@@ -162,7 +162,7 @@ export function BorrowLendForm({
           <div className="space-y-2">
             <Label>Type</Label>
             <Select
-              value={type}
+              value={type || ""}
               onValueChange={(v) =>
                 v && setValue("type", v as "borrowed" | "lent", {
                   shouldValidate: true,

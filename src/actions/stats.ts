@@ -46,6 +46,8 @@ export async function getDashboardSummary(
 ): Promise<DashboardSummary> {
   await dbConnect();
   
+  console.log("hi");
+  
   const now = new Date();
   const currentMonth = month ?? (now.getMonth() + 1);
   const currentYear = year ?? now.getFullYear();
@@ -61,7 +63,7 @@ export async function getDashboardSummary(
 
   const yearStart = startOfYear(now);
   const yearEnd = endOfYear(now);
-
+  
   const [
     allIncomeAgg,
     allExpenseAgg,
@@ -88,6 +90,7 @@ export async function getDashboardSummary(
       { $match: { date: { $gte: todayStart, $lte: todayEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
+    
 
     Income.aggregate([
       { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
@@ -97,7 +100,7 @@ export async function getDashboardSummary(
       { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
-
+    
     Income.aggregate([
       { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -115,23 +118,23 @@ export async function getDashboardSummary(
       { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
-
+    
     BorrowLend.find({ status: "pending" }).lean(),
     Budget.find({ month: currentMonth, year: currentYear }).lean(),
     getOrCreateStats(),
   ]);
-
+  
   const allIncome = allIncomeAgg[0]?.total ?? 0;
   const allExpense = allExpenseAgg[0]?.total ?? 0;
   const currentBalance = allIncome - allExpense;
-
+  
   const monthlyIncome = monthIncomeAgg[0]?.total ?? 0;
   const monthlyExpenses = monthExpenseAgg[0]?.total ?? 0;
   const savings = monthlyIncome - monthlyExpenses;
-
+  
   const todayIncome = todayIncomeAgg[0]?.total ?? 0;
   const todayExpenses = todayExpenseAgg[0]?.total ?? 0;
-
+  console.log(todayExpenseAgg)
   const weekIncome = weekIncomeAgg[0]?.total ?? 0;
   const weekExpenses = weekExpenseAgg[0]?.total ?? 0;
 
@@ -152,6 +155,9 @@ export async function getDashboardSummary(
   );
   const budgetUsedPercentage =
     totalBudget > 0 ? Math.round((monthlyExpenses / totalBudget) * 100) : 0;
+
+console.log(todayExpenses);
+
 
   return {
     currentBalance,

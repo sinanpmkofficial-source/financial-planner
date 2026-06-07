@@ -15,6 +15,8 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PageHeader } from "@/components/layout/header";
+import { ExpenseForm } from "@/components/expenses/expense-form";
+import { IncomeForm } from "@/components/income/income-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -71,35 +73,70 @@ export function DashboardClient() {
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [settings, setSettings] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
+
+  // Decoupled loading states
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [budgetsLoading, setBudgetsLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
+  const [incomeFormOpen, setIncomeFormOpen] = useState(false);
 
-      const [s, e, i, b, setts] = await Promise.all([
-        getDashboardSummary(),
-        getRecentExpenses(5),
-        getRecentIncomes(5),
-        getBudgetsWithSpent(currentMonth, currentYear),
-        getUserSettings(),
-      ]);
-      
-      setSummary(s);
-      setExpenses(e);
-      setIncomes(i);
-      setBudgets(b);
-      setSettings(setts);
-    } catch (err) {
-      console.error("Dashboard data load error", err);
-    } finally {
-      setLoading(false);
-    }
+  const fetchData = useCallback(async () => {
+    // Fetch Summary independently
+    setSummaryLoading(true);
+    getDashboardSummary()
+      .then((s) => {
+        setSummary(s);
+        setSummaryLoading(false);
+      })
+      .catch((err) => {
+        console.error("Dashboard summary load error", err);
+        setSummaryLoading(false);
+      });
+
+    // Fetch Transactions (expenses & incomes) independently
+    setTransactionsLoading(true);
+    Promise.all([getRecentExpenses(5), getRecentIncomes(5)])
+      .then(([e, i]) => {
+        setExpenses(e);
+        setIncomes(i);
+        setTransactionsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Transactions load error", err);
+        setTransactionsLoading(false);
+      });
+
+    // Fetch Budgets independently
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    setBudgetsLoading(true);
+    getBudgetsWithSpent(currentMonth, currentYear)
+      .then((b) => {
+        setBudgets(b);
+        setBudgetsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Budgets load error", err);
+        setBudgetsLoading(false);
+      });
+
+    // Fetch User Settings independently
+    setSettingsLoading(true);
+    getUserSettings()
+      .then((setts) => {
+        setSettings(setts);
+        setSettingsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Settings load error", err);
+        setSettingsLoading(false);
+      });
   }, []);
 
   const fetchTrend = useCallback(async () => {
@@ -144,30 +181,17 @@ export function DashboardClient() {
     fetchTrend();
   }, [fetchTrend]);
 
-  if (loading || !summary) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Dashboard" showMonthPicker={false} />
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 h-[340px] rounded-2xl bg-muted/65 animate-pulse" />
-          <div className="h-[340px] rounded-2xl bg-muted/65 animate-pulse" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="h-32 rounded-2xl bg-muted/65 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   const showGamification = settings?.showGamification !== false;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader title="Dashboard" showMonthPicker={false} />
-        <QuickActions />
+        <QuickActions
+          onAddExpense={() => setExpenseFormOpen(true)}
+          onAddIncome={() => setIncomeFormOpen(true)}
+          disabled={summaryLoading}
+        />
       </div>
 
       {/* Top Section: Cash Flow Chart & Net Wealth Card */}
@@ -280,9 +304,9 @@ export function DashboardClient() {
         {/* Consolidated Hero Net Cash Card */}
         <div
           className={cn(
-            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-            "flex flex-col justify-between"
+            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
           )}
         >
           {/* Top Section */}
@@ -315,7 +339,11 @@ export function DashboardClient() {
                 Available Balance
               </p>
               <h3 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1 text-foreground">
-                {formatCurrency(summary.currentBalance)}
+                {summaryLoading || !summary ? (
+                  <span className="inline-block h-9 w-40 bg-muted animate-pulse rounded-md mt-1" />
+                ) : (
+                  formatCurrency(summary.currentBalance)
+                )}
               </h3>
             </div>
 
@@ -324,36 +352,63 @@ export function DashboardClient() {
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                   Today
                 </span>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                  +{formatCurrency(summary.todayIncome ?? 0)}
-                </p>
-                <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                  -{formatCurrency(summary.todayExpenses ?? 0)}
-                </p>
+                {summaryLoading || !summary ? (
+                  <div className="space-y-1 py-1">
+                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
+                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                      +{formatCurrency(summary.todayIncome ?? 0)}
+                    </p>
+                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                      -{formatCurrency(summary.todayExpenses ?? 0)}
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1 border-x border-border/60 px-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                   This Week
                 </span>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                  +{formatCurrency(summary.weekIncome ?? 0)}
-                </p>
-                <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                  -{formatCurrency(summary.weekExpenses ?? 0)}
-                </p>
+                {summaryLoading || !summary ? (
+                  <div className="space-y-1 py-1">
+                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
+                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                      +{formatCurrency(summary.weekIncome ?? 0)}
+                    </p>
+                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                      -{formatCurrency(summary.weekExpenses ?? 0)}
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                   This Year
                 </span>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                  +{formatCurrency(summary.yearIncome ?? 0)}
-                </p>
-                <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                  -{formatCurrency(summary.yearExpenses ?? 0)}
-                </p>
+                {summaryLoading || !summary ? (
+                  <div className="space-y-1 py-1">
+                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
+                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                      +{formatCurrency(summary.yearIncome ?? 0)}
+                    </p>
+                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                      -{formatCurrency(summary.yearExpenses ?? 0)}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -363,7 +418,11 @@ export function DashboardClient() {
                 Saved this Month
               </span>
               <span className="font-bold text-foreground">
-                {formatCurrency(summary.savings)}
+                {summaryLoading || !summary ? (
+                  <span className="inline-block h-3.5 w-16 bg-muted animate-pulse rounded-sm" />
+                ) : (
+                  formatCurrency(summary.savings)
+                )}
               </span>
             </div>
           </div>
@@ -375,9 +434,9 @@ export function DashboardClient() {
         {/* Credit & Debt Card */}
         <div
           className={cn(
-            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-            "flex flex-col justify-between"
+            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
           )}
         >
           {/* Top Section */}
@@ -407,42 +466,68 @@ export function DashboardClient() {
 
           {/* Bottom Section */}
           <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-            <div>
-              <h4 className="text-xl font-bold text-foreground">
-                Net Owed: {formatCurrency(summary.totalLent - summary.totalBorrowed)}
-              </h4>
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-medium">
-                    <ArrowDownLeft className="w-3.5 h-3.5 text-foreground" />
-                    Borrowed (I owe)
-                  </span>
-                  <span className="font-bold text-foreground">{formatCurrency(summary.totalBorrowed)}</span>
+            {summaryLoading || !summary ? (
+              <>
+                <div>
+                  <div className="h-6 w-32 bg-muted animate-pulse rounded-md" />
                 </div>
-                <Progress value={summary.totalBorrowed > 0 ? (summary.totalBorrowed / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-medium">
-                    <ArrowUpRight className="w-3.5 h-3.5 text-foreground" />
-                    Lent (They owe me)
-                  </span>
-                  <span className="font-bold text-foreground">{formatCurrency(summary.totalLent)}</span>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
+                      <div className="h-3 w-12 bg-muted animate-pulse rounded-sm" />
+                    </div>
+                    <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
+                      <div className="h-3 w-12 bg-muted animate-pulse rounded-sm" />
+                    </div>
+                    <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                  </div>
                 </div>
-                <Progress value={summary.totalLent > 0 ? (summary.totalLent / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
-              </div>
-            </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h4 className="text-xl font-bold text-foreground">
+                    Net Owed: {formatCurrency(summary.totalLent - summary.totalBorrowed)}
+                  </h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 font-medium">
+                        <ArrowDownLeft className="w-3.5 h-3.5 text-foreground" />
+                        Borrowed (I owe)
+                      </span>
+                      <span className="font-bold text-foreground">{formatCurrency(summary.totalBorrowed)}</span>
+                    </div>
+                    <Progress value={summary.totalBorrowed > 0 ? (summary.totalBorrowed / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 font-medium">
+                        <ArrowUpRight className="w-3.5 h-3.5 text-foreground" />
+                        Lent (They owe me)
+                      </span>
+                      <span className="font-bold text-foreground">{formatCurrency(summary.totalLent)}</span>
+                    </div>
+                    <Progress value={summary.totalLent > 0 ? (summary.totalLent / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Budget Status Card */}
         <div
           className={cn(
-            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-            "flex flex-col justify-between"
+            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
           )}
         >
           {/* Top Section */}
@@ -472,34 +557,59 @@ export function DashboardClient() {
 
           {/* Bottom Section */}
           <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-            <div>
-              <h4 className="text-xl font-bold text-foreground">
-                {summary.budgetUsedPercentage}% Consumed
-              </h4>
-            </div>
-            <div className="space-y-2">
-              <Progress
-                value={summary.budgetUsedPercentage}
-                className="h-2 bg-muted"
-              />
-              <p className="text-xs text-muted-foreground font-medium">
-                {summary.budgetUsedPercentage > 90
-                  ? "Careful! You're approaching your overall budget limit."
-                  : "Stretching well. Keep tracking your daily updates."}
-              </p>
-            </div>
+            {summaryLoading || !summary ? (
+              <>
+                <div>
+                  <div className="h-6 w-24 bg-muted animate-pulse rounded-md" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-2 bg-muted animate-pulse rounded-full" />
+                  <div className="h-3 w-48 bg-muted animate-pulse rounded-sm" />
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h4 className="text-xl font-bold text-foreground">
+                    {summary.budgetUsedPercentage}% Consumed
+                  </h4>
+                </div>
+                <div className="space-y-2">
+                  <Progress
+                    value={summary.budgetUsedPercentage}
+                    className="h-2 bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground font-medium">
+                    {summary.budgetUsedPercentage > 90
+                      ? "Careful! You're approaching your overall budget limit."
+                      : "Stretching well. Keep tracking your daily updates."}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Level & XP Card */}
-        {showGamification && <XpCard stats={summary.stats} />}
+        {showGamification && <XpCard stats={summary?.stats} loading={summaryLoading} />}
       </div>
 
       {/* Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <RecentTransactions expenses={expenses} incomes={incomes} categories={settings?.categories} />
-        <BudgetAlerts budgets={budgets} />
+        <RecentTransactions expenses={expenses} incomes={incomes} categories={settings?.categories} loading={transactionsLoading} />
+        <BudgetAlerts budgets={budgets} loading={budgetsLoading} />
       </div>
+
+      <ExpenseForm
+        open={expenseFormOpen}
+        onOpenChange={setExpenseFormOpen}
+        onSuccess={fetchData}
+      />
+      <IncomeForm
+        open={incomeFormOpen}
+        onOpenChange={setIncomeFormOpen}
+        onSuccess={fetchData}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ import {
   Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MonthYearPicker } from "@/components/layout/month-year-picker";
+import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -66,7 +66,7 @@ export function Sidebar() {
       {/* Month/Year Picker */}
       {pathname !== "/" && (
         <div className="px-3 py-4 border-t border-border">
-          <MonthYearPicker />
+          <DatePeriodFilter />
         </div>
       )}
     </aside>

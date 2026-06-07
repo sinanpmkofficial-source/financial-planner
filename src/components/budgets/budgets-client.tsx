@@ -18,7 +18,7 @@ import type { BudgetWithSpent } from "@/types";
 import { cn } from "@/lib/utils";
 
 export function BudgetsClient() {
-  const { selectedMonth, selectedYear } = useUIStore();
+  const { dateRange } = useUIStore();
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -29,12 +29,14 @@ export function BudgetsClient() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getBudgetsWithSpent(selectedMonth, selectedYear);
+      const month = dateRange.from.getMonth() + 1;
+      const year = dateRange.from.getFullYear();
+      const data = await getBudgetsWithSpent(month, year);
       setBudgets(data);
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear]);
+  }, [dateRange]);
 
   useEffect(() => {
     fetchData();
@@ -101,12 +103,14 @@ export function BudgetsClient() {
               <Card
                 key={budget._id}
                 className={cn(
-                  "border shadow-sm",
+                  "border bg-card transition-all duration-300",
+                  "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
+                  "md:shadow-none md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
                   isDanger
-                    ? "border-rose-200 bg-rose-50/20"
+                    ? "border-rose-300/80 dark:border-rose-800/80 bg-rose-50/20 dark:bg-rose-950/10 md:border-rose-200/50 md:dark:border-rose-900/30 md:hover:border-rose-300"
                     : isWarning
-                    ? "border-amber-200 bg-amber-50/20"
-                    : "border-border/50"
+                    ? "border-amber-300/80 dark:border-amber-800/80 bg-amber-50/20 dark:bg-amber-950/10 md:border-amber-200/50 md:dark:border-amber-900/30 md:hover:border-amber-300"
+                    : "border-foreground/30 md:border-foreground/15 md:hover:border-foreground/30"
                 )}
               >
                 <CardContent className="p-5">

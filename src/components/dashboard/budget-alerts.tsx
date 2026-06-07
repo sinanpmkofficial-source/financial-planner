@@ -7,10 +7,36 @@ import { AlertTriangle } from "lucide-react";
 
 interface BudgetAlertsProps {
   budgets: BudgetWithSpent[];
+  loading?: boolean;
 }
 
-export function BudgetAlerts({ budgets }: BudgetAlertsProps) {
+export function BudgetAlerts({ budgets, loading = false }: BudgetAlertsProps) {
   const warningBudgets = budgets.filter((b) => b.percentage >= 80);
+
+  if (loading) {
+    return (
+      <Card className="border border-amber-200 bg-amber-50/30 shadow-xs">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 animate-pulse" />
+            Budget Alerts
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {Array.from({ length: 2 }).map((_, idx) => (
+            <div key={idx} className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="h-4 w-24 bg-muted animate-pulse rounded-sm" />
+                <div className="h-4 w-8 bg-muted animate-pulse rounded-sm" />
+              </div>
+              <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+              <div className="h-3 w-28 bg-muted animate-pulse rounded-sm" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (warningBudgets.length === 0) return null;
 

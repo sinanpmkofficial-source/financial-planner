@@ -7,19 +7,20 @@ import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface XpCardProps {
-  stats: UserStats;
+  stats?: UserStats;
+  loading?: boolean;
 }
 
-export function XpCard({ stats }: XpCardProps) {
-  const progress = getXpProgress(stats.totalXp);
-  const nextLevelXp = getXpForNextLevel(stats.level);
+export function XpCard({ stats, loading = false }: XpCardProps) {
+  const progress = stats ? getXpProgress(stats.totalXp) : 0;
+  const nextLevelXp = stats ? getXpForNextLevel(stats.level) : 100;
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-        "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-        "flex flex-col justify-between"
+        "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+        "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+        "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
       )}
     >
       {/* Top Section */}
@@ -49,17 +50,31 @@ export function XpCard({ stats }: XpCardProps) {
 
       {/* Bottom Section */}
       <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-        <div>
-          <h4 className="text-xl font-bold text-foreground">
-            Level {stats.level}
-          </h4>
-        </div>
-        <div className="space-y-2">
-          <Progress value={progress} className="h-2" />
-          <p className="text-xs text-muted-foreground font-medium">
-            {stats.totalXp} / {nextLevelXp} XP ({Math.round(progress)}%)
-          </p>
-        </div>
+        {loading || !stats ? (
+          <>
+            <div>
+              <div className="h-7 w-20 bg-muted animate-pulse rounded-md" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-2 bg-muted rounded-full animate-pulse" />
+              <div className="h-4 w-32 bg-muted animate-pulse rounded-sm" />
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <h4 className="text-xl font-bold text-foreground">
+                Level {stats.level}
+              </h4>
+            </div>
+            <div className="space-y-2">
+              <Progress value={progress} className="h-2" />
+              <p className="text-xs text-muted-foreground font-medium">
+                {stats.totalXp} / {nextLevelXp} XP ({Math.round(progress)}%)
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

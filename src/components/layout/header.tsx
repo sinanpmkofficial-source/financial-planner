@@ -1,6 +1,6 @@
 "use client";
 
-import { MonthYearPicker } from "@/components/layout/month-year-picker";
+import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 
 interface PageHeaderProps {
   title: string;
@@ -30,7 +30,7 @@ export function PageHeader({
       <div className="flex items-center gap-3">
         {showMonthPicker && (
           <div className="lg:hidden">
-            <MonthYearPicker />
+            <DatePeriodFilter />
           </div>
         )}
         {action}
