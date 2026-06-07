@@ -21,8 +21,7 @@ const navItems = [
   { href: "/income", label: "Income", icon: Wallet },
   { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins },
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/analytics", label: "Analytics", icon: TrendingUp },
+  { href: "/analytics", label: "Reports", icon: TrendingUp },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -65,9 +64,11 @@ export function Sidebar() {
       </nav>
 
       {/* Month/Year Picker */}
-      <div className="px-3 py-4 border-t border-border">
-        <MonthYearPicker />
-      </div>
+      {pathname !== "/" && (
+        <div className="px-3 py-4 border-t border-border">
+          <MonthYearPicker />
+        </div>
+      )}
     </aside>
   );
 }

@@ -32,8 +32,7 @@ const primaryItems = [
 
 const moreItems = [
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-  { href: "/analytics", label: "Analytics", icon: TrendingUp },
+  { href: "/analytics", label: "Reports", icon: TrendingUp },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

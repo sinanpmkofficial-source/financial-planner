@@ -9,6 +9,14 @@ import Budget from "@/models/budget";
 import { calculateLevel } from "@/lib/xp";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import type { UserStats, DashboardSummary } from "@/types";
+import {
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfYear,
+  endOfYear,
+} from "date-fns";
 
 async function getOrCreateStats() {
   await dbConnect();
@@ -33,31 +41,102 @@ export async function awardXp(amount: number): Promise<void> {
 }
 
 export async function getDashboardSummary(
-  month: number,
-  year: number
+  month?: number,
+  year?: number
 ): Promise<DashboardSummary> {
   await dbConnect();
-  const { start, end } = getMonthDateRange(month, year);
+  
+  const now = new Date();
+  const currentMonth = month ?? (now.getMonth() + 1);
+  const currentYear = year ?? now.getFullYear();
 
-  const [incomeAgg, expenseAgg, borrowLendRecords, budgets, stats] =
-    await Promise.all([
-      Income.aggregate([
-        { $match: { date: { $gte: start, $lte: end } } },
-        { $group: { _id: null, total: { $sum: "$amount" } } },
-      ]),
-      Expense.aggregate([
-        { $match: { date: { $gte: start, $lte: end } } },
-        { $group: { _id: null, total: { $sum: "$amount" } } },
-      ]),
-      BorrowLend.find({ status: "pending" }).lean(),
-      Budget.find({ month, year }).lean(),
-      getOrCreateStats(),
-    ]);
+  // Define ranges
+  const todayStart = startOfDay(now);
+  const todayEnd = endOfDay(now);
 
-  const monthlyIncome = incomeAgg[0]?.total ?? 0;
-  const monthlyExpenses = expenseAgg[0]?.total ?? 0;
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
+  const { start: monthStart, end: monthEnd } = getMonthDateRange(currentMonth, currentYear);
+
+  const yearStart = startOfYear(now);
+  const yearEnd = endOfYear(now);
+
+  const [
+    allIncomeAgg,
+    allExpenseAgg,
+    todayIncomeAgg,
+    todayExpenseAgg,
+    weekIncomeAgg,
+    weekExpenseAgg,
+    monthIncomeAgg,
+    monthExpenseAgg,
+    yearIncomeAgg,
+    yearExpenseAgg,
+    borrowLendRecords,
+    budgets,
+    stats,
+  ] = await Promise.all([
+    Income.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+    Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+    
+    Income.aggregate([
+      { $match: { date: { $gte: todayStart, $lte: todayEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Expense.aggregate([
+      { $match: { date: { $gte: todayStart, $lte: todayEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+
+    Income.aggregate([
+      { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Expense.aggregate([
+      { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+
+    Income.aggregate([
+      { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Expense.aggregate([
+      { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+
+    Income.aggregate([
+      { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Expense.aggregate([
+      { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+
+    BorrowLend.find({ status: "pending" }).lean(),
+    Budget.find({ month: currentMonth, year: currentYear }).lean(),
+    getOrCreateStats(),
+  ]);
+
+  const allIncome = allIncomeAgg[0]?.total ?? 0;
+  const allExpense = allExpenseAgg[0]?.total ?? 0;
+  const currentBalance = allIncome - allExpense;
+
+  const monthlyIncome = monthIncomeAgg[0]?.total ?? 0;
+  const monthlyExpenses = monthExpenseAgg[0]?.total ?? 0;
   const savings = monthlyIncome - monthlyExpenses;
-  const currentBalance = savings;
+
+  const todayIncome = todayIncomeAgg[0]?.total ?? 0;
+  const todayExpenses = todayExpenseAgg[0]?.total ?? 0;
+
+  const weekIncome = weekIncomeAgg[0]?.total ?? 0;
+  const weekExpenses = weekExpenseAgg[0]?.total ?? 0;
+
+  const yearIncome = yearIncomeAgg[0]?.total ?? 0;
+  const yearExpenses = yearExpenseAgg[0]?.total ?? 0;
 
   let totalBorrowed = 0;
   let totalLent = 0;
@@ -83,5 +162,11 @@ export async function getDashboardSummary(
     totalLent,
     budgetUsedPercentage,
     stats: serializeDoc<UserStats>(stats),
+    todayIncome,
+    todayExpenses,
+    weekIncome,
+    weekExpenses,
+    yearIncome,
+    yearExpenses,
   };
 }

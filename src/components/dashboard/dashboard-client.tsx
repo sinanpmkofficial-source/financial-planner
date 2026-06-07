@@ -7,7 +7,7 @@ import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
 import { getBudgetsWithSpent } from "@/actions/budget";
 import { getUserSettings } from "@/actions/settings";
-import { getExpenseTrend, getIncomeTrend } from "@/actions/reports";
+import { getUnifiedData } from "@/actions/reports";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { XpCard } from "@/components/dashboard/xp-card";
@@ -17,7 +17,6 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PageHeader } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Wallet,
   TrendingUp,
@@ -38,15 +37,22 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { DashboardSummary, Expense, Income, BudgetWithSpent } from "@/types";
+import {
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfYear,
+  endOfYear,
+} from "date-fns";
 
 // Custom tooltip for premium look
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
-    const formattedLabel = typeof label === 'number' ? `Day ${label}` : label;
     return (
       <div className="bg-popover border border-border rounded-xl px-3 py-2.5 shadow-md text-xs">
-        <p className="text-muted-foreground mb-1.5 font-medium">{formattedLabel}</p>
+        <p className="text-muted-foreground mb-1.5 font-medium">{label}</p>
         {payload.map((entry: { name: string; value: number; color: string }, i: number) => (
           <p key={i} className="text-sm font-semibold" style={{ color: entry.color }}>
             {entry.name}: {formatCurrency(entry.value)}
@@ -59,7 +65,6 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 export function DashboardClient() {
-  const { selectedMonth, selectedYear } = useUIStore();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -67,17 +72,21 @@ export function DashboardClient() {
   const [settings, setSettings] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [graphPeriod, setGraphPeriod] = useState<"weekly" | "monthly" | "yearly">("monthly");
-  const [chartLoading, setChartLoading] = useState(false);
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
+  const [trendLoading, setTrendLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+      const currentYear = now.getFullYear();
+
       const [s, e, i, b, setts] = await Promise.all([
-        getDashboardSummary(selectedMonth, selectedYear),
+        getDashboardSummary(),
         getRecentExpenses(5),
         getRecentIncomes(5),
-        getBudgetsWithSpent(selectedMonth, selectedYear),
+        getBudgetsWithSpent(currentMonth, currentYear),
         getUserSettings(),
       ]);
       
@@ -91,41 +100,54 @@ export function DashboardClient() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear]);
+  }, []);
 
-  const fetchTrendData = useCallback(async () => {
-    setChartLoading(true);
+  const fetchTrend = useCallback(async () => {
+    setTrendLoading(true);
     try {
-      const [et, it] = await Promise.all([
-        getExpenseTrend(selectedMonth, selectedYear, undefined, graphPeriod),
-        getIncomeTrend(selectedMonth, selectedYear, graphPeriod),
-      ]);
+      const now = new Date();
+      let start: Date;
+      let end: Date;
 
-      const merged = et.map((item, idx) => ({
+      if (graphPeriod === "daily") {
+        start = startOfDay(now);
+        end = endOfDay(now);
+      } else if (graphPeriod === "weekly") {
+        start = startOfWeek(now, { weekStartsOn: 1 });
+        end = endOfWeek(now, { weekStartsOn: 1 });
+      } else {
+        start = startOfYear(now);
+        end = endOfYear(now);
+      }
+
+      const data = await getUnifiedData(start, end);
+
+      // Merge trends for Composed Chart
+      const merged = data.expenseTrend.map((item, idx) => ({
         label: item.label,
         expenses: item.value,
-        income: it[idx]?.value ?? 0,
+        income: data.incomeTrend[idx]?.value ?? 0,
       }));
       setChartData(merged);
     } catch (err) {
       console.error("Dashboard trend load error", err);
     } finally {
-      setChartLoading(false);
+      setTrendLoading(false);
     }
-  }, [selectedMonth, selectedYear, graphPeriod]);
+  }, [graphPeriod]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   useEffect(() => {
-    fetchTrendData();
-  }, [fetchTrendData]);
+    fetchTrend();
+  }, [fetchTrend]);
 
   if (loading || !summary) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Dashboard" showMonthPicker />
+        <PageHeader title="Dashboard" showMonthPicker={false} />
         <div className="grid gap-6 md:grid-cols-3">
           <div className="md:col-span-2 h-[340px] rounded-2xl bg-muted/65 animate-pulse" />
           <div className="h-[340px] rounded-2xl bg-muted/65 animate-pulse" />
@@ -144,7 +166,7 @@ export function DashboardClient() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader title="Dashboard" showMonthPicker />
+        <PageHeader title="Dashboard" showMonthPicker={false} />
         <QuickActions />
       </div>
 
@@ -152,42 +174,69 @@ export function DashboardClient() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Composed Cash Flow Chart */}
         <Card className="lg:col-span-2 border border-border/50 shadow-xs rounded-2xl overflow-hidden bg-card">
-          <CardHeader className="pb-3 border-b border-border/40">
+          <CardHeader className="pb-2">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-base font-semibold text-foreground">Cash Flow</CardTitle>
-                <CardDescription>Comparison of income and expenses</CardDescription>
+                <CardDescription>
+                  {graphPeriod === "daily"
+                    ? "Today's hourly comparison"
+                    : graphPeriod === "weekly"
+                    ? "This week's daily comparison"
+                    : "This year's monthly comparison"}
+                </CardDescription>
               </div>
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Legend */}
-                <div className="flex items-center gap-3.5 text-xs font-medium">
-                  <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-3.5">
+                {/* Period Selector Tabs/Buttons */}
+                <div className="flex rounded-lg bg-muted p-0.5 text-xs mr-2 border border-border/40">
+                  <button
+                    onClick={() => setGraphPeriod("daily")}
+                    className={cn(
+                      "px-3 py-1 rounded-md font-semibold transition-all cursor-pointer",
+                      graphPeriod === "daily" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Day
+                  </button>
+                  <button
+                    onClick={() => setGraphPeriod("weekly")}
+                    className={cn(
+                      "px-3 py-1 rounded-md font-semibold transition-all cursor-pointer",
+                      graphPeriod === "weekly" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Week
+                  </button>
+                  <button
+                    onClick={() => setGraphPeriod("yearly")}
+                    className={cn(
+                      "px-3 py-1 rounded-md font-semibold transition-all cursor-pointer",
+                      graphPeriod === "yearly" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    Year
+                  </button>
+                </div>
+                <div className="flex items-center gap-3 text-xs font-medium shrink-0">
+                  <div className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     <span className="text-muted-foreground">Income</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-rose-500" />
                     <span className="text-muted-foreground">Expenses</span>
                   </div>
                 </div>
-
-                {/* Period Selector Tabs */}
-                <Tabs
-                  value={graphPeriod}
-                  onValueChange={(v) => setGraphPeriod(v as "weekly" | "monthly" | "yearly")}
-                  className="w-full sm:w-auto"
-                >
-                  <TabsList className="bg-muted/50 p-0.5 h-8 grid grid-cols-3 w-full sm:w-auto sm:inline-flex">
-                    <TabsTrigger value="weekly" className="text-xs h-7 px-2.5">Week</TabsTrigger>
-                    <TabsTrigger value="monthly" className="text-xs h-7 px-2.5">Month</TabsTrigger>
-                    <TabsTrigger value="yearly" className="text-xs h-7 px-2.5">Year</TabsTrigger>
-                  </TabsList>
-                </Tabs>
               </div>
             </div>
           </CardHeader>
-          <CardContent className={cn("pt-4 transition-opacity duration-200", chartLoading && "opacity-55")}>
-            <div className="h-[260px] w-full">
+          <CardContent className="pt-2">
+            <div className="h-[260px] w-full relative">
+              {trendLoading && (
+                <div className="absolute inset-0 bg-card/50 flex items-center justify-center z-10 rounded-2xl">
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
                   <defs>
@@ -240,9 +289,9 @@ export function DashboardClient() {
           <div className="flex items-center justify-between pb-3.5 px-6 pt-6">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
-                HERO
+                OVERVIEW
               </span>
-              <h3 className="text-base font-semibold text-foreground">Net Cash Position</h3>
+              <h3 className="text-base font-semibold text-foreground">Financial Summary</h3>
             </div>
             <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
               <Wallet className="w-4 h-4" />
@@ -270,24 +319,40 @@ export function DashboardClient() {
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/60">
+            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-border/60 text-center">
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                  <TrendingUp className="w-3.5 h-3.5 text-foreground" />
-                  <span>Total In</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">
-                  {formatCurrency(summary.monthlyIncome)}
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  Today
+                </span>
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                  +{formatCurrency(summary.todayIncome ?? 0)}
+                </p>
+                <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                  -{formatCurrency(summary.todayExpenses ?? 0)}
+                </p>
+              </div>
+
+              <div className="space-y-1 border-x border-border/60 px-1">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  This Week
+                </span>
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                  +{formatCurrency(summary.weekIncome ?? 0)}
+                </p>
+                <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                  -{formatCurrency(summary.weekExpenses ?? 0)}
                 </p>
               </div>
 
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                  <TrendingDown className="w-3.5 h-3.5 text-foreground" />
-                  <span>Total Out</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">
-                  {formatCurrency(summary.monthlyExpenses)}
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                  This Year
+                </span>
+                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                  +{formatCurrency(summary.yearIncome ?? 0)}
+                </p>
+                <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                  -{formatCurrency(summary.yearExpenses ?? 0)}
                 </p>
               </div>
             </div>

@@ -124,17 +124,18 @@ export function BorrowLendClient() {
           return (
             <Card
               key={record._id}
-              className="border border-border/50 shadow-sm"
+              className="border border-border/50 shadow-sm hover:border-border/80 transition-colors"
             >
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Details section */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <span className="text-xl shrink-0 mt-0.5">
                       {record.type === "borrowed" ? "🔴" : "🟢"}
                     </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-sm text-foreground truncate">
                           {record.personName}
                         </p>
                         <Badge
@@ -143,12 +144,12 @@ export function BorrowLendClient() {
                               ? "default"
                               : "secondary"
                           }
-                          className="text-[10px]"
+                          className="text-[9px] uppercase tracking-wider px-1.5 py-0"
                         >
                           {record.status}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1">
                         <p className="text-xs text-muted-foreground">
                           {formatDate(record.date)}
                         </p>
@@ -159,12 +160,12 @@ export function BorrowLendClient() {
                         )}
                       </div>
                       {record.notes && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                           {record.notes}
                         </p>
                       )}
                       {paid > 0 && (
-                        <div className="mt-2 space-y-1 max-w-[200px]">
+                        <div className="mt-2.5 space-y-1 max-w-[240px]">
                           <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
                             <span>Paid: {formatCurrency(paid)}</span>
                             <span>{Math.round((paid / record.amount) * 100)}%</span>
@@ -176,10 +177,12 @@ export function BorrowLendClient() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="text-right flex flex-col mr-2">
+
+                  {/* Actions & Price Section */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 pt-3 sm:pt-0 border-t border-border/20 sm:border-t-0">
+                    <div className="text-left sm:text-right flex flex-col">
                       <span
-                        className={`text-sm font-bold ${
+                        className={`text-sm sm:text-base font-extrabold ${
                           record.type === "borrowed"
                             ? "text-rose-600"
                             : "text-emerald-600"
@@ -193,39 +196,42 @@ export function BorrowLendClient() {
                         </span>
                       )}
                     </div>
-                    {record.status === "pending" && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-foreground"
-                          onClick={() => handleOpenRepay(record)}
-                          title={record.type === "borrowed" ? "Pay Back Amount" : "Collect Payment"}
-                        >
-                          <Coins className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-emerald-600"
-                          onClick={() => handleSettle(record._id)}
-                          title="Instant full settlement"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                        </Button>
-                      </>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground"
-                      onClick={() => handleEdit(record)}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </Button>
-                    <ConfirmDelete
-                      onConfirm={() => handleDelete(record._id)}
-                    />
+
+                    <div className="flex items-center gap-1">
+                      {record.status === "pending" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-foreground hover:bg-muted rounded-full shrink-0"
+                            onClick={() => handleOpenRepay(record)}
+                            title={record.type === "borrowed" ? "Pay Back Amount" : "Collect Payment"}
+                          >
+                            <Coins className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-full shrink-0"
+                            onClick={() => handleSettle(record._id)}
+                            title="Instant full settlement"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded-full shrink-0"
+                        onClick={() => handleEdit(record)}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <ConfirmDelete
+                        onConfirm={() => handleDelete(record._id)}
+                      />
+                    </div>
                   </div>
                 </div>
               </CardContent>

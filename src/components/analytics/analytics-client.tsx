@@ -1,20 +1,12 @@
 "use client";
 
-import { useUIStore } from "@/stores/ui-store";
-import { useEffect, useState, useCallback } from "react";
-import {
-  getExpenseTrend,
-  getIncomeTrend,
-  getSavingsTrend,
-  getMonthlyComparison,
-  getCategoryDistribution,
-} from "@/actions/reports";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { getUnifiedData } from "@/actions/reports";
 import { getUserSettings } from "@/actions/settings";
 import { formatCurrency } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { StatCard } from "@/components/shared/stat-card";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -25,10 +17,6 @@ import {
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   Cell,
@@ -39,12 +27,31 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { Info, BarChart2 } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  PiggyBank,
+  Wallet,
+  Info,
+  BarChart2,
+} from "lucide-react";
 import type {
   ChartDataPoint,
-  MonthlyComparison,
   CategoryDistribution,
+  ReportData,
 } from "@/types";
+import {
+  startOfDay,
+  endOfDay,
+  subDays,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  startOfYear,
+  endOfYear,
+} from "date-fns";
+import { DateRangePicker } from "@/components/shared/date-range-picker";
+import { DateRange } from "react-day-picker";
 
 function ChartCard({
   title,
@@ -61,22 +68,16 @@ function ChartCard({
         "flex flex-col justify-between"
       )}
     >
-      {/* Top Title Section */}
       <div className="pb-3.5 px-5 pt-5 flex items-center justify-between">
         <h3 className="text-base font-semibold text-foreground">{title}</h3>
       </div>
 
-      {/* Ticket Cut / Dashed Line Separator */}
       <div className="relative flex items-center w-full">
-        {/* Left Notch */}
         <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-        {/* Dashed Line */}
         <div className="w-full border-t border-dashed border-foreground/15" />
-        {/* Right Notch */}
         <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
       </div>
 
-      {/* Content Section */}
       <div className="p-5">
         <div className="h-[280px] w-full">{children}</div>
       </div>
@@ -101,41 +102,74 @@ function CustomTooltip({ active, payload, label }: any) {
   return null;
 }
 
+type PeriodPreset = 
+  | "Today" 
+  | "Yesterday" 
+  | "Last 7 Days" 
+  | "Last 30 Days" 
+  | "This Month" 
+  | "Last Month" 
+  | "This Year" 
+  | "Custom";
+
 export function AnalyticsClient() {
-  const { selectedMonth, selectedYear, setYear } = useUIStore();
   const [expenseTrend, setExpenseTrend] = useState<ChartDataPoint[]>([]);
   const [incomeTrend, setIncomeTrend] = useState<ChartDataPoint[]>([]);
-  const [savingsTrend, setSavingsTrend] = useState<ChartDataPoint[]>([]);
-  const [comparison, setComparison] = useState<MonthlyComparison[]>([]);
+  const [report, setReport] = useState<ReportData | null>(null);
   const [distribution, setDistribution] = useState<CategoryDistribution[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filter and period states
-  const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
+  const [preset, setPreset] = useState<PeriodPreset>("This Month");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
 
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    switch (preset) {
+      case "Today":
+        return { from: startOfDay(now), to: endOfDay(now) };
+      case "Yesterday":
+        const yesterday = subDays(now, 1);
+        return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
+      case "Last 7 Days":
+        return { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
+      case "Last 30 Days":
+        return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
+      case "This Month":
+        return { from: startOfMonth(now), to: endOfMonth(now) };
+      case "Last Month":
+        const lastMonth = subMonths(now, 1);
+        return { from: startOfMonth(lastMonth), to: endOfMonth(lastMonth) };
+      case "This Year":
+        return { from: startOfYear(now), to: endOfYear(now) };
+      case "Custom":
+        return customRange;
+      default:
+        return { from: startOfMonth(now), to: endOfMonth(now) };
+    }
+  }, [preset, customRange]);
+
   const fetchData = useCallback(async () => {
+    if (!dateRange?.from || !dateRange?.to) return;
+    
     setLoading(true);
     try {
-      const [et, it, st, mc, cd] = await Promise.all([
-        getExpenseTrend(selectedMonth, selectedYear, categoryFilter, period),
-        getIncomeTrend(selectedMonth, selectedYear, period),
-        getSavingsTrend(categoryFilter, period),
-        getMonthlyComparison(categoryFilter, period),
-        getCategoryDistribution(selectedMonth, selectedYear, period),
-      ]);
-      setExpenseTrend(et);
-      setIncomeTrend(it);
-      setSavingsTrend(st);
-      setComparison(mc);
-      setDistribution(cd);
+      const data = await getUnifiedData(dateRange.from, dateRange.to, categoryFilter);
+      setReport(data.report);
+      setExpenseTrend(data.expenseTrend);
+      setIncomeTrend(data.incomeTrend);
+      setDistribution(data.categoryDistribution);
     } catch (err) {
       console.error("Analytics load error", err);
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear, categoryFilter, period]);
+  }, [dateRange, categoryFilter]);
 
   useEffect(() => {
     fetchData();
@@ -150,40 +184,40 @@ export function AnalyticsClient() {
 
   const isFiltered = categoryFilter !== "all";
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Analytics" showMonthPicker />
-        <div className="grid gap-6 lg:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-[360px] rounded-2xl bg-muted/65 animate-pulse border border-border/40" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Analytics"
-        description="Visual insights into your income and expenses"
-        showMonthPicker={period === "monthly"} // Hide standard month picker in yearly view
+        title="Analytics & Reports"
+        description={report?.periodLabel || "Loading report data..."}
       />
 
       {/* Toggles and Filter Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 bg-card rounded-2xl border border-border/50 shadow-xs">
+      <div className="flex flex-col gap-4 p-4 bg-card rounded-2xl border border-border/50 shadow-xs">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Period Toggle */}
-          <Tabs
-            value={period}
-            onValueChange={(v) => setPeriod(v as "monthly" | "yearly")}
-          >
-            <TabsList className="bg-muted/50 p-1">
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              <TabsTrigger value="yearly">Yearly</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* Period Preset Select */}
+          <Select value={preset} onValueChange={(val) => setPreset(val as PeriodPreset)}>
+            <SelectTrigger className="w-48 h-9">
+              <SelectValue placeholder="Select Period" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Today">Today</SelectItem>
+              <SelectItem value="Yesterday">Yesterday</SelectItem>
+              <SelectItem value="Last 7 Days">Last 7 Days</SelectItem>
+              <SelectItem value="Last 30 Days">Last 30 Days</SelectItem>
+              <SelectItem value="This Month">This Month</SelectItem>
+              <SelectItem value="Last Month">Last Month</SelectItem>
+              <SelectItem value="This Year">This Year</SelectItem>
+              <SelectItem value="Custom">📅 Custom Range</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Custom Date Range Picker */}
+          {preset === "Custom" && (
+            <DateRangePicker 
+              date={customRange} 
+              setDate={setCustomRange} 
+            />
+          )}
 
           {/* Category Filter */}
           <Select value={categoryFilter} onValueChange={(val) => val && setCategoryFilter(val)}>
@@ -200,57 +234,93 @@ export function AnalyticsClient() {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Local Year Select for Yearly View */}
-        {period === "yearly" && (
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            <span className="text-xs font-semibold text-muted-foreground">Active Year:</span>
-            <Select value={String(selectedYear)} onValueChange={(val) => val && setYear(Number(val))}>
-              <SelectTrigger className="h-9 w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 7 }, (_, i) => 2024 + i).map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
+
+      {/* Warning banner when filtering by category */}
+      {isFiltered && (
+        <div className="flex items-center gap-3 p-4 rounded-xl border border-amber-500/10 bg-amber-50/50 dark:bg-amber-950/10 text-xs text-amber-600 dark:text-amber-500">
+          <Info className="w-4 h-4 shrink-0" />
+          <p>
+            You are viewing the report specifically for <strong>{categoryFilter}</strong>.
+            Income-related metrics are hidden or set to zero.
+          </p>
+        </div>
+      )}
+
+      {/* Stat Cards */}
+      {loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-[120px] rounded-2xl bg-muted/60 animate-pulse border border-border/40" />
+          ))}
+        </div>
+      ) : report ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            label="Income"
+            value={formatCurrency(report.income)}
+            icon={TrendingUp}
+            variant={isFiltered ? "default" : "success"}
+            index="01"
+          />
+          <StatCard
+            label="Expenses"
+            value={formatCurrency(report.expenses)}
+            icon={TrendingDown}
+            variant="danger"
+            index="02"
+          />
+          <StatCard
+            label="Savings"
+            value={formatCurrency(report.savings)}
+            icon={PiggyBank}
+            variant={isFiltered ? "default" : report.savings >= 0 ? "success" : "danger"}
+            index="03"
+          />
+          <StatCard
+            label="Net Balance"
+            value={formatCurrency(report.netBalance)}
+            icon={Wallet}
+            variant={isFiltered ? "default" : report.netBalance >= 0 ? "success" : "danger"}
+            index="04"
+          />
+        </div>
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Expense Trend */}
         <ChartCard
           title={
             isFiltered
-              ? `${categoryFilter} Expense Trend (${period === "monthly" ? "Daily" : "Monthly"})`
-              : `Expense Trend (${period === "monthly" ? "Daily" : "Monthly"})`
+              ? `${categoryFilter} Expense Trend`
+              : `Expense Trend`
           }
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={expenseTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-              <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-              <Tooltip content={<CustomTooltip />} />
-              <Line
-                name="Expenses"
-                type="monotone"
-                dataKey="value"
-                stroke="oklch(0.60 0.18 25)"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {loading ? (
+             <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={expenseTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
+                <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
+                <Tooltip content={<CustomTooltip />} />
+                <Line
+                  name="Expenses"
+                  type="monotone"
+                  dataKey="value"
+                  stroke="oklch(0.60 0.18 25)"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </ChartCard>
 
         {/* Income Trend */}
-        <ChartCard title={`Income Trend (${period === "monthly" ? "Daily" : "Monthly"})`}>
+        <ChartCard title="Income Trend">
           {isFiltered ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-2 bg-muted/10 rounded-xl border border-dashed border-border">
               <Info className="w-6 h-6 text-muted-foreground" />
@@ -258,6 +328,8 @@ export function AnalyticsClient() {
                 Income trend is hidden when filtering by expense category
               </p>
             </div>
+          ) : loading ? (
+            <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={incomeTrend}>
@@ -279,73 +351,8 @@ export function AnalyticsClient() {
           )}
         </ChartCard>
 
-        {/* Savings Trend */}
-        <ChartCard
-          title={
-            isFiltered
-              ? `Savings after ${categoryFilter} (${period === "monthly" ? "6 Months" : "5 Years"})`
-              : `Savings Trend (${period === "monthly" ? "6 Months" : "5 Years"})`
-          }
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={savingsTrend}>
-              <defs>
-                <linearGradient id="colorSavings" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="oklch(0.65 0.16 260)" stopOpacity={0.15}/>
-                  <stop offset="95%" stopColor="oklch(0.65 0.16 260)" stopOpacity={0.01}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-              <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                name="Savings"
-                type="monotone"
-                dataKey="value"
-                stroke="oklch(0.65 0.16 260)"
-                fill="url(#colorSavings)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        {/* Monthly / Yearly Comparison */}
-        <ChartCard
-          title={
-            isFiltered
-              ? `Income vs ${categoryFilter} Expenses (${period === "monthly" ? "6 Months" : "5 Years"})`
-              : `Income vs Expenses (${period === "monthly" ? "6 Months" : "5 Years"})`
-          }
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={comparison}>
-              <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-              <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              {!isFiltered && (
-                <Bar
-                  name="Income"
-                  dataKey="income"
-                  fill="oklch(0.65 0.15 140)"
-                  radius={[4, 4, 0, 0]}
-                />
-              )}
-              <Bar
-                name={isFiltered ? `${categoryFilter} Expenses` : "Expenses"}
-                dataKey="expenses"
-                fill="oklch(0.60 0.18 25)"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
         {/* Category Distribution */}
-        <ChartCard title={`Expense by Category (${period === "monthly" ? "Monthly" : "Yearly"})`}>
+        <ChartCard title="Expense by Category">
           {isFiltered ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-6 gap-2 bg-muted/10 rounded-xl border border-dashed border-border">
               <BarChart2 className="w-6 h-6 text-muted-foreground" />
@@ -353,6 +360,8 @@ export function AnalyticsClient() {
                 Distribution breakdown is only visible when viewing all categories
               </p>
             </div>
+          ) : loading ? (
+            <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
           ) : distribution.length === 0 ? (
             <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
               No expense data available for this selection

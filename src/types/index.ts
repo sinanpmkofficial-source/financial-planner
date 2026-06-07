@@ -67,6 +67,12 @@ export interface DashboardSummary {
   totalLent: number;
   budgetUsedPercentage: number;
   stats: UserStats;
+  todayIncome?: number;
+  todayExpenses?: number;
+  weekIncome?: number;
+  weekExpenses?: number;
+  yearIncome?: number;
+  yearExpenses?: number;
 }
 
 export interface ReportData {
@@ -87,11 +93,3 @@ export interface CategoryDistribution {
   amount: number;
   color: string;
 }
-
-export interface MonthlyComparison {
-  month: string;
-  income: number;
-  expenses: number;
-}
-
-export type ReportPeriod = "daily" | "weekly" | "monthly" | "yearly";
