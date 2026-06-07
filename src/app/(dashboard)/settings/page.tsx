@@ -378,7 +378,7 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle>{editingCategory ? "Edit Category" : "Add Custom Category"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSaveCategory} className="space-y-5">
+          <form onSubmit={handleSaveCategory} className="space-y-5 w-full min-w-0">
             {/* Category Name */}
             <div className="space-y-2">
               <Label htmlFor="cat-name">Category Name</Label>
@@ -399,7 +399,7 @@ export default function SettingsPage() {
             {/* Icon (Emoji) */}
             <div className="space-y-2">
               <Label>Select Emoji Icon</Label>
-              <div className="flex gap-2">
+              <div className="flex gap-2 w-full min-w-0">
                 <Input
                   className="w-12 text-center text-lg h-9 px-1"
                   value={catIcon}

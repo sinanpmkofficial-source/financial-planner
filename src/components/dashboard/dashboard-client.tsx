@@ -96,6 +96,15 @@ export function DashboardClient() {
     return { totalIncome, totalExpenses };
   }, [chartData]);
 
+  const budgetSummary = useMemo(() => {
+    const totalLimit = budgets.reduce((sum, b) => sum + b.amount, 0);
+    const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+    const totalLeft = Math.max(0, totalLimit - totalSpent);
+    const percentageLeft = totalLimit > 0 ? Math.round((totalLeft / totalLimit) * 100) : 0;
+    const percentageSpent = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
+    return { totalLimit, totalSpent, totalLeft, percentageLeft, percentageSpent };
+  }, [budgets]);
+
   const fetchData = useCallback(async () => {
     // Fetch Summary independently
     setSummaryLoading(true);
@@ -482,7 +491,7 @@ export function DashboardClient() {
 
       {/* Secondary Row: Credit/Debt, Budget, and Gamification */}
       <div className={cn("grid gap-6", showGamification ? "md:grid-cols-3" : "md:grid-cols-2")}>
-        {/* Credit & Debt Card */}
+        {/* Budget Status Card */}
         <div
           className={cn(
             "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
@@ -495,6 +504,159 @@ export function DashboardClient() {
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
                 01
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Monthly Budgets
+              </span>
+            </div>
+            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+              <Target className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Ticket Cut / Dashed Line Separator */}
+          <div className="relative flex items-center w-full">
+            {/* Left Notch */}
+            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
+            {/* Dashed Line */}
+            <div className="w-full border-t border-dashed border-foreground/15" />
+            {/* Right Notch */}
+            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
+          </div>
+
+          {/* Bottom Section */}
+          <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+            {budgetsLoading ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <div className="h-3 w-20 bg-muted animate-pulse rounded-sm" />
+                    <div className="h-3 w-16 bg-muted animate-pulse rounded-sm" />
+                  </div>
+                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
+                    <div className="h-3 w-14 bg-muted animate-pulse rounded-sm" />
+                  </div>
+                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                </div>
+              </div>
+            ) : budgets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-4 text-center gap-1.5">
+                <p className="text-xs text-muted-foreground font-medium">
+                  No budgets configured for this month.
+                </p>
+                <a
+                  href="/budgets"
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  Configure Budgets <ArrowRight className="w-3 h-3" />
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Total Left Summary */}
+                <div className="pb-3 border-b border-border/40">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Total Budget Left
+                  </p>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-extrabold text-foreground">
+                      {formatCurrency(budgetSummary.totalLeft)}
+                    </span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      / {formatCurrency(budgetSummary.totalLimit)}
+                    </span>
+                    <span className={cn(
+                      "text-xs font-bold px-1.5 py-0.5 rounded-md ml-auto",
+                      budgetSummary.percentageLeft > 20
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"
+                        : budgetSummary.percentageLeft > 0
+                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-500"
+                        : "bg-rose-500/10 text-rose-600 dark:text-rose-500"
+                    )}>
+                      {budgetSummary.percentageLeft}% left
+                    </span>
+                  </div>
+                  <Progress 
+                    value={budgetSummary.percentageSpent} 
+                    className={cn(
+                      "h-1.5 bg-muted mt-2",
+                      budgetSummary.percentageSpent >= 100 && "[&>div]:bg-rose-500",
+                      budgetSummary.percentageSpent >= 80 && budgetSummary.percentageSpent < 100 && "[&>div]:bg-amber-500",
+                      budgetSummary.percentageSpent < 80 && "[&>div]:bg-emerald-500"
+                    )}
+                  />
+                </div>
+
+                {/* Individual Category Budgets */}
+                <div className="space-y-3.5 max-h-[140px] overflow-y-auto pr-1 scrollbar-thin">
+                  {budgets.map((b) => {
+                    const percentage = Math.min(b.percentage, 100);
+                    const isWarning = b.percentage >= 80 && b.percentage < 100;
+                    const isDanger = b.percentage >= 100;
+                    return (
+                      <div key={b._id} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="flex items-center gap-1.5 font-medium text-foreground">
+                            <span className="text-sm">
+                              {CATEGORY_ICONS[b.category as ExpenseCategory] || "📌"}
+                            </span>
+                            <span>{b.category}</span>
+                          </span>
+                          <span className="text-muted-foreground font-mono text-[11px]">
+                            <span className="font-semibold text-foreground">{formatCurrency(b.spent)}</span>
+                            {" / "}
+                            <span>{formatCurrency(b.amount)}</span>
+                          </span>
+                        </div>
+                        <div className="relative pt-1">
+                          <Progress
+                            value={percentage}
+                            className={cn(
+                              "h-1.5 bg-muted",
+                              isDanger && "[&>div]:bg-rose-500",
+                              isWarning && "[&>div]:bg-amber-500",
+                              !isDanger && !isWarning && "[&>div]:bg-emerald-500"
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "absolute right-0 top-[-10px] text-[9px] font-bold font-mono",
+                              isDanger
+                                ? "text-rose-600 dark:text-rose-400"
+                                : isWarning
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-emerald-600 dark:text-emerald-400"
+                            )}
+                          >
+                            {b.percentage}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Credit & Debt Card */}
+        <div
+          className={cn(
+            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+          )}
+        >
+          {/* Top Section */}
+          <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+                02
               </span>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Credit & Debts
@@ -569,122 +731,6 @@ export function DashboardClient() {
                   </div>
                 </div>
               </>
-            )}
-          </div>
-        </div>
-
-        {/* Budget Status Card */}
-        <div
-          className={cn(
-            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
-            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
-            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
-          )}
-        >
-          {/* Top Section */}
-          <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
-                02
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Monthly Budgets
-              </span>
-            </div>
-            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
-              <Target className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Ticket Cut / Dashed Line Separator */}
-          <div className="relative flex items-center w-full">
-            {/* Left Notch */}
-            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-            {/* Dashed Line */}
-            <div className="w-full border-t border-dashed border-foreground/15" />
-            {/* Right Notch */}
-            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
-          </div>
-
-          {/* Bottom Section */}
-          <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-            {budgetsLoading ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <div className="h-3 w-20 bg-muted animate-pulse rounded-sm" />
-                    <div className="h-3 w-16 bg-muted animate-pulse rounded-sm" />
-                  </div>
-                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
-                    <div className="h-3 w-14 bg-muted animate-pulse rounded-sm" />
-                  </div>
-                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
-                </div>
-              </div>
-            ) : budgets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-4 text-center gap-1.5">
-                <p className="text-xs text-muted-foreground font-medium">
-                  No budgets configured for this month.
-                </p>
-                <a
-                  href="/budgets"
-                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
-                >
-                  Configure Budgets <ArrowRight className="w-3 h-3" />
-                </a>
-              </div>
-            ) : (
-              <div className="space-y-3.5 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
-                {budgets.map((b) => {
-                  const percentage = Math.min(b.percentage, 100);
-                  const isWarning = b.percentage >= 80 && b.percentage < 100;
-                  const isDanger = b.percentage >= 100;
-                  return (
-                    <div key={b._id} className="space-y-1">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="flex items-center gap-1.5 font-medium text-foreground">
-                          <span className="text-sm">
-                            {CATEGORY_ICONS[b.category as ExpenseCategory] || "📌"}
-                          </span>
-                          <span>{b.category}</span>
-                        </span>
-                        <span className="text-muted-foreground font-mono text-[11px]">
-                          <span className="font-semibold text-foreground">{formatCurrency(b.spent)}</span>
-                          {" / "}
-                          <span>{formatCurrency(b.amount)}</span>
-                        </span>
-                      </div>
-                      <div className="relative pt-1">
-                        <Progress
-                          value={percentage}
-                          className={cn(
-                            "h-1.5 bg-muted",
-                            isDanger && "[&>div]:bg-rose-500",
-                            isWarning && "[&>div]:bg-amber-500",
-                            !isDanger && !isWarning && "[&>div]:bg-emerald-500"
-                          )}
-                        />
-                        <span
-                          className={cn(
-                            "absolute right-0 top-[-10px] text-[9px] font-bold font-mono",
-                            isDanger
-                              ? "text-rose-600 dark:text-rose-400"
-                              : isWarning
-                              ? "text-amber-600 dark:text-amber-400"
-                              : "text-emerald-600 dark:text-emerald-400"
-                          )}
-                        >
-                          {b.percentage}%
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
             )}
           </div>
         </div>
