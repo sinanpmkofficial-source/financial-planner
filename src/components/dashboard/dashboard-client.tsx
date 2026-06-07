@@ -17,6 +17,7 @@ import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PageHeader } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Wallet,
   TrendingUp,
@@ -42,9 +43,10 @@ import type { DashboardSummary, Expense, Income, BudgetWithSpent } from "@/types
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload, label }: any) {
   if (active && payload && payload.length) {
+    const formattedLabel = typeof label === 'number' ? `Day ${label}` : label;
     return (
       <div className="bg-popover border border-border rounded-xl px-3 py-2.5 shadow-md text-xs">
-        <p className="text-muted-foreground mb-1.5 font-medium">Day {label}</p>
+        <p className="text-muted-foreground mb-1.5 font-medium">{formattedLabel}</p>
         {payload.map((entry: { name: string; value: number; color: string }, i: number) => (
           <p key={i} className="text-sm font-semibold" style={{ color: entry.color }}>
             {entry.name}: {formatCurrency(entry.value)}
@@ -65,18 +67,18 @@ export function DashboardClient() {
   const [settings, setSettings] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [graphPeriod, setGraphPeriod] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  const [chartLoading, setChartLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [s, e, i, b, setts, et, it] = await Promise.all([
+      const [s, e, i, b, setts] = await Promise.all([
         getDashboardSummary(selectedMonth, selectedYear),
         getRecentExpenses(5),
         getRecentIncomes(5),
         getBudgetsWithSpent(selectedMonth, selectedYear),
         getUserSettings(),
-        getExpenseTrend(selectedMonth, selectedYear),
-        getIncomeTrend(selectedMonth, selectedYear),
       ]);
       
       setSummary(s);
@@ -84,14 +86,6 @@ export function DashboardClient() {
       setIncomes(i);
       setBudgets(b);
       setSettings(setts);
-
-      // Merge trends for Composed Chart
-      const merged = et.map((item, idx) => ({
-        day: Number(item.label),
-        expenses: item.value,
-        income: it[idx]?.value ?? 0,
-      }));
-      setChartData(merged);
     } catch (err) {
       console.error("Dashboard data load error", err);
     } finally {
@@ -99,9 +93,34 @@ export function DashboardClient() {
     }
   }, [selectedMonth, selectedYear]);
 
+  const fetchTrendData = useCallback(async () => {
+    setChartLoading(true);
+    try {
+      const [et, it] = await Promise.all([
+        getExpenseTrend(selectedMonth, selectedYear, undefined, graphPeriod),
+        getIncomeTrend(selectedMonth, selectedYear, graphPeriod),
+      ]);
+
+      const merged = et.map((item, idx) => ({
+        label: item.label,
+        expenses: item.value,
+        income: it[idx]?.value ?? 0,
+      }));
+      setChartData(merged);
+    } catch (err) {
+      console.error("Dashboard trend load error", err);
+    } finally {
+      setChartLoading(false);
+    }
+  }, [selectedMonth, selectedYear, graphPeriod]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    fetchTrendData();
+  }, [fetchTrendData]);
 
   if (loading || !summary) {
     return (
@@ -133,25 +152,41 @@ export function DashboardClient() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Composed Cash Flow Chart */}
         <Card className="lg:col-span-2 border border-border/50 shadow-xs rounded-2xl overflow-hidden bg-card">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-3 border-b border-border/40">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-base font-semibold text-foreground">Cash Flow</CardTitle>
-                <CardDescription>Daily comparison of income and expenses</CardDescription>
+                <CardDescription>Comparison of income and expenses</CardDescription>
               </div>
-              <div className="flex items-center gap-3.5 text-xs font-medium">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-muted-foreground">Income</span>
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Legend */}
+                <div className="flex items-center gap-3.5 text-xs font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="text-muted-foreground">Income</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" />
+                    <span className="text-muted-foreground">Expenses</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  <span className="text-muted-foreground">Expenses</span>
-                </div>
+
+                {/* Period Selector Tabs */}
+                <Tabs
+                  value={graphPeriod}
+                  onValueChange={(v) => setGraphPeriod(v as "weekly" | "monthly" | "yearly")}
+                  className="w-full sm:w-auto"
+                >
+                  <TabsList className="bg-muted/50 p-0.5 h-8 grid grid-cols-3 w-full sm:w-auto sm:inline-flex">
+                    <TabsTrigger value="weekly" className="text-xs h-7 px-2.5">Week</TabsTrigger>
+                    <TabsTrigger value="monthly" className="text-xs h-7 px-2.5">Month</TabsTrigger>
+                    <TabsTrigger value="yearly" className="text-xs h-7 px-2.5">Year</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-2">
+          <CardContent className={cn("pt-4 transition-opacity duration-200", chartLoading && "opacity-55")}>
             <div className="h-[260px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
@@ -166,7 +201,7 @@ export function DashboardClient() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-                  <XAxis dataKey="day" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
                   <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
                   <Tooltip content={<CustomTooltip />} />
                   <Area

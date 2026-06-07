@@ -101,13 +101,37 @@ export async function getExpenseTrend(
   month: number,
   year: number,
   category?: string,
-  period: "monthly" | "yearly" = "monthly"
+  period: "weekly" | "monthly" | "yearly" = "monthly"
 ): Promise<ChartDataPoint[]> {
   await dbConnect();
 
   const isCategoryFilter = category && category.toLowerCase() !== "all";
 
-  if (period === "monthly") {
+  if (period === "weekly") {
+    const now = new Date();
+    const start = startOfWeek(now, { weekStartsOn: 1 });
+    const end = endOfWeek(now, { weekStartsOn: 1 });
+    const days = eachDayOfInterval({ start, end });
+
+    const matchQuery: any = { date: { $gte: start, $lte: end } };
+    if (isCategoryFilter) {
+      matchQuery.category = category;
+    }
+
+    const expenses = await Expense.find(matchQuery).lean();
+
+    return days.map((day) => {
+      const dayStart = startOfDay(day);
+      const dayEnd = endOfDay(day);
+      const total = expenses
+        .filter((e) => {
+          const d = new Date(e.date);
+          return d >= dayStart && d <= dayEnd;
+        })
+        .reduce((sum, e) => sum + e.amount, 0);
+      return { label: format(day, "EEE"), value: total };
+    });
+  } else if (period === "monthly") {
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(new Date(year, month - 1));
     const days = eachDayOfInterval({ start, end });
@@ -160,11 +184,32 @@ export async function getExpenseTrend(
 export async function getIncomeTrend(
   month: number,
   year: number,
-  period: "monthly" | "yearly" = "monthly"
+  period: "weekly" | "monthly" | "yearly" = "monthly"
 ): Promise<ChartDataPoint[]> {
   await dbConnect();
 
-  if (period === "monthly") {
+  if (period === "weekly") {
+    const now = new Date();
+    const start = startOfWeek(now, { weekStartsOn: 1 });
+    const end = endOfWeek(now, { weekStartsOn: 1 });
+    const days = eachDayOfInterval({ start, end });
+
+    const incomes = await Income.find({
+      date: { $gte: start, $lte: end },
+    }).lean();
+
+    return days.map((day) => {
+      const dayStart = startOfDay(day);
+      const dayEnd = endOfDay(day);
+      const total = incomes
+        .filter((i) => {
+          const d = new Date(i.date);
+          return d >= dayStart && d <= dayEnd;
+        })
+        .reduce((sum, i) => sum + i.amount, 0);
+      return { label: format(day, "EEE"), value: total };
+    });
+  } else if (period === "monthly") {
     const start = startOfMonth(new Date(year, month - 1));
     const end = endOfMonth(new Date(year, month - 1));
     const days = eachDayOfInterval({ start, end });
