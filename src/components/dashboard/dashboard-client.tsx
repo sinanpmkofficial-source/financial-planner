@@ -99,7 +99,7 @@ export function DashboardClient() {
   const fetchData = useCallback(async () => {
     // Fetch Summary independently
     setSummaryLoading(true);
-    getDashboardSummary()
+    getDashboardSummary(undefined, undefined, new Date().getTimezoneOffset())
       .then((s) => {
         setSummary(s);
         setSummaryLoading(false);

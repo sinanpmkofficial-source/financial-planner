@@ -26,6 +26,7 @@ import type {
   CategoryDistribution,
 } from "@/types";
 import { CATEGORY_COLORS, type ExpenseCategory } from "@/constants";
+import { utcToLocal, localToUtc } from "@/lib/date-utils";
 
 function formatPeriodLabel(start: Date, end: Date): string {
   if (isSameDay(start, end)) {
@@ -61,8 +62,11 @@ export async function getUnifiedData(
 }> {
   await dbConnect();
 
-  const start = startOfDay(from);
-  const end = endOfDay(to);
+  const localStart = startOfDay(utcToLocal(from));
+  const localEnd = endOfDay(utcToLocal(to));
+
+  const start = localToUtc(localStart);
+  const end = localToUtc(localEnd);
 
   const isCategoryFilter = category && category.toLowerCase() !== "all";
 
@@ -96,14 +100,14 @@ export async function getUnifiedData(
     expenses,
     savings: income - expenses,
     netBalance: income - expenses,
-    periodLabel: formatPeriodLabel(start, end),
+    periodLabel: formatPeriodLabel(localStart, localEnd),
   };
 
   // 2. Expense Trend
   const expensesList = await Expense.find(expenseMatch).lean();
   const incomesList = await Income.find(incomeMatch).lean();
 
-  const days = eachDayOfInterval({ start, end });
+  const days = eachDayOfInterval({ start: localStart, end: localEnd });
   
   const diffDays = days.length;
   
@@ -115,14 +119,14 @@ export async function getUnifiedData(
     const hours = Array.from({ length: 24 }, (_, i) => i);
     expenseTrend = hours.map((h) => {
       const total = expensesList
-        .filter((e) => new Date(e.date).getHours() === h)
+        .filter((e) => utcToLocal(e.date).getHours() === h)
         .reduce((sum, e) => sum + e.amount, 0);
       return { label: `${h.toString().padStart(2, "0")}:00`, value: total };
     });
 
     incomeTrend = hours.map((h) => {
       const total = incomesList
-        .filter((i) => new Date(i.date).getHours() === h)
+        .filter((i) => utcToLocal(i.date).getHours() === h)
         .reduce((sum, i) => sum + i.amount, 0);
       return { label: `${h.toString().padStart(2, "0")}:00`, value: total };
     });
@@ -132,7 +136,7 @@ export async function getUnifiedData(
       const dEnd = endOfDay(day);
       const total = expensesList
         .filter((e) => {
-          const d = new Date(e.date);
+          const d = utcToLocal(e.date);
           return d >= dStart && d <= dEnd;
         })
         .reduce((sum, e) => sum + e.amount, 0);
@@ -144,7 +148,7 @@ export async function getUnifiedData(
       const dEnd = endOfDay(day);
       const total = incomesList
         .filter((i) => {
-          const d = new Date(i.date);
+          const d = utcToLocal(i.date);
           return d >= dStart && d <= dEnd;
         })
         .reduce((sum, i) => sum + i.amount, 0);
@@ -152,13 +156,13 @@ export async function getUnifiedData(
     });
   } else {
     // Group by month
-    const months = eachMonthOfInterval({ start, end });
+    const months = eachMonthOfInterval({ start: localStart, end: localEnd });
     expenseTrend = months.map((m) => {
       const mStart = startOfMonth(m);
       const mEnd = endOfMonth(m);
       const total = expensesList
         .filter((e) => {
-          const d = new Date(e.date);
+          const d = utcToLocal(e.date);
           return d >= mStart && d <= mEnd;
         })
         .reduce((sum, e) => sum + e.amount, 0);
@@ -170,7 +174,7 @@ export async function getUnifiedData(
       const mEnd = endOfMonth(m);
       const total = incomesList
         .filter((i) => {
-          const d = new Date(i.date);
+          const d = utcToLocal(i.date);
           return d >= mStart && d <= mEnd;
         })
         .reduce((sum, i) => sum + i.amount, 0);
