@@ -168,7 +168,7 @@ export function DashboardClient() {
         end = endOfYear(now);
       }
 
-      const data = await getUnifiedData(start, end);
+      const data = await getUnifiedData(start, end, undefined, new Date().getTimezoneOffset());
 
       // Merge trends for Composed Chart
       const merged = data.expenseTrend.map((item, idx) => ({

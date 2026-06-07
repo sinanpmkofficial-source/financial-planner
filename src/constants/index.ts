@@ -14,14 +14,14 @@ export const EXPENSE_CATEGORIES = [
 export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
-  Food: "🍽️",
-  Travel: "✈️",
-  Rent: "🏠",
-  Shopping: "🛍️",
-  Bills: "📄",
-  Health: "💊",
-  Education: "📚",
-  Other: "📌",
+  Food: "Utensils",
+  Travel: "Plane",
+  Rent: "Home",
+  Shopping: "ShoppingBag",
+  Bills: "Receipt",
+  Health: "HeartPulse",
+  Education: "GraduationCap",
+  Other: "FolderOpen",
 };
 
 export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {

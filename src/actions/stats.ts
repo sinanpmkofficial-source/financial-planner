@@ -44,9 +44,7 @@ export async function getDashboardSummary(
   timezoneOffset?: number
 ): Promise<DashboardSummary> {
   await dbConnect();
-  
-  console.log("hi");
-  
+
   const clientNow = getClientNow(timezoneOffset);
   const currentMonth = month ?? (clientNow.getMonth() + 1);
   const currentYear = year ?? clientNow.getFullYear();
@@ -127,7 +125,6 @@ export async function getDashboardSummary(
   
   const todayIncome = todayIncomeAgg[0]?.total ?? 0;
   const todayExpenses = todayExpenseAgg[0]?.total ?? 0;
-  console.log(todayExpenseAgg)
   const weekIncome = weekIncomeAgg[0]?.total ?? 0;
   const weekExpenses = weekExpenseAgg[0]?.total ?? 0;
 
@@ -148,8 +145,6 @@ export async function getDashboardSummary(
   );
   const budgetUsedPercentage =
     totalBudget > 0 ? Math.round((monthlyExpenses / totalBudget) * 100) : 0;
-
-console.log(todayExpenses);
 
 
   return {

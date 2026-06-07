@@ -53,7 +53,8 @@ function formatPeriodLabel(start: Date, end: Date): string {
 export async function getUnifiedData(
   from: Date,
   to: Date,
-  category?: string
+  category?: string,
+  timezoneOffset?: number
 ): Promise<{
   report: ReportData;
   expenseTrend: ChartDataPoint[];
@@ -62,8 +63,12 @@ export async function getUnifiedData(
 }> {
   await dbConnect();
 
-  const localStart = startOfDay(utcToLocal(from));
-  const localEnd = endOfDay(utcToLocal(to));
+  const offset = timezoneOffset ?? 0;
+  const shiftedFrom = new Date(from.getTime() - offset * 60 * 1000);
+  const shiftedTo = new Date(to.getTime() - offset * 60 * 1000);
+
+  const localStart = startOfDay(utcToLocal(shiftedFrom));
+  const localEnd = endOfDay(utcToLocal(shiftedTo));
 
   const start = localToUtc(localStart);
   const end = localToUtc(localEnd);

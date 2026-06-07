@@ -81,8 +81,18 @@ export function BudgetsClient() {
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-32 rounded-xl bg-muted animate-pulse" />
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="p-5 rounded-xl border border-border/10 bg-card animate-pulse space-y-3.5 shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-muted" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-3 w-16 bg-muted rounded-sm" />
+                  <div className="h-2.5 w-24 bg-muted rounded-sm" />
+                </div>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full" />
+              <div className="h-2.5 w-16 bg-muted rounded-sm" />
+            </div>
           ))}
         </div>
       ) : budgets.length === 0 ? (

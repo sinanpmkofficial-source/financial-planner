@@ -159,7 +159,12 @@ export function AnalyticsClient() {
     
     setLoading(true);
     try {
-      const data = await getUnifiedData(dateRange.from, dateRange.to, categoryFilter);
+      const data = await getUnifiedData(
+        dateRange.from,
+        dateRange.to,
+        categoryFilter,
+        new Date().getTimezoneOffset()
+      );
       setReport(data.report);
       setExpenseTrend(data.expenseTrend);
       setIncomeTrend(data.incomeTrend);

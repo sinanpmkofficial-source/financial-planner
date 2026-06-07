@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/format";
-import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
+import { type ExpenseCategory } from "@/constants";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import type { BudgetWithSpent } from "@/types";
 import { AlertTriangle } from "lucide-react";
 
@@ -53,9 +54,7 @@ export function BudgetAlerts({ budgets, loading = false }: BudgetAlertsProps) {
           <div key={b._id} className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm">
-                  {CATEGORY_ICONS[b.category as ExpenseCategory]}
-                </span>
+                <CategoryIcon name={b.category} className="w-4 h-4 text-foreground" />
                 <span className="text-sm font-medium">{b.category}</span>
               </div>
               <span

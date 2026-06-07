@@ -163,7 +163,29 @@ export default function SettingsPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Settings" description="Loading your preferences..." />
-        <div className="h-64 rounded-xl bg-muted animate-pulse" />
+        <div className="w-48 h-9 bg-muted animate-pulse rounded-lg" />
+        <div className="p-6 rounded-xl border border-border/10 bg-card animate-pulse space-y-4 shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+          <div className="flex justify-between items-center">
+            <div className="space-y-2">
+              <div className="h-5 w-40 bg-muted rounded-sm" />
+              <div className="h-3.5 w-64 bg-muted rounded-sm" />
+            </div>
+            <div className="h-9 w-28 bg-muted rounded-lg" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pt-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/5 bg-muted/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-muted" />
+                  <div className="space-y-2">
+                    <div className="h-3.5 w-16 bg-muted rounded-sm" />
+                    <div className="h-2 w-12 bg-muted rounded-sm" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -184,7 +206,7 @@ export default function SettingsPage() {
         {/* Categories Tab */}
         <TabsContent value="categories" className="space-y-4 outline-none">
           <Card className="border border-border/50 shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
               <div>
                 <CardTitle className="text-lg font-semibold">Expense Categories</CardTitle>
                 <CardDescription>
@@ -384,7 +406,7 @@ export default function SettingsPage() {
                   onChange={(e) => setCatIcon(e.target.value)}
                   maxLength={2}
                 />
-                <div className="flex-1 flex items-center overflow-x-auto gap-1.5 p-1 border border-border/40 rounded-lg bg-muted/20 scrollbar-none">
+                <div className="flex-1 min-w-0 flex items-center overflow-x-auto gap-1.5 p-1 border border-border/40 rounded-lg bg-muted/20 scrollbar-none">
                   {EMOJI_PRESETS.map((emoji) => (
                     <button
                       key={emoji}
@@ -405,7 +427,7 @@ export default function SettingsPage() {
             {/* Color Preset */}
             <div className="space-y-2">
               <Label>Label Color</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 gap-2">
                 {COLOR_PRESETS.map((preset) => (
                   <button
                     key={preset.name}

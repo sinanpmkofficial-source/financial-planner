@@ -126,8 +126,17 @@ export function ExpensesClient() {
       {/* List */}
       {loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/10 bg-card animate-pulse shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-muted" />
+                <div className="space-y-1.5">
+                  <div className="h-3.5 w-24 bg-muted rounded-sm" />
+                  <div className="h-3 w-16 bg-muted rounded-sm" />
+                </div>
+              </div>
+              <div className="h-4 w-12 bg-muted rounded-sm" />
+            </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (

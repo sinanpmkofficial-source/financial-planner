@@ -29,14 +29,14 @@ const UserSettingsSchema = new Schema<IUserSettings>(
     categories: {
       type: [CategorySchema],
       default: [
-        { name: "Food", icon: "🍔", color: "hsl(142, 72%, 29%)" },
-        { name: "Travel", icon: "🚗", color: "hsl(217, 91%, 60%)" },
-        { name: "Rent", icon: "🏠", color: "hsl(25, 95%, 53%)" },
-        { name: "Shopping", icon: "🛍️", color: "hsl(325, 90%, 50%)" },
-        { name: "Bills", icon: "⚡", color: "hsl(43, 96%, 50%)" },
-        { name: "Health", icon: "🏥", color: "hsl(0, 84%, 60%)" },
-        { name: "Education", icon: "🎓", color: "hsl(271, 91%, 65%)" },
-        { name: "Other", icon: "📁", color: "hsl(200, 15%, 50%)" }
+        { name: "Food", icon: "Utensils", color: "hsl(142, 72%, 29%)" },
+        { name: "Travel", icon: "Car", color: "hsl(217, 91%, 60%)" },
+        { name: "Rent", icon: "Home", color: "hsl(25, 95%, 53%)" },
+        { name: "Shopping", icon: "ShoppingBag", color: "hsl(325, 90%, 50%)" },
+        { name: "Bills", icon: "Zap", color: "hsl(43, 96%, 50%)" },
+        { name: "Health", icon: "HeartPulse", color: "hsl(0, 84%, 60%)" },
+        { name: "Education", icon: "GraduationCap", color: "hsl(271, 91%, 65%)" },
+        { name: "Other", icon: "FolderOpen", color: "hsl(200, 15%, 50%)" }
       ]
     }
   },
