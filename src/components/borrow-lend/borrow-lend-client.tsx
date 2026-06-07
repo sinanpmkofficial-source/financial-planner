@@ -41,6 +41,9 @@ export function BorrowLendClient() {
     pendingCollections: 0,
     pendingPayments: 0,
   });
+
+  console.log(summary);
+  
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<BorrowLend | undefined>();

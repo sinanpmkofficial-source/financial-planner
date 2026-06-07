@@ -1,7 +1,7 @@
 "use client";
 
 import { useUIStore } from "@/stores/ui-store";
-import { useEffect, useState, startTransition, useCallback } from "react";
+import { useEffect, useState, startTransition, useCallback, useMemo } from "react";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
@@ -19,6 +19,7 @@ import { ExpenseForm } from "@/components/expenses/expense-form";
 import { IncomeForm } from "@/components/income/income-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
 import {
   Wallet,
   TrendingUp,
@@ -84,6 +85,16 @@ export function DashboardClient() {
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
   const [incomeFormOpen, setIncomeFormOpen] = useState(false);
+
+  const periodMetrics = useMemo(() => {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    for (const item of chartData) {
+      totalIncome += item.income || 0;
+      totalExpenses += item.expenses || 0;
+    }
+    return { totalIncome, totalExpenses };
+  }, [chartData]);
 
   const fetchData = useCallback(async () => {
     // Fetch Summary independently
@@ -185,14 +196,17 @@ export function DashboardClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader title="Dashboard" showMonthPicker={false} />
-        <QuickActions
-          onAddExpense={() => setExpenseFormOpen(true)}
-          onAddIncome={() => setIncomeFormOpen(true)}
-          disabled={summaryLoading}
-        />
-      </div>
+      <PageHeader
+        title="Dashboard"
+        showMonthPicker={false}
+        action={
+          <QuickActions
+            onAddExpense={() => setExpenseFormOpen(true)}
+            onAddIncome={() => setIncomeFormOpen(true)}
+            disabled={summaryLoading}
+          />
+        }
+      />
 
       {/* Top Section: Cash Flow Chart & Net Wealth Card */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -255,6 +269,43 @@ export function DashboardClient() {
             </div>
           </CardHeader>
           <CardContent className="pt-2">
+            <div className="grid grid-cols-2 gap-4 px-2 pb-4 border-b border-border/40 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-500">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Period Income
+                  </p>
+                  <p className="text-base sm:text-lg font-bold text-foreground">
+                    {trendLoading ? (
+                      <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
+                    ) : (
+                      formatCurrency(periodMetrics.totalIncome)
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-500">
+                  <TrendingDown className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Period Expenses
+                  </p>
+                  <p className="text-base sm:text-lg font-bold text-foreground">
+                    {trendLoading ? (
+                      <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
+                    ) : (
+                      formatCurrency(periodMetrics.totalExpenses)
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="h-[260px] w-full relative">
               {trendLoading && (
                 <div className="absolute inset-0 bg-card/50 flex items-center justify-center z-10 rounded-2xl">
@@ -557,35 +608,83 @@ export function DashboardClient() {
 
           {/* Bottom Section */}
           <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-            {summaryLoading || !summary ? (
-              <>
-                <div>
-                  <div className="h-6 w-24 bg-muted animate-pulse rounded-md" />
+            {budgetsLoading ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <div className="h-3 w-20 bg-muted animate-pulse rounded-sm" />
+                    <div className="h-3 w-16 bg-muted animate-pulse rounded-sm" />
+                  </div>
+                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
                 </div>
                 <div className="space-y-2">
-                  <div className="h-2 bg-muted animate-pulse rounded-full" />
-                  <div className="h-3 w-48 bg-muted animate-pulse rounded-sm" />
+                  <div className="flex justify-between">
+                    <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
+                    <div className="h-3 w-14 bg-muted animate-pulse rounded-sm" />
+                  </div>
+                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
                 </div>
-              </>
+              </div>
+            ) : budgets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-4 text-center gap-1.5">
+                <p className="text-xs text-muted-foreground font-medium">
+                  No budgets configured for this month.
+                </p>
+                <a
+                  href="/budgets"
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  Configure Budgets <ArrowRight className="w-3 h-3" />
+                </a>
+              </div>
             ) : (
-              <>
-                <div>
-                  <h4 className="text-xl font-bold text-foreground">
-                    {summary.budgetUsedPercentage}% Consumed
-                  </h4>
-                </div>
-                <div className="space-y-2">
-                  <Progress
-                    value={summary.budgetUsedPercentage}
-                    className="h-2 bg-muted"
-                  />
-                  <p className="text-xs text-muted-foreground font-medium">
-                    {summary.budgetUsedPercentage > 90
-                      ? "Careful! You're approaching your overall budget limit."
-                      : "Stretching well. Keep tracking your daily updates."}
-                  </p>
-                </div>
-              </>
+              <div className="space-y-3.5 max-h-[160px] overflow-y-auto pr-1 scrollbar-thin">
+                {budgets.map((b) => {
+                  const percentage = Math.min(b.percentage, 100);
+                  const isWarning = b.percentage >= 80 && b.percentage < 100;
+                  const isDanger = b.percentage >= 100;
+                  return (
+                    <div key={b._id} className="space-y-1">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="flex items-center gap-1.5 font-medium text-foreground">
+                          <span className="text-sm">
+                            {CATEGORY_ICONS[b.category as ExpenseCategory] || "📌"}
+                          </span>
+                          <span>{b.category}</span>
+                        </span>
+                        <span className="text-muted-foreground font-mono text-[11px]">
+                          <span className="font-semibold text-foreground">{formatCurrency(b.spent)}</span>
+                          {" / "}
+                          <span>{formatCurrency(b.amount)}</span>
+                        </span>
+                      </div>
+                      <div className="relative pt-1">
+                        <Progress
+                          value={percentage}
+                          className={cn(
+                            "h-1.5 bg-muted",
+                            isDanger && "[&>div]:bg-rose-500",
+                            isWarning && "[&>div]:bg-amber-500",
+                            !isDanger && !isWarning && "[&>div]:bg-emerald-500"
+                          )}
+                        />
+                        <span
+                          className={cn(
+                            "absolute right-0 top-[-10px] text-[9px] font-bold font-mono",
+                            isDanger
+                              ? "text-rose-600 dark:text-rose-400"
+                              : isWarning
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-emerald-600 dark:text-emerald-400"
+                          )}
+                        >
+                          {b.percentage}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
