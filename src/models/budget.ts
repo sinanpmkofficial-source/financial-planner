@@ -26,5 +26,8 @@ const BudgetSchema = new Schema<IBudget>(
 BudgetSchema.index({ month: 1, year: 1 });
 BudgetSchema.index({ category: 1, month: 1, year: 1 }, { unique: true });
 
-export default mongoose.models.Budget ||
-  mongoose.model<IBudget>("Budget", BudgetSchema);
+if (mongoose.models.Budget) {
+  mongoose.deleteModel("Budget");
+}
+
+export default mongoose.model<IBudget>("Budget", BudgetSchema);

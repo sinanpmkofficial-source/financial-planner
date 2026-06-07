@@ -13,6 +13,7 @@ import { getUserSettings } from "@/actions/settings";
 import { formatCurrency } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -53,14 +54,33 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="border border-border/50 shadow-sm rounded-2xl bg-card">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div
+      className={cn(
+        "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
+        "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
+        "flex flex-col justify-between"
+      )}
+    >
+      {/* Top Title Section */}
+      <div className="pb-3.5 px-5 pt-5 flex items-center justify-between">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      </div>
+
+      {/* Ticket Cut / Dashed Line Separator */}
+      <div className="relative flex items-center w-full">
+        {/* Left Notch */}
+        <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
+        {/* Dashed Line */}
+        <div className="w-full border-t border-dashed border-foreground/15" />
+        {/* Right Notch */}
+        <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
+      </div>
+
+      {/* Content Section */}
+      <div className="p-5">
         <div className="h-[280px] w-full">{children}</div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

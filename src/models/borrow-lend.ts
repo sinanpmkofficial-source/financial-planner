@@ -3,6 +3,7 @@ import mongoose, { Schema, type Document } from "mongoose";
 export interface IBorrowLend extends Document {
   personName: string;
   amount: number;
+  paidAmount: number;
   type: "borrowed" | "lent";
   date: Date;
   dueDate?: Date;
@@ -16,6 +17,7 @@ const BorrowLendSchema = new Schema<IBorrowLend>(
   {
     personName: { type: String, required: true },
     amount: { type: Number, required: true, min: 0 },
+    paidAmount: { type: Number, required: true, default: 0, min: 0 },
     type: {
       type: String,
       required: true,
@@ -36,5 +38,8 @@ const BorrowLendSchema = new Schema<IBorrowLend>(
 
 BorrowLendSchema.index({ status: 1, type: 1 });
 
-export default mongoose.models.BorrowLend ||
-  mongoose.model<IBorrowLend>("BorrowLend", BorrowLendSchema);
+if (mongoose.models.BorrowLend) {
+  mongoose.deleteModel("BorrowLend");
+}
+
+export default mongoose.model<IBorrowLend>("BorrowLend", BorrowLendSchema);

@@ -169,24 +169,28 @@ export function ReportsClient() {
             value={formatCurrency(report.income)}
             icon={TrendingUp}
             variant={isFiltered ? "default" : "success"}
+            index="01"
           />
           <StatCard
             label="Expenses"
             value={formatCurrency(report.expenses)}
             icon={TrendingDown}
             variant="danger"
+            index="02"
           />
           <StatCard
             label="Savings"
             value={formatCurrency(report.savings)}
             icon={PiggyBank}
             variant={isFiltered ? "default" : report.savings >= 0 ? "success" : "danger"}
+            index="03"
           />
           <StatCard
             label="Net Balance"
             value={formatCurrency(report.netBalance)}
             icon={Wallet}
             variant={isFiltered ? "default" : report.netBalance >= 0 ? "success" : "danger"}
+            index="04"
           />
         </div>
       ) : null}

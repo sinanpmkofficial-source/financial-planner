@@ -26,5 +26,8 @@ const ExpenseSchema = new Schema<IExpense>(
 ExpenseSchema.index({ date: -1 });
 ExpenseSchema.index({ category: 1, date: -1 });
 
-export default mongoose.models.Expense ||
-  mongoose.model<IExpense>("Expense", ExpenseSchema);
+if (mongoose.models.Expense) {
+  mongoose.deleteModel("Expense");
+}
+
+export default mongoose.model<IExpense>("Expense", ExpenseSchema);

@@ -82,6 +82,26 @@ export function BudgetForm({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (open) {
+      reset(
+        budget
+          ? {
+              category: budget.category,
+              amount: budget.amount,
+              month: budget.month,
+              year: budget.year,
+            }
+          : {
+              category: undefined,
+              amount: undefined,
+              month: selectedMonth,
+              year: selectedYear,
+            }
+      );
+    }
+  }, [budget, open, reset, selectedMonth, selectedYear]);
+
   const availableCategories = isEditing
     ? categories.map((c) => c.name)
     : categories.map((c) => c.name).filter((c) => !existingCategories.includes(c));

@@ -79,6 +79,26 @@ export function ExpenseForm({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (open) {
+      reset(
+        expense
+          ? {
+              amount: expense.amount,
+              category: expense.category,
+              note: expense.note ?? "",
+              date: format(new Date(expense.date), "yyyy-MM-dd"),
+            }
+          : {
+              amount: undefined,
+              category: undefined,
+              note: "",
+              date: format(new Date(), "yyyy-MM-dd"),
+            }
+      );
+    }
+  }, [expense, open, reset]);
+
   const onSubmit = async (data: ExpenseFormData) => {
     setLoading(true);
     try {

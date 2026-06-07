@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { incomeSchema, type IncomeFormData } from "@/validations/income";
@@ -55,6 +55,26 @@ export function IncomeForm({
           date: format(new Date(), "yyyy-MM-dd"),
         },
   });
+
+  useEffect(() => {
+    if (open) {
+      reset(
+        income
+          ? {
+              amount: income.amount,
+              source: income.source,
+              note: income.note ?? "",
+              date: format(new Date(income.date), "yyyy-MM-dd"),
+            }
+          : {
+              amount: undefined,
+              source: "",
+              note: "",
+              date: format(new Date(), "yyyy-MM-dd"),
+            }
+      );
+    }
+  }, [income, open, reset]);
 
   const onSubmit = async (data: IncomeFormData) => {
     setLoading(true);

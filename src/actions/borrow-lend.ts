@@ -2,6 +2,8 @@
 
 import { dbConnect } from "@/lib/db";
 import BorrowLend from "@/models/borrow-lend";
+import Expense from "@/models/expense";
+import Income from "@/models/income";
 import {
   borrowLendSchema,
   type BorrowLendFormData,
@@ -94,7 +96,30 @@ export async function settleBorrowLend(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await dbConnect();
-    await BorrowLend.findByIdAndUpdate(id, { status: "settled" });
+    const record = await BorrowLend.findById(id);
+    if (record) {
+      const remaining = record.amount - (record.paidAmount ?? 0);
+      await BorrowLend.findByIdAndUpdate(id, {
+        paidAmount: record.amount,
+        status: "settled",
+      });
+      // By default when clicking settle directly, we can record the full remaining repayment as transaction
+      if (record.type === "borrowed") {
+        await Expense.create({
+          amount: remaining,
+          category: "Debt",
+          note: `Repayment of borrowed money to ${record.personName} (Full Settlement)`,
+          date: new Date(),
+        });
+      } else {
+        await Income.create({
+          amount: remaining,
+          source: `Repayment from ${record.personName}`,
+          note: `Collection of lent money (Full Settlement)`,
+          date: new Date(),
+        });
+      }
+    }
     revalidatePath("/");
     revalidatePath("/borrow-lend");
     return { success: true };
@@ -103,6 +128,67 @@ export async function settleBorrowLend(
       success: false,
       error:
         error instanceof Error ? error.message : "Failed to settle record",
+    };
+  }
+}
+
+export async function recordRepayment(
+  id: string,
+  repaymentAmount: number,
+  dateStr: string,
+  createTransaction: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await dbConnect();
+    const record = await BorrowLend.findById(id);
+    if (!record) {
+      return { success: false, error: "Record not found" };
+    }
+
+    const currentPaid = record.paidAmount ?? 0;
+    const newPaidAmount = currentPaid + repaymentAmount;
+
+    if (newPaidAmount > record.amount) {
+      return {
+        success: false,
+        error: `Repayment amount exceeds remaining balance of ${record.amount - currentPaid}`,
+      };
+    }
+
+    const date = new Date(dateStr);
+    const status = newPaidAmount >= record.amount ? "settled" : "pending";
+
+    await BorrowLend.findByIdAndUpdate(id, {
+      paidAmount: newPaidAmount,
+      status,
+    });
+
+    if (createTransaction) {
+      if (record.type === "borrowed") {
+        await Expense.create({
+          amount: repaymentAmount,
+          category: "Debt",
+          note: `Repayment of borrowed money to ${record.personName}`,
+          date,
+        });
+      } else {
+        await Income.create({
+          amount: repaymentAmount,
+          source: `Repayment from ${record.personName}`,
+          note: `Collection of lent money`,
+          date,
+        });
+      }
+    }
+
+    revalidatePath("/");
+    revalidatePath("/borrow-lend");
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "Failed to record repayment",
     };
   }
 }
@@ -117,12 +203,14 @@ export async function getBorrowLendSummary() {
   let pendingPayments = 0;
 
   for (const r of records) {
+    const paid = r.paidAmount ?? 0;
+    const remaining = r.amount - paid;
     if (r.type === "borrowed") {
-      totalBorrowed += r.amount;
-      pendingPayments += r.amount;
+      totalBorrowed += remaining;
+      pendingPayments += remaining;
     } else {
-      totalLent += r.amount;
-      pendingCollections += r.amount;
+      totalLent += remaining;
+      pendingCollections += remaining;
     }
   }
 

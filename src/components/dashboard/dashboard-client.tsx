@@ -194,133 +194,202 @@ export function DashboardClient() {
         </Card>
 
         {/* Consolidated Hero Net Cash Card */}
-        <Card className="border border-border/50 shadow-xs rounded-2xl bg-card flex flex-col justify-between">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold">Net Cash Position</CardTitle>
-            <CardDescription>Overall performance for this cycle</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col justify-center gap-6">
+        <div
+          className={cn(
+            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
+            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
+            "flex flex-col justify-between"
+          )}
+        >
+          {/* Top Section */}
+          <div className="flex items-center justify-between pb-3.5 px-6 pt-6">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+                HERO
+              </span>
+              <h3 className="text-base font-semibold text-foreground">Net Cash Position</h3>
+            </div>
+            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+              <Wallet className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Ticket Cut / Dashed Line Separator */}
+          <div className="relative flex items-center w-full">
+            {/* Left Notch */}
+            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
+            {/* Dashed Line */}
+            <div className="w-full border-t border-dashed border-foreground/15" />
+            {/* Right Notch */}
+            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
+          </div>
+
+          {/* Bottom Section */}
+          <div className="p-6 flex-1 flex flex-col justify-between gap-6">
             <div>
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Available Balance
               </p>
-              <h3 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1.5 text-foreground">
+              <h3 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1 text-foreground">
                 {formatCurrency(summary.currentBalance)}
               </h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border/60">
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/60">
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                  <TrendingUp className="w-3.5 h-3.5 text-foreground" />
                   <span>Total In</span>
                 </div>
-                <p className="text-base font-bold text-foreground">
+                <p className="text-lg font-bold text-foreground">
                   {formatCurrency(summary.monthlyIncome)}
                 </p>
               </div>
 
               <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                  <TrendingDown className="w-3.5 h-3.5 text-foreground" />
                   <span>Total Out</span>
                 </div>
-                <p className="text-base font-bold text-foreground">
+                <p className="text-lg font-bold text-foreground">
                   {formatCurrency(summary.monthlyExpenses)}
                 </p>
               </div>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 space-y-1.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1.5 font-medium">
-                  <PiggyBank className="w-3.5 h-3.5 text-primary" />
-                  Saved this Month
-                </span>
-                <span className="font-semibold text-foreground">
-                  {formatCurrency(summary.savings)}
-                </span>
-              </div>
+            <div className="p-3.5 rounded-xl border border-foreground/15 bg-muted/30 flex items-center justify-between text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5 font-medium">
+                <PiggyBank className="w-3.5 h-3.5 text-foreground" />
+                Saved this Month
+              </span>
+              <span className="font-bold text-foreground">
+                {formatCurrency(summary.savings)}
+              </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Secondary Row: Credit/Debt, Budget, and Gamification */}
       <div className={cn("grid gap-6", showGamification ? "md:grid-cols-3" : "md:grid-cols-2")}>
         {/* Credit & Debt Card */}
-        <Card className="border border-border/50 shadow-xs rounded-2xl bg-card">
-          <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Credit & Debts
-                </p>
-                <h4 className="text-xl font-bold text-foreground">
-                  Net Owed: {formatCurrency(summary.totalLent - summary.totalBorrowed)}
-                </h4>
-              </div>
-              <div className="p-2 bg-amber-50 dark:bg-amber-950/20 rounded-xl">
-                <ArrowRight className="w-4 h-4 text-amber-600" />
-              </div>
+        <div
+          className={cn(
+            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
+            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
+            "flex flex-col justify-between"
+          )}
+        >
+          {/* Top Section */}
+          <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+                01
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Credit & Debts
+              </span>
             </div>
-            <div className="space-y-2.5">
+            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Ticket Cut / Dashed Line Separator */}
+          <div className="relative flex items-center w-full">
+            {/* Left Notch */}
+            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
+            {/* Dashed Line */}
+            <div className="w-full border-t border-dashed border-foreground/15" />
+            {/* Right Notch */}
+            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
+          </div>
+
+          {/* Bottom Section */}
+          <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+            <div>
+              <h4 className="text-xl font-bold text-foreground">
+                Net Owed: {formatCurrency(summary.totalLent - summary.totalBorrowed)}
+              </h4>
+            </div>
+            <div className="space-y-3">
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <ArrowDownLeft className="w-3 h-3 text-amber-500" />
+                  <span className="flex items-center gap-1 font-medium">
+                    <ArrowDownLeft className="w-3.5 h-3.5 text-foreground" />
                     Borrowed (I owe)
                   </span>
-                  <span className="font-semibold text-foreground">{formatCurrency(summary.totalBorrowed)}</span>
+                  <span className="font-bold text-foreground">{formatCurrency(summary.totalBorrowed)}</span>
                 </div>
                 <Progress value={summary.totalBorrowed > 0 ? (summary.totalBorrowed / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
               </div>
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <ArrowUpRight className="w-3 h-3 text-emerald-500" />
+                  <span className="flex items-center gap-1 font-medium">
+                    <ArrowUpRight className="w-3.5 h-3.5 text-foreground" />
                     Lent (They owe me)
                   </span>
-                  <span className="font-semibold text-foreground">{formatCurrency(summary.totalLent)}</span>
+                  <span className="font-bold text-foreground">{formatCurrency(summary.totalLent)}</span>
                 </div>
                 <Progress value={summary.totalLent > 0 ? (summary.totalLent / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Budget Status Card */}
-        <Card className="border border-border/50 shadow-xs rounded-2xl bg-card">
-          <CardContent className="p-5 flex flex-col justify-between h-full gap-4">
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                  Monthly Budgets
-                </p>
-                <h4 className="text-xl font-bold text-foreground">
-                  {summary.budgetUsedPercentage}% Consumed
-                </h4>
-              </div>
-              <div className="p-2 bg-indigo-50 dark:bg-indigo-950/20 rounded-xl">
-                <Target className="w-4 h-4 text-indigo-600" />
-              </div>
+        <div
+          className={cn(
+            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
+            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
+            "flex flex-col justify-between"
+          )}
+        >
+          {/* Top Section */}
+          <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+                02
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Monthly Budgets
+              </span>
             </div>
-            <div className="space-y-1.5">
+            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+              <Target className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Ticket Cut / Dashed Line Separator */}
+          <div className="relative flex items-center w-full">
+            {/* Left Notch */}
+            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
+            {/* Dashed Line */}
+            <div className="w-full border-t border-dashed border-foreground/15" />
+            {/* Right Notch */}
+            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
+          </div>
+
+          {/* Bottom Section */}
+          <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+            <div>
+              <h4 className="text-xl font-bold text-foreground">
+                {summary.budgetUsedPercentage}% Consumed
+              </h4>
+            </div>
+            <div className="space-y-2">
               <Progress
                 value={summary.budgetUsedPercentage}
                 className="h-2 bg-muted"
-                style={{
-                  color: summary.budgetUsedPercentage > 90 ? "oklch(0.60 0.18 25)" : "oklch(0.42 0.15 260)"
-                }}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground font-medium">
                 {summary.budgetUsedPercentage > 90
                   ? "Careful! You're approaching your overall budget limit."
                   : "Stretching well. Keep tracking your daily updates."}
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Level & XP Card */}
         {showGamification && <XpCard stats={summary.stats} />}

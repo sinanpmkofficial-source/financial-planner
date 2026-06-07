@@ -10,6 +10,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
 import { BorrowLendForm } from "@/components/borrow-lend/borrow-lend-form";
+import { RepaymentDialog } from "@/components/borrow-lend/repayment-dialog";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -26,6 +27,7 @@ import {
   ArrowUpRight,
   Clock,
   Banknote,
+  Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { BorrowLend } from "@/types";
@@ -41,6 +43,8 @@ export function BorrowLendClient() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<BorrowLend | undefined>();
+  const [repayOpen, setRepayOpen] = useState(false);
+  const [repayRecord, setRepayRecord] = useState<BorrowLend | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -85,6 +89,11 @@ export function BorrowLendClient() {
     setFormOpen(true);
   };
 
+  const handleOpenRepay = (record: BorrowLend) => {
+    setRepayRecord(record);
+    setRepayOpen(true);
+  };
+
   const handleFormClose = (open: boolean) => {
     setFormOpen(open);
     if (!open) setEditingRecord(undefined);
@@ -108,87 +117,121 @@ export function BorrowLendClient() {
 
     return (
       <div className="space-y-2">
-        {items.map((record) => (
-          <Card
-            key={record._id}
-            className="border border-border/50 shadow-sm"
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">
-                    {record.type === "borrowed" ? "🔴" : "🟢"}
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm">
-                        {record.personName}
-                      </p>
-                      <Badge
-                        variant={
-                          record.status === "settled"
-                            ? "default"
-                            : "secondary"
-                        }
-                        className="text-[10px]"
-                      >
-                        {record.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(record.date)}
-                      </p>
-                      {record.dueDate && (
+        {items.map((record) => {
+          const paid = record.paidAmount ?? 0;
+          const remaining = record.amount - paid;
+          
+          return (
+            <Card
+              key={record._id}
+              className="border border-border/50 shadow-sm"
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">
+                      {record.type === "borrowed" ? "🔴" : "🟢"}
+                    </span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-sm">
+                          {record.personName}
+                        </p>
+                        <Badge
+                          variant={
+                            record.status === "settled"
+                              ? "default"
+                              : "secondary"
+                          }
+                          className="text-[10px]"
+                        >
+                          {record.status}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
                         <p className="text-xs text-muted-foreground">
-                          · Due: {formatDate(record.dueDate)}
+                          {formatDate(record.date)}
+                        </p>
+                        {record.dueDate && (
+                          <p className="text-xs text-muted-foreground">
+                            · Due: {formatDate(record.dueDate)}
+                          </p>
+                        )}
+                      </div>
+                      {record.notes && (
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {record.notes}
                         </p>
                       )}
+                      {paid > 0 && (
+                        <div className="mt-2 space-y-1 max-w-[200px]">
+                          <div className="flex justify-between text-[10px] text-muted-foreground font-semibold">
+                            <span>Paid: {formatCurrency(paid)}</span>
+                            <span>{Math.round((paid / record.amount) * 100)}%</span>
+                          </div>
+                          <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-foreground" style={{ width: `${(paid / record.amount) * 100}%` }} />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {record.notes && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {record.notes}
-                      </p>
-                    )}
                   </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-sm font-semibold ${
-                      record.type === "borrowed"
-                        ? "text-rose-600"
-                        : "text-emerald-600"
-                    }`}
-                  >
-                    {formatCurrency(record.amount)}
-                  </span>
-                  {record.status === "pending" && (
+                  <div className="flex items-center gap-2">
+                    <div className="text-right flex flex-col mr-2">
+                      <span
+                        className={`text-sm font-bold ${
+                          record.type === "borrowed"
+                            ? "text-rose-600"
+                            : "text-emerald-600"
+                        }`}
+                      >
+                        {formatCurrency(record.amount)}
+                      </span>
+                      {paid > 0 && record.status === "pending" && (
+                        <span className="text-[10px] text-muted-foreground font-medium">
+                          Due: {formatCurrency(remaining)}
+                        </span>
+                      )}
+                    </div>
+                    {record.status === "pending" && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-foreground"
+                          onClick={() => handleOpenRepay(record)}
+                          title={record.type === "borrowed" ? "Pay Back Amount" : "Collect Payment"}
+                        >
+                          <Coins className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-emerald-600"
+                          onClick={() => handleSettle(record._id)}
+                          title="Instant full settlement"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </Button>
+                      </>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-emerald-600"
-                      onClick={() => handleSettle(record._id)}
-                      title="Mark as settled"
+                      className="h-8 w-8 text-muted-foreground"
+                      onClick={() => handleEdit(record)}
                     >
-                      <Check className="w-3.5 h-3.5" />
+                      <Pencil className="w-3.5 h-3.5" />
                     </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground"
-                    onClick={() => handleEdit(record)}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </Button>
-                  <ConfirmDelete
-                    onConfirm={() => handleDelete(record._id)}
-                  />
+                    <ConfirmDelete
+                      onConfirm={() => handleDelete(record._id)}
+                    />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     );
   };
@@ -213,24 +256,28 @@ export function BorrowLendClient() {
           value={formatCurrency(summary.totalBorrowed)}
           icon={ArrowDownLeft}
           variant="danger"
+          index="01"
         />
         <StatCard
           label="Total Lent"
           value={formatCurrency(summary.totalLent)}
           icon={ArrowUpRight}
           variant="success"
+          index="02"
         />
         <StatCard
           label="Pending Payments"
           value={formatCurrency(summary.pendingPayments)}
           icon={Clock}
           variant="warning"
+          index="03"
         />
         <StatCard
           label="Pending Collections"
           value={formatCurrency(summary.pendingCollections)}
           icon={Banknote}
           variant="default"
+          index="04"
         />
       </div>
 
@@ -262,6 +309,13 @@ export function BorrowLendClient() {
         open={formOpen}
         onOpenChange={handleFormClose}
         record={editingRecord}
+        onSuccess={fetchData}
+      />
+
+      <RepaymentDialog
+        open={repayOpen}
+        onOpenChange={setRepayOpen}
+        record={repayRecord}
         onSuccess={fetchData}
       />
     </div>

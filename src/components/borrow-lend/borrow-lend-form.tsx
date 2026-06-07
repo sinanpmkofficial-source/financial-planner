@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -73,6 +73,32 @@ export function BorrowLendForm({
           notes: "",
         },
   });
+
+  useEffect(() => {
+    if (open) {
+      reset(
+        record
+          ? {
+              personName: record.personName,
+              amount: record.amount,
+              type: record.type,
+              date: format(new Date(record.date), "yyyy-MM-dd"),
+              dueDate: record.dueDate
+                ? format(new Date(record.dueDate), "yyyy-MM-dd")
+                : undefined,
+              notes: record.notes ?? "",
+            }
+          : {
+              personName: "",
+              amount: undefined,
+              type: undefined,
+              date: format(new Date(), "yyyy-MM-dd"),
+              dueDate: undefined,
+              notes: "",
+            }
+      );
+    }
+  }, [record, open, reset]);
 
   const type = watch("type");
 

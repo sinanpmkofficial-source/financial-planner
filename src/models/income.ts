@@ -21,5 +21,8 @@ const IncomeSchema = new Schema<IIncome>(
 
 IncomeSchema.index({ date: -1 });
 
-export default mongoose.models.Income ||
-  mongoose.model<IIncome>("Income", IncomeSchema);
+if (mongoose.models.Income) {
+  mongoose.deleteModel("Income");
+}
+
+export default mongoose.model<IIncome>("Income", IncomeSchema);

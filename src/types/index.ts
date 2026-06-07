@@ -24,6 +24,7 @@ export interface BorrowLend {
   _id: string;
   personName: string;
   amount: number;
+  paidAmount?: number;
   type: "borrowed" | "lent";
   date: string;
   dueDate?: string;

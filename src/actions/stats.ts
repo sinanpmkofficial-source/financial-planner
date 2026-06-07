@@ -62,8 +62,9 @@ export async function getDashboardSummary(
   let totalBorrowed = 0;
   let totalLent = 0;
   for (const r of borrowLendRecords) {
-    if (r.type === "borrowed") totalBorrowed += r.amount;
-    else totalLent += r.amount;
+    const remaining = r.amount - (r.paidAmount ?? 0);
+    if (r.type === "borrowed") totalBorrowed += remaining;
+    else totalLent += remaining;
   }
 
   const totalBudget = budgets.reduce(
