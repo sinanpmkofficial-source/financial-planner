@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
-import Link from "next/link";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
@@ -30,7 +29,6 @@ import {
   Target,
   ArrowRight,
   AlertCircle,
-  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getRecurringExpenses, confirmRecurringPayment } from "@/actions/recurring-expense";
@@ -301,14 +299,6 @@ export function DashboardClient() {
         showMonthPicker={false}
         action={
           <div className="flex items-center gap-2">
-            <Link
-              href="/guide"
-              className="h-9 px-3.5 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-xl transition-all text-xs flex items-center gap-1.5 font-semibold shrink-0 cursor-pointer bg-background"
-              title="Methodology & Calculation Guide"
-            >
-              <HelpCircle className="w-4 h-4 text-primary" />
-              <span className="hidden sm:inline">Guide</span>
-            </Link>
             <QuickActions
               onRecordTransaction={() => setTransactionFormOpen(true)}
               disabled={summaryLoading}
