@@ -94,7 +94,7 @@ export function Sidebar() {
       </nav>
 
       {/* Month/Year Picker */}
-      {pathname !== "/" && (
+      {pathname !== "/" && pathname !== "/financial-health" && (
         <div className="px-3 py-4 border-t border-border">
           <DatePeriodFilter />
         </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useUIStore } from "@/stores/ui-store";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
@@ -129,7 +128,7 @@ export function DashboardClient() {
   const budgetSummary = useMemo(() => {
     const totalLimit = budgets.reduce((sum, b) => sum + b.amount, 0);
     const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-    const totalLeft = Math.max(0, totalLimit - totalSpent);
+    const totalLeft = budgets.reduce((sum, b) => sum + b.remaining, 0);
     const percentageLeft = totalLimit > 0 ? Math.round((totalLeft / totalLimit) * 100) : 0;
     const percentageSpent = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
     return { totalLimit, totalSpent, totalLeft, percentageLeft, percentageSpent };
@@ -261,7 +260,7 @@ export function DashboardClient() {
       } else {
         toast.error(res.error || "Failed to confirm payment", { id: toastId });
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to confirm payment", { id: toastId });
     }
   };
@@ -381,18 +380,22 @@ export function DashboardClient() {
           }
         />
         <StatCard
-          label="Net Savings (Month)"
-          value={summaryLoading || !summary ? "..." : formatCurrency(summary.savings ?? 0)}
+          label="Safe to Spend"
+          value={
+            summaryLoading || budgetsLoading || !summary
+              ? "..."
+              : formatCurrency((summary.savings ?? 0) - budgetSummary.totalLeft)
+          }
           icon={PiggyBank}
           variant="default"
           index="04"
           className="animate-fade-in-up opacity-0 animation-delay-225"
           trend={
-            summaryLoading || !summary
+            summaryLoading || budgetsLoading || !summary
               ? "..."
-              : (summary.savings ?? 0) >= 0
-              ? "Positive cash flow"
-              : "Negative cash flow"
+              : ((summary.savings ?? 0) - budgetSummary.totalLeft) >= 0
+              ? "Unallocated surplus"
+              : "Deficit risk (over budget)"
           }
         />
       </div>
@@ -772,7 +775,7 @@ export function DashboardClient() {
                 </div>
 
                 {/* Individual Category Budgets */}
-                <div className="space-y-3.5 max-h-[140px] overflow-y-auto pr-1 scrollbar-thin">
+                <div className="space-y-3.5 pr-1">
                   {budgets.map((b) => {
                     const percentage = Math.min(b.percentage, 100);
                     const isWarning = b.percentage >= 80 && b.percentage < 100;

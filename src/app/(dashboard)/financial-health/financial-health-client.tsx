@@ -1,6 +1,5 @@
 "use client";
 
-import { useUIStore } from "@/stores/ui-store";
 import { useEffect, useState, useCallback } from "react";
 import { getFinancialHealthData } from "@/actions/financial-health";
 import { formatCurrency } from "@/lib/format";
@@ -10,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle2, XCircle, AlertCircle, Sparkles, TrendingUp, TrendingDown, PiggyBank, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MONTHS } from "@/constants";
 
 interface FinancialHealthData {
   totalIncome: number;
@@ -25,24 +26,22 @@ interface FinancialHealthData {
 }
 
 export function FinancialHealthClient() {
-  const { dateRange } = useUIStore();
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [healthData, setHealthData] = useState<FinancialHealthData | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const month = dateRange.from.getMonth() + 1;
-      const year = dateRange.from.getFullYear();
-      
-      const hData = await getFinancialHealthData(month, year);
+      const hData = await getFinancialHealthData(selectedMonth, selectedYear);
       setHealthData(hData);
     } catch {
       toast.error("Failed to load financial health data");
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [selectedMonth, selectedYear]);
 
   useEffect(() => {
     fetchData();
@@ -51,7 +50,39 @@ export function FinancialHealthClient() {
   if (loading || !healthData) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Financial Health" description="Analyzing your finances..." />
+        <PageHeader 
+          title="Financial Health" 
+          description="Analyzing your finances..." 
+          showMonthPicker={false}
+          action={
+            <div className="flex items-center gap-2">
+              <Select value={String(selectedMonth)} onValueChange={(val) => setSelectedMonth(Number(val))}>
+                <SelectTrigger className="h-9 w-[110px] text-xs bg-background rounded-xl border-border/50" disabled>
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {MONTHS.map((m, idx) => (
+                    <SelectItem key={m} value={String(idx + 1)}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(Number(val))}>
+                <SelectTrigger className="h-9 w-[80px] text-xs bg-background rounded-xl border-border/50" disabled>
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {[2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          }
+        />
         <div className="h-64 bg-muted/20 animate-pulse rounded-2xl border border-border/10" />
       </div>
     );
@@ -193,7 +224,35 @@ export function FinancialHealthClient() {
       <PageHeader
         title="Financial Health Audit"
         description="Analysis of monthly spending metrics against the 50-30-20 blueprint"
-        showMonthPicker
+        showMonthPicker={false}
+        action={
+          <div className="flex items-center gap-2">
+            <Select value={String(selectedMonth)} onValueChange={(val) => setSelectedMonth(Number(val))}>
+              <SelectTrigger className="h-9 w-[110px] text-xs bg-background rounded-xl border-border/50">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {MONTHS.map((m, idx) => (
+                  <SelectItem key={m} value={String(idx + 1)}>
+                    {m}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(Number(val))}>
+              <SelectTrigger className="h-9 w-[80px] text-xs bg-background rounded-xl border-border/50">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {[2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
       />
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -220,7 +279,7 @@ export function FinancialHealthClient() {
                     cx="80"
                     cy="80"
                     r="68"
-                    className={cn("stroke-primary transition-all duration-500")}
+                    className="stroke-primary transition-all duration-500"
                     strokeWidth="10"
                     fill="transparent"
                     strokeDasharray={427}
