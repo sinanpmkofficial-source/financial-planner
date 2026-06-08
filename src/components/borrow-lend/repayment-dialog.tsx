@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Dialog,
   DialogContent,
@@ -124,14 +125,15 @@ export function RepaymentDialog({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col">
             <Label htmlFor="repay-date">Payment Date</Label>
-            <Input
-              id="repay-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
+            <DatePicker
+              date={date ? new Date(date) : new Date()}
+              onSelect={(d) => {
+                if (d) {
+                  setDate(format(d, "yyyy-MM-dd"));
+                }
+              }}
             />
           </div>
 

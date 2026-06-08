@@ -11,6 +11,7 @@ import { createRecurringExpense } from "@/actions/recurring-expense";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -86,6 +87,7 @@ export function TransactionForm({
   const tag = watch("tag");
   const isRecurring = watch("isRecurring");
   const frequency = watch("frequency");
+  const dateValue = watch("date");
 
   useEffect(() => {
     if (open) {
@@ -391,9 +393,16 @@ export function TransactionForm({
           </div>
 
           {/* Date field */}
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col">
             <Label htmlFor="transaction-date">Date</Label>
-            <Input id="transaction-date" type="date" {...register("date")} />
+            <DatePicker
+              date={dateValue ? new Date(dateValue) : new Date()}
+              onSelect={(d) => {
+                if (d) {
+                  setValue("date", format(d, "yyyy-MM-dd"), { shouldValidate: true });
+                }
+              }}
+            />
             {errors.date && (
               <p className="text-xs text-destructive">{errors.date.message}</p>
             )}
