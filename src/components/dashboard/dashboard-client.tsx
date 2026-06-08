@@ -15,8 +15,7 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PageHeader } from "@/components/layout/header";
-import { ExpenseForm } from "@/components/expenses/expense-form";
-import { IncomeForm } from "@/components/income/income-form";
+import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
@@ -84,8 +83,7 @@ export function DashboardClient() {
   const [trendLoading, setTrendLoading] = useState(false);
 
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
-  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
-  const [incomeFormOpen, setIncomeFormOpen] = useState(false);
+  const [transactionFormOpen, setTransactionFormOpen] = useState(false);
 
   const periodMetrics = useMemo(() => {
     let totalIncome = 0;
@@ -216,8 +214,7 @@ export function DashboardClient() {
         showMonthPicker={false}
         action={
           <QuickActions
-            onAddExpense={() => setExpenseFormOpen(true)}
-            onAddIncome={() => setIncomeFormOpen(true)}
+            onRecordTransaction={() => setTransactionFormOpen(true)}
             disabled={summaryLoading}
           />
         }
@@ -820,14 +817,9 @@ export function DashboardClient() {
         <BudgetAlerts budgets={budgets} loading={budgetsLoading} categories={settings?.categories} />
       </div>
 
-      <ExpenseForm
-        open={expenseFormOpen}
-        onOpenChange={setExpenseFormOpen}
-        onSuccess={fetchData}
-      />
-      <IncomeForm
-        open={incomeFormOpen}
-        onOpenChange={setIncomeFormOpen}
+      <TransactionForm
+        open={transactionFormOpen}
+        onOpenChange={setTransactionFormOpen}
         onSuccess={fetchData}
       />
     </div>

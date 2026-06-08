@@ -182,7 +182,7 @@ export function BorrowLendForm({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="bl-date">Date</Label>
               <Input id="bl-date" type="date" {...register("date")} />

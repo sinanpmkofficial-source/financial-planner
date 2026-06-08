@@ -8,6 +8,7 @@ interface StatCardProps {
   trend?: string;
   variant?: "default" | "success" | "danger" | "warning";
   index?: string;
+  className?: string;
 }
 
 export function StatCard({
@@ -17,13 +18,15 @@ export function StatCard({
   trend,
   variant = "default",
   index,
+  className,
 }: StatCardProps) {
   return (
     <div
       className={cn(
         "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between group/card",
         "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
-        "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+        "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
+        className
       )}
     >
       {/* Top Section */}

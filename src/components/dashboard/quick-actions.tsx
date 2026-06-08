@@ -4,25 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 interface QuickActionsProps {
-  onAddExpense?: () => void;
-  onAddIncome?: () => void;
+  onRecordTransaction?: () => void;
   disabled?: boolean;
 }
 
 export function QuickActions({
-  onAddExpense,
-  onAddIncome,
+  onRecordTransaction,
   disabled = false,
 }: QuickActionsProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      <Button size="sm" className="gap-1.5 cursor-pointer" onClick={onAddExpense} disabled={disabled}>
+      <Button size="sm" className="gap-1.5 cursor-pointer" onClick={onRecordTransaction} disabled={disabled}>
         <Plus className="w-3.5 h-3.5" />
-        Add Expense
-      </Button>
-      <Button size="sm" variant="outline" className="gap-1.5 cursor-pointer" onClick={onAddIncome} disabled={disabled}>
-        <Plus className="w-3.5 h-3.5" />
-        Add Income
+        Record Transaction
       </Button>
     </div>
   );

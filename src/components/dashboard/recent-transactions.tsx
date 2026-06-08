@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDateShort } from "@/lib/format";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
 import type { Expense, Income } from "@/types";
+import { cn } from "@/lib/utils";
 
 interface RecentTransactionsProps {
   expenses: Expense[];

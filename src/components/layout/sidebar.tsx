@@ -17,8 +17,7 @@ import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/expenses", label: "Expenses", icon: Receipt },
-  { href: "/income", label: "Income", icon: Wallet },
+  { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins },
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/analytics", label: "Reports", icon: TrendingUp },

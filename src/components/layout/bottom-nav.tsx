@@ -25,8 +25,7 @@ import { useState } from "react";
 
 const primaryItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/expenses", label: "Expenses", icon: Receipt },
-  { href: "/income", label: "Income", icon: Wallet },
+  { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/borrow-lend", label: "Borrow", icon: HandCoins },
 ];
 
