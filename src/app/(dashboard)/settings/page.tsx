@@ -172,25 +172,21 @@ function CategoryDialog({
           {/* Color Preset */}
           <div className="space-y-2">
             <Label>Label Color</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="flex flex-wrap gap-2.5 pt-1">
               {COLOR_PRESETS.map((preset) => (
                 <button
                   key={preset.name}
                   type="button"
                   onClick={() => setCatColor(preset.value)}
                   className={cn(
-                    "flex items-center gap-1.5 p-1.5 !rounded-lg border text-xs font-medium transition-all",
+                    "w-8 h-8 rounded-full flex items-center justify-center border transition-all cursor-pointer hover:scale-110 shrink-0",
                     catColor === preset.value
-                      ? "border-primary bg-primary/5 shadow-xs"
-                      : "border-border/40 hover:bg-muted"
+                      ? "ring-2 ring-primary ring-offset-2 border-transparent scale-105"
+                      : "border-border/60 hover:border-foreground/30"
                   )}
-                >
-                  <span
-                    className="w-3.5 h-3.5 rounded-full inline-block shrink-0"
-                    style={{ backgroundColor: preset.value }}
-                  />
-                  <span className="truncate">{preset.name}</span>
-                </button>
+                  style={{ backgroundColor: preset.value }}
+                  title={preset.name}
+                />
               ))}
             </div>
             <div className="flex items-center gap-2 pt-2">
