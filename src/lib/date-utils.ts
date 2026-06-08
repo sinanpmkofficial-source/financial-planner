@@ -77,3 +77,15 @@ export function getClientYearBounds(clientNow: Date, timezoneOffset?: number) {
     end: new Date(end.getTime() + timezoneOffset * 60 * 1000),
   };
 }
+
+// Calculate client-timezone-aware start and end of month in UTC
+export function getClientMonthBounds(clientNow: Date, timezoneOffset?: number) {
+  const start = fnsStartOfMonth(clientNow);
+  const end = fnsEndOfMonth(clientNow);
+  if (timezoneOffset === undefined) return { start, end };
+  return {
+    start: new Date(start.getTime() + timezoneOffset * 60 * 1000),
+    end: new Date(end.getTime() + timezoneOffset * 60 * 1000),
+  };
+}
+

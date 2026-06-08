@@ -410,7 +410,7 @@ export default function SettingsPage() {
       const res = await deleteCategory(name);
       if (res.success) {
         toast.success("Category deleted");
-        loadSettings();
+        await loadSettings();
       } else {
         toast.error(res.error || "Failed to delete category");
       }

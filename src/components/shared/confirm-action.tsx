@@ -12,33 +12,37 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Trash2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-interface ConfirmDeleteProps {
+interface ConfirmActionProps {
   onConfirm: () => void | Promise<void>;
-  title?: string;
-  description?: string;
-  trigger?: React.ReactElement;
+  title: string;
+  description: string;
+  confirmText?: string;
+  confirmVariant?: "default" | "destructive" | "success";
+  trigger: React.ReactElement;
 }
 
-export function ConfirmDelete({
+export function ConfirmAction({
   onConfirm,
-  title = "Are you sure?",
-  description = "This action cannot be undone.",
+  title,
+  description,
+  confirmText = "Confirm",
+  confirmVariant = "default",
   trigger,
-}: ConfirmDeleteProps) {
+}: ConfirmActionProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleConfirm = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleAction = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     setLoading(true);
     try {
       await onConfirm();
       setOpen(false);
     } catch (err) {
-      console.error("Delete failed:", err);
+      console.error("Action failed:", err);
     } finally {
       setLoading(false);
     }
@@ -46,15 +50,7 @@ export function ConfirmDelete({
 
   return (
     <AlertDialog open={open} onOpenChange={(val) => !loading && setOpen(val)}>
-      <AlertDialogTrigger
-        render={
-          trigger || (
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive cursor-pointer" />
-          )
-        }
-      >
-        {!trigger && <Trash2 className="w-4 h-4" />}
-      </AlertDialogTrigger>
+      <AlertDialogTrigger render={trigger} />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -63,12 +59,16 @@ export function ConfirmDelete({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
           <AlertDialogAction
-            onClick={handleConfirm}
+            onClick={handleAction}
             disabled={loading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1.5 cursor-pointer font-semibold"
+            className={cn(
+              "flex items-center gap-1.5 cursor-pointer font-semibold",
+              confirmVariant === "destructive" && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+              confirmVariant === "success" && "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
+            )}
           >
             {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Delete
+            {confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

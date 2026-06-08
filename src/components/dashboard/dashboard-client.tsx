@@ -39,14 +39,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { StatCard } from "@/components/shared/stat-card";
 import type { DashboardSummary, Expense, Income, BudgetWithSpent } from "@/types";
 import {
   startOfDay,
   endOfDay,
   startOfWeek,
   endOfWeek,
-  startOfYear,
-  endOfYear,
+  startOfMonth,
+  endOfMonth,
 } from "date-fns";
 
 // Custom tooltip for premium look
@@ -82,7 +83,7 @@ export function DashboardClient() {
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
 
-  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [expenseFormOpen, setExpenseFormOpen] = useState(false);
   const [incomeFormOpen, setIncomeFormOpen] = useState(false);
 
@@ -173,8 +174,8 @@ export function DashboardClient() {
         start = startOfWeek(now, { weekStartsOn: 1 });
         end = endOfWeek(now, { weekStartsOn: 1 });
       } else {
-        start = startOfYear(now);
-        end = endOfYear(now);
+        start = startOfMonth(now);
+        end = endOfMonth(now);
       }
 
       const data = await getUnifiedData(start, end, undefined, new Date().getTimezoneOffset());
@@ -217,6 +218,75 @@ export function DashboardClient() {
         }
       />
 
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="Spent Today"
+          value={summaryLoading || !summary ? "..." : formatCurrency(summary.todayExpenses ?? 0)}
+          icon={TrendingDown}
+          variant="danger"
+          index="01"
+          trend={
+            summaryLoading || !summary
+              ? "..."
+              : (() => {
+                  const now = new Date();
+                  const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                  const dailyLimit = budgetSummary.totalLimit / totalDays;
+                  if (dailyLimit > 0) {
+                    const diff = (summary.todayExpenses ?? 0) - dailyLimit;
+                    return diff > 0 
+                      ? `${formatCurrency(Math.round(diff))} over daily limit`
+                      : `${formatCurrency(Math.round(Math.abs(diff)))} under daily limit`;
+                  }
+                  return "No budget configured";
+                })()
+          }
+        />
+        <StatCard
+          label="Monthly Spend"
+          value={summaryLoading || !summary ? "..." : formatCurrency(summary.monthlyExpenses ?? 0)}
+          icon={TrendingDown}
+          variant="warning"
+          index="02"
+          trend={
+            summaryLoading || !summary
+              ? "..."
+              : budgetSummary.totalLimit > 0
+              ? `${Math.round((summary.monthlyExpenses / budgetSummary.totalLimit) * 100)}% of total budget`
+              : "No budget configured"
+          }
+        />
+        <StatCard
+          label="Remaining Budget"
+          value={summaryLoading || !summary ? "..." : formatCurrency(budgetSummary.totalLeft)}
+          icon={Target}
+          variant="success"
+          index="03"
+          trend={
+            summaryLoading || !summary
+              ? "..."
+              : budgetSummary.totalLimit > 0
+              ? `${budgetSummary.percentageLeft}% remaining`
+              : "No budget configured"
+          }
+        />
+        <StatCard
+          label="Net Savings (Month)"
+          value={summaryLoading || !summary ? "..." : formatCurrency(summary.savings ?? 0)}
+          icon={PiggyBank}
+          variant="default"
+          index="04"
+          trend={
+            summaryLoading || !summary
+              ? "..."
+              : (summary.savings ?? 0) >= 0
+              ? "Positive cash flow"
+              : "Negative cash flow"
+          }
+        />
+      </div>
+
       {/* Top Section: Cash Flow Chart & Net Wealth Card */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Composed Cash Flow Chart */}
@@ -230,7 +300,7 @@ export function DashboardClient() {
                     ? "Today's hourly comparison"
                     : graphPeriod === "weekly"
                     ? "This week's daily comparison"
-                    : "This year's monthly comparison"}
+                    : "This month's daily comparison"}
                 </CardDescription>
               </div>
               <div className="flex items-center gap-3.5">
@@ -255,13 +325,13 @@ export function DashboardClient() {
                     Week
                   </button>
                   <button
-                    onClick={() => setGraphPeriod("yearly")}
+                    onClick={() => setGraphPeriod("monthly")}
                     className={cn(
                       "px-3 py-1 rounded-md font-semibold transition-all cursor-pointer",
-                      graphPeriod === "yearly" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+                      graphPeriod === "monthly" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
                     )}
                   >
-                    Year
+                    Month
                   </button>
                 </div>
                 <div className="flex items-center gap-3 text-xs font-medium shrink-0">
@@ -452,7 +522,7 @@ export function DashboardClient() {
 
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                  This Year
+                  This Month
                 </span>
                 {summaryLoading || !summary ? (
                   <div className="space-y-1 py-1">
@@ -462,10 +532,10 @@ export function DashboardClient() {
                 ) : (
                   <>
                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                      +{formatCurrency(summary.yearIncome ?? 0)}
+                      +{formatCurrency(summary.monthlyIncome ?? 0)}
                     </p>
                     <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                      -{formatCurrency(summary.yearExpenses ?? 0)}
+                      -{formatCurrency(summary.monthlyExpenses ?? 0)}
                     </p>
                   </>
                 )}

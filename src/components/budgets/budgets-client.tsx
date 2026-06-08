@@ -46,7 +46,7 @@ export function BudgetsClient() {
     const result = await deleteBudget(id);
     if (result.success) {
       toast.success("Budget deleted");
-      fetchData();
+      await fetchData();
     } else {
       toast.error(result.error);
     }

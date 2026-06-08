@@ -69,7 +69,7 @@ export function ExpensesClient() {
     const result = await deleteExpense(id);
     if (result.success) {
       toast.success("Expense deleted");
-      fetchData();
+      await fetchData();
     } else {
       toast.error(result.error);
     }

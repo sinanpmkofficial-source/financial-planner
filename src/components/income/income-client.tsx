@@ -49,7 +49,7 @@ export function IncomeClient() {
     const result = await deleteIncome(id);
     if (result.success) {
       toast.success("Income deleted");
-      fetchData();
+      await fetchData();
     } else {
       toast.error(result.error);
     }

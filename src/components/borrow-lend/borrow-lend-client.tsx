@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/layout/header";
 import { BorrowLendForm } from "@/components/borrow-lend/borrow-lend-form";
 import { RepaymentDialog } from "@/components/borrow-lend/repayment-dialog";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ export function BorrowLendClient() {
     const result = await deleteBorrowLend(id);
     if (result.success) {
       toast.success("Record deleted");
-      fetchData();
+      await fetchData();
     } else {
       toast.error(result.error);
     }
@@ -80,7 +81,7 @@ export function BorrowLendClient() {
     const result = await settleBorrowLend(id);
     if (result.success) {
       toast.success("Marked as settled");
-      fetchData();
+      await fetchData();
     } else {
       toast.error(result.error);
     }
@@ -215,15 +216,23 @@ export function BorrowLendClient() {
                           >
                             <Coins className="w-3.5 h-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-full shrink-0"
-                            onClick={() => handleSettle(record._id)}
-                            title="Instant full settlement"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                          </Button>
+                          <ConfirmAction
+                            title="Settle Record?"
+                            description={`Are you sure you want to fully settle this record with ${record.personName}? This will record a corresponding transaction.`}
+                            confirmText="Settle"
+                            confirmVariant="success"
+                            onConfirm={() => handleSettle(record._id)}
+                            trigger={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 rounded-full shrink-0 cursor-pointer"
+                                title="Instant full settlement"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </Button>
+                            }
+                          />
                         </>
                       )}
                       <Button
