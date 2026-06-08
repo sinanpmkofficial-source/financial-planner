@@ -156,6 +156,7 @@ export function TransactionsClient() {
           icon={TrendingUp}
           variant="success"
           index="01"
+          className="animate-fade-in-up opacity-0"
         />
         <StatCard
           label="Total Expenses"
@@ -163,6 +164,7 @@ export function TransactionsClient() {
           icon={TrendingDown}
           variant="danger"
           index="02"
+          className="animate-fade-in-up opacity-0 animation-delay-75"
         />
         <StatCard
           label="Net Balance"
@@ -170,7 +172,7 @@ export function TransactionsClient() {
           icon={ArrowRight}
           variant="default"
           index="03"
-          className="col-span-2 md:col-span-1"
+          className="col-span-2 md:col-span-1 animate-fade-in-up opacity-0 animation-delay-150"
         />
       </div>
 

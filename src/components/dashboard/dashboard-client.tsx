@@ -228,6 +228,7 @@ export function DashboardClient() {
           icon={TrendingDown}
           variant="danger"
           index="01"
+          className="animate-fade-in-up opacity-0"
           trend={
             summaryLoading || !summary
               ? "..."
@@ -251,6 +252,7 @@ export function DashboardClient() {
           icon={TrendingDown}
           variant="warning"
           index="02"
+          className="animate-fade-in-up opacity-0 animation-delay-75"
           trend={
             summaryLoading || !summary
               ? "..."
@@ -265,6 +267,7 @@ export function DashboardClient() {
           icon={Target}
           variant="success"
           index="03"
+          className="animate-fade-in-up opacity-0 animation-delay-150"
           trend={
             summaryLoading || !summary
               ? "..."
@@ -279,6 +282,7 @@ export function DashboardClient() {
           icon={PiggyBank}
           variant="default"
           index="04"
+          className="animate-fade-in-up opacity-0 animation-delay-225"
           trend={
             summaryLoading || !summary
               ? "..."
