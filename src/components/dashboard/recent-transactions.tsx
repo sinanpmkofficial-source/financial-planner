@@ -8,6 +8,7 @@ interface RecentTransactionsProps {
   expenses: Expense[];
   incomes: Income[];
   categories?: { name: string; icon: string }[];
+  loading?: boolean;
 }
 
 type Transaction = {
@@ -23,6 +24,7 @@ export function RecentTransactions({
   expenses,
   incomes,
   categories = [],
+  loading = false,
 }: RecentTransactionsProps) {
   const catIconMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.icon]));
 
@@ -45,6 +47,37 @@ export function RecentTransactions({
   ]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 7);
+
+  if (loading) {
+    return (
+      <Card className="border border-border/50 shadow-xs">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-semibold">
+            Recent Transactions
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="divide-y divide-border/50">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <div key={idx} className="flex items-center justify-between px-5 py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
+                  <div className="space-y-1.5">
+                    <div className="h-3.5 w-24 bg-muted animate-pulse rounded-sm" />
+                    <div className="h-3 w-16 bg-muted animate-pulse rounded-sm" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-16 bg-muted animate-pulse rounded-sm" />
+                  <div className="h-4 w-12 bg-muted animate-pulse rounded-sm" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (transactions.length === 0) {
     return null;

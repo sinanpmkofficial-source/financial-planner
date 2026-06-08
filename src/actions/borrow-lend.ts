@@ -195,7 +195,7 @@ export async function recordRepayment(
 
 export async function getBorrowLendSummary() {
   await dbConnect();
-  const records = await BorrowLend.find({ status: "pending" }).lean();
+  const records = await BorrowLend.find().lean();
 
   let totalBorrowed = 0;
   let totalLent = 0;
@@ -206,11 +206,15 @@ export async function getBorrowLendSummary() {
     const paid = r.paidAmount ?? 0;
     const remaining = r.amount - paid;
     if (r.type === "borrowed") {
-      totalBorrowed += remaining;
-      pendingPayments += remaining;
+      totalBorrowed += r.amount;
+      if (r.status === "pending") {
+        pendingPayments += remaining;
+      }
     } else {
-      totalLent += remaining;
-      pendingCollections += remaining;
+      totalLent += r.amount;
+      if (r.status === "pending") {
+        pendingCollections += remaining;
+      }
     }
   }
 

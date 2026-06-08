@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import {
   Plus,
   HandCoins,
@@ -40,6 +41,7 @@ export function BorrowLendClient() {
     pendingCollections: 0,
     pendingPayments: 0,
   });
+
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<BorrowLend | undefined>();
@@ -124,7 +126,11 @@ export function BorrowLendClient() {
           return (
             <Card
               key={record._id}
-              className="border border-border/50 shadow-sm hover:border-border/80 transition-colors"
+              className={cn(
+                "border bg-card transition-all duration-300",
+                "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+                "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+              )}
             >
               <CardContent className="p-4">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -290,8 +296,17 @@ export function BorrowLendClient() {
       {/* Tabs */}
       {loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/10 bg-card animate-pulse shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-muted" />
+                <div className="space-y-1.5">
+                  <div className="h-3.5 w-24 bg-muted rounded-sm" />
+                  <div className="h-3 w-16 bg-muted rounded-sm" />
+                </div>
+              </div>
+              <div className="h-4 w-12 bg-muted rounded-sm" />
+            </div>
           ))}
         </div>
       ) : (

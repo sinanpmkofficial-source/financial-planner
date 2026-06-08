@@ -10,13 +10,11 @@ import { calculateLevel } from "@/lib/xp";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import type { UserStats, DashboardSummary } from "@/types";
 import {
-  startOfDay,
-  endOfDay,
-  startOfWeek,
-  endOfWeek,
-  startOfYear,
-  endOfYear,
-} from "date-fns";
+  getClientNow,
+  getClientDayBounds,
+  getClientWeekBounds,
+  getClientYearBounds,
+} from "@/lib/date-utils";
 
 async function getOrCreateStats() {
   await dbConnect();
@@ -42,26 +40,21 @@ export async function awardXp(amount: number): Promise<void> {
 
 export async function getDashboardSummary(
   month?: number,
-  year?: number
+  year?: number,
+  timezoneOffset?: number
 ): Promise<DashboardSummary> {
   await dbConnect();
-  
-  const now = new Date();
-  const currentMonth = month ?? (now.getMonth() + 1);
-  const currentYear = year ?? now.getFullYear();
+
+  const clientNow = getClientNow(timezoneOffset);
+  const currentMonth = month ?? (clientNow.getMonth() + 1);
+  const currentYear = year ?? clientNow.getFullYear();
 
   // Define ranges
-  const todayStart = startOfDay(now);
-  const todayEnd = endOfDay(now);
-
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-
+  const { start: todayStart, end: todayEnd } = getClientDayBounds(clientNow, timezoneOffset);
+  const { start: weekStart, end: weekEnd } = getClientWeekBounds(clientNow, timezoneOffset);
   const { start: monthStart, end: monthEnd } = getMonthDateRange(currentMonth, currentYear);
-
-  const yearStart = startOfYear(now);
-  const yearEnd = endOfYear(now);
-
+  const { start: yearStart, end: yearEnd } = getClientYearBounds(clientNow, timezoneOffset);
+  
   const [
     allIncomeAgg,
     allExpenseAgg,
@@ -88,6 +81,7 @@ export async function getDashboardSummary(
       { $match: { date: { $gte: todayStart, $lte: todayEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
+    
 
     Income.aggregate([
       { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
@@ -97,7 +91,7 @@ export async function getDashboardSummary(
       { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
-
+    
     Income.aggregate([
       { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
@@ -115,23 +109,22 @@ export async function getDashboardSummary(
       { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
-
+    
     BorrowLend.find({ status: "pending" }).lean(),
     Budget.find({ month: currentMonth, year: currentYear }).lean(),
     getOrCreateStats(),
   ]);
-
+  
   const allIncome = allIncomeAgg[0]?.total ?? 0;
   const allExpense = allExpenseAgg[0]?.total ?? 0;
   const currentBalance = allIncome - allExpense;
-
+  
   const monthlyIncome = monthIncomeAgg[0]?.total ?? 0;
   const monthlyExpenses = monthExpenseAgg[0]?.total ?? 0;
   const savings = monthlyIncome - monthlyExpenses;
-
+  
   const todayIncome = todayIncomeAgg[0]?.total ?? 0;
   const todayExpenses = todayExpenseAgg[0]?.total ?? 0;
-
   const weekIncome = weekIncomeAgg[0]?.total ?? 0;
   const weekExpenses = weekExpenseAgg[0]?.total ?? 0;
 
@@ -152,6 +145,7 @@ export async function getDashboardSummary(
   );
   const budgetUsedPercentage =
     totalBudget > 0 ? Math.round((monthlyExpenses / totalBudget) * 100) : 0;
+
 
   return {
     currentBalance,

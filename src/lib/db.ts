@@ -28,11 +28,24 @@ export async function dbConnect() {
   if (cached.conn) return cached.conn;
 
   if (!cached.promise) {
+    console.log("Connecting to MongoDB...");
     cached.promise = mongoose
       .connect(MONGODB_URI, { bufferCommands: false })
-      .then((m) => m);
+      .then((m) => {
+        console.log("MongoDB connected successfully.");
+        return m;
+      })
+      .catch((error) => {
+        console.error("MongoDB connection failed:", error);
+        throw error;
+      });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (error) {
+    cached.promise = null;
+    throw error;
+  }
   return cached.conn;
 }

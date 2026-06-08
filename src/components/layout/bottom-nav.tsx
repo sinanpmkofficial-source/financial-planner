@@ -86,11 +86,11 @@ export function BottomNav() {
             <MoreHorizontal className="w-5 h-5" />
             <span className="text-[10px] font-medium">More</span>
           </SheetTrigger>
-          <SheetContent side="bottom" className="rounded-t-2xl">
-            <SheetHeader>
-              <SheetTitle>More</SheetTitle>
+          <SheetContent side="bottom" className="rounded-t-2xl px-5 pb-6">
+            <SheetHeader className="px-0">
+              <SheetTitle>More Options</SheetTitle>
             </SheetHeader>
-            <div className="grid grid-cols-3 gap-4 py-6">
+            <div className="grid grid-cols-3 gap-3 pt-2 pb-4">
               {moreItems.map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (
@@ -99,14 +99,14 @@ export function BottomNav() {
                     href={item.href}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex flex-col items-center gap-2 p-4 rounded-xl transition-colors",
+                      "flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl transition-colors text-center border border-border/10",
                       isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-xs"
+                        : "bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
-                    <item.icon className="w-6 h-6" />
-                    <span className="text-xs font-medium">{item.label}</span>
+                    <item.icon className="w-5 h-5 sm:w-6 sm:h-6 text-foreground" />
+                    <span className="text-xs font-semibold">{item.label}</span>
                   </Link>
                 );
               })}

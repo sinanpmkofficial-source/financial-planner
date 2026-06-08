@@ -145,7 +145,7 @@ export function ExpenseForm({
           <div className="space-y-2">
             <Label>Category</Label>
             <Select
-              value={category}
+              value={category || ""}
               onValueChange={(v) =>
                 v && setValue("category", v, {
                   shouldValidate: true,

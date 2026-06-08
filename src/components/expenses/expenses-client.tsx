@@ -3,7 +3,7 @@
 import { useUIStore } from "@/stores/ui-store";
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { getExpenses, deleteExpense } from "@/actions/expense";
+import { getExpenses, deleteExpense, getExpensesByDateRange } from "@/actions/expense";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { CATEGORY_ICONS, EXPENSE_CATEGORIES, type ExpenseCategory } from "@/constants";
 import { PageHeader } from "@/components/layout/header";
@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -27,7 +28,7 @@ import type { Expense } from "@/types";
 import { getUserSettings } from "@/actions/settings";
 
 export function ExpensesClient() {
-  const { selectedMonth, selectedYear } = useUIStore();
+  const { dateRange } = useUIStore();
   const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
@@ -39,12 +40,12 @@ export function ExpensesClient() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getExpenses(selectedMonth, selectedYear);
+      const data = await getExpensesByDateRange(dateRange.from, dateRange.to);
       setExpenses(data);
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedYear]);
+  }, [dateRange]);
 
   useEffect(() => {
     fetchData();
@@ -125,8 +126,17 @@ export function ExpensesClient() {
       {/* List */}
       {loading ? (
         <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/10 bg-card animate-pulse shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-muted" />
+                <div className="space-y-1.5">
+                  <div className="h-3.5 w-24 bg-muted rounded-sm" />
+                  <div className="h-3 w-16 bg-muted rounded-sm" />
+                </div>
+              </div>
+              <div className="h-4 w-12 bg-muted rounded-sm" />
+            </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -142,7 +152,11 @@ export function ExpensesClient() {
           {filtered.map((expense) => (
             <Card
               key={expense._id}
-              className="border border-border/50 shadow-sm"
+              className={cn(
+                "border bg-card transition-all duration-300",
+                "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+                "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+              )}
             >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">

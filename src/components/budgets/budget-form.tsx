@@ -45,7 +45,9 @@ export function BudgetForm({
 }: BudgetFormProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
-  const { selectedMonth, selectedYear } = useUIStore();
+  const { dateRange } = useUIStore();
+  const selectedMonth = dateRange.from.getMonth() + 1;
+  const selectedYear = dateRange.from.getFullYear();
   const isEditing = !!budget;
 
   const {
@@ -138,7 +140,7 @@ export function BudgetForm({
           <div className="space-y-2">
             <Label>Category</Label>
             <Select
-              value={category}
+              value={category || ""}
               onValueChange={(v) =>
                 v && setValue("category", v, {
                   shouldValidate: true,

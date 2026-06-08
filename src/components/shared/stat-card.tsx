@@ -21,9 +21,9 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-        "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-        "group/card flex flex-col justify-between"
+        "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between group/card",
+        "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+        "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
       )}
     >
       {/* Top Section */}

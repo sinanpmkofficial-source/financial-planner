@@ -1,7 +1,7 @@
 "use client";
 
 import { useUIStore } from "@/stores/ui-store";
-import { useEffect, useState, startTransition, useCallback } from "react";
+import { useEffect, useState, startTransition, useCallback, useMemo } from "react";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
@@ -15,8 +15,11 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PageHeader } from "@/components/layout/header";
+import { ExpenseForm } from "@/components/expenses/expense-form";
+import { IncomeForm } from "@/components/income/income-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
 import {
   Wallet,
   TrendingUp,
@@ -71,35 +74,89 @@ export function DashboardClient() {
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [settings, setSettings] = useState<any>(null);
   const [chartData, setChartData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
+
+  // Decoupled loading states
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
+  const [budgetsLoading, setBudgetsLoading] = useState(true);
+  const [settingsLoading, setSettingsLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
+  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "yearly">("daily");
+  const [expenseFormOpen, setExpenseFormOpen] = useState(false);
+  const [incomeFormOpen, setIncomeFormOpen] = useState(false);
 
-      const [s, e, i, b, setts] = await Promise.all([
-        getDashboardSummary(),
-        getRecentExpenses(5),
-        getRecentIncomes(5),
-        getBudgetsWithSpent(currentMonth, currentYear),
-        getUserSettings(),
-      ]);
-      
-      setSummary(s);
-      setExpenses(e);
-      setIncomes(i);
-      setBudgets(b);
-      setSettings(setts);
-    } catch (err) {
-      console.error("Dashboard data load error", err);
-    } finally {
-      setLoading(false);
+  const periodMetrics = useMemo(() => {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    for (const item of chartData) {
+      totalIncome += item.income || 0;
+      totalExpenses += item.expenses || 0;
     }
+    return { totalIncome, totalExpenses };
+  }, [chartData]);
+
+  const budgetSummary = useMemo(() => {
+    const totalLimit = budgets.reduce((sum, b) => sum + b.amount, 0);
+    const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+    const totalLeft = Math.max(0, totalLimit - totalSpent);
+    const percentageLeft = totalLimit > 0 ? Math.round((totalLeft / totalLimit) * 100) : 0;
+    const percentageSpent = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
+    return { totalLimit, totalSpent, totalLeft, percentageLeft, percentageSpent };
+  }, [budgets]);
+
+  const fetchData = useCallback(async () => {
+    // Fetch Summary independently
+    setSummaryLoading(true);
+    getDashboardSummary(undefined, undefined, new Date().getTimezoneOffset())
+      .then((s) => {
+        setSummary(s);
+        setSummaryLoading(false);
+      })
+      .catch((err) => {
+        console.error("Dashboard summary load error", err);
+        setSummaryLoading(false);
+      });
+
+    // Fetch Transactions (expenses & incomes) independently
+    setTransactionsLoading(true);
+    Promise.all([getRecentExpenses(5), getRecentIncomes(5)])
+      .then(([e, i]) => {
+        setExpenses(e);
+        setIncomes(i);
+        setTransactionsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Transactions load error", err);
+        setTransactionsLoading(false);
+      });
+
+    // Fetch Budgets independently
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    setBudgetsLoading(true);
+    getBudgetsWithSpent(currentMonth, currentYear)
+      .then((b) => {
+        setBudgets(b);
+        setBudgetsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Budgets load error", err);
+        setBudgetsLoading(false);
+      });
+
+    // Fetch User Settings independently
+    setSettingsLoading(true);
+    getUserSettings()
+      .then((setts) => {
+        setSettings(setts);
+        setSettingsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Settings load error", err);
+        setSettingsLoading(false);
+      });
   }, []);
 
   const fetchTrend = useCallback(async () => {
@@ -120,7 +177,7 @@ export function DashboardClient() {
         end = endOfYear(now);
       }
 
-      const data = await getUnifiedData(start, end);
+      const data = await getUnifiedData(start, end, undefined, new Date().getTimezoneOffset());
 
       // Merge trends for Composed Chart
       const merged = data.expenseTrend.map((item, idx) => ({
@@ -144,31 +201,21 @@ export function DashboardClient() {
     fetchTrend();
   }, [fetchTrend]);
 
-  if (loading || !summary) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Dashboard" showMonthPicker={false} />
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 h-[340px] rounded-2xl bg-muted/65 animate-pulse" />
-          <div className="h-[340px] rounded-2xl bg-muted/65 animate-pulse" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="h-32 rounded-2xl bg-muted/65 animate-pulse" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   const showGamification = settings?.showGamification !== false;
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <PageHeader title="Dashboard" showMonthPicker={false} />
-        <QuickActions />
-      </div>
+      <PageHeader
+        title="Dashboard"
+        showMonthPicker={false}
+        action={
+          <QuickActions
+            onAddExpense={() => setExpenseFormOpen(true)}
+            onAddIncome={() => setIncomeFormOpen(true)}
+            disabled={summaryLoading}
+          />
+        }
+      />
 
       {/* Top Section: Cash Flow Chart & Net Wealth Card */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -231,6 +278,43 @@ export function DashboardClient() {
             </div>
           </CardHeader>
           <CardContent className="pt-2">
+            <div className="grid grid-cols-2 gap-4 px-2 pb-4 border-b border-border/40 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-500">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Period Income
+                  </p>
+                  <p className="text-base sm:text-lg font-bold text-foreground">
+                    {trendLoading ? (
+                      <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
+                    ) : (
+                      formatCurrency(periodMetrics.totalIncome)
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-500">
+                  <TrendingDown className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Period Expenses
+                  </p>
+                  <p className="text-base sm:text-lg font-bold text-foreground">
+                    {trendLoading ? (
+                      <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
+                    ) : (
+                      formatCurrency(periodMetrics.totalExpenses)
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="h-[260px] w-full relative">
               {trendLoading && (
                 <div className="absolute inset-0 bg-card/50 flex items-center justify-center z-10 rounded-2xl">
@@ -280,9 +364,9 @@ export function DashboardClient() {
         {/* Consolidated Hero Net Cash Card */}
         <div
           className={cn(
-            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-            "flex flex-col justify-between"
+            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
           )}
         >
           {/* Top Section */}
@@ -315,7 +399,11 @@ export function DashboardClient() {
                 Available Balance
               </p>
               <h3 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1 text-foreground">
-                {formatCurrency(summary.currentBalance)}
+                {summaryLoading || !summary ? (
+                  <span className="inline-block h-9 w-40 bg-muted animate-pulse rounded-md mt-1" />
+                ) : (
+                  formatCurrency(summary.currentBalance)
+                )}
               </h3>
             </div>
 
@@ -324,36 +412,63 @@ export function DashboardClient() {
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                   Today
                 </span>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                  +{formatCurrency(summary.todayIncome ?? 0)}
-                </p>
-                <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                  -{formatCurrency(summary.todayExpenses ?? 0)}
-                </p>
+                {summaryLoading || !summary ? (
+                  <div className="space-y-1 py-1">
+                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
+                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                      +{formatCurrency(summary.todayIncome ?? 0)}
+                    </p>
+                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                      -{formatCurrency(summary.todayExpenses ?? 0)}
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1 border-x border-border/60 px-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                   This Week
                 </span>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                  +{formatCurrency(summary.weekIncome ?? 0)}
-                </p>
-                <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                  -{formatCurrency(summary.weekExpenses ?? 0)}
-                </p>
+                {summaryLoading || !summary ? (
+                  <div className="space-y-1 py-1">
+                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
+                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                      +{formatCurrency(summary.weekIncome ?? 0)}
+                    </p>
+                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                      -{formatCurrency(summary.weekExpenses ?? 0)}
+                    </p>
+                  </>
+                )}
               </div>
 
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
                   This Year
                 </span>
-                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                  +{formatCurrency(summary.yearIncome ?? 0)}
-                </p>
-                <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                  -{formatCurrency(summary.yearExpenses ?? 0)}
-                </p>
+                {summaryLoading || !summary ? (
+                  <div className="space-y-1 py-1">
+                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
+                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
+                      +{formatCurrency(summary.yearIncome ?? 0)}
+                    </p>
+                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
+                      -{formatCurrency(summary.yearExpenses ?? 0)}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
 
@@ -363,7 +478,11 @@ export function DashboardClient() {
                 Saved this Month
               </span>
               <span className="font-bold text-foreground">
-                {formatCurrency(summary.savings)}
+                {summaryLoading || !summary ? (
+                  <span className="inline-block h-3.5 w-16 bg-muted animate-pulse rounded-sm" />
+                ) : (
+                  formatCurrency(summary.savings)
+                )}
               </span>
             </div>
           </div>
@@ -372,12 +491,12 @@ export function DashboardClient() {
 
       {/* Secondary Row: Credit/Debt, Budget, and Gamification */}
       <div className={cn("grid gap-6", showGamification ? "md:grid-cols-3" : "md:grid-cols-2")}>
-        {/* Credit & Debt Card */}
+        {/* Budget Status Card */}
         <div
           className={cn(
-            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-            "flex flex-col justify-between"
+            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
           )}
         >
           {/* Top Section */}
@@ -385,71 +504,6 @@ export function DashboardClient() {
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
                 01
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Credit & Debts
-              </span>
-            </div>
-            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Ticket Cut / Dashed Line Separator */}
-          <div className="relative flex items-center w-full">
-            {/* Left Notch */}
-            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-            {/* Dashed Line */}
-            <div className="w-full border-t border-dashed border-foreground/15" />
-            {/* Right Notch */}
-            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
-          </div>
-
-          {/* Bottom Section */}
-          <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-            <div>
-              <h4 className="text-xl font-bold text-foreground">
-                Net Owed: {formatCurrency(summary.totalLent - summary.totalBorrowed)}
-              </h4>
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-medium">
-                    <ArrowDownLeft className="w-3.5 h-3.5 text-foreground" />
-                    Borrowed (I owe)
-                  </span>
-                  <span className="font-bold text-foreground">{formatCurrency(summary.totalBorrowed)}</span>
-                </div>
-                <Progress value={summary.totalBorrowed > 0 ? (summary.totalBorrowed / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-medium">
-                    <ArrowUpRight className="w-3.5 h-3.5 text-foreground" />
-                    Lent (They owe me)
-                  </span>
-                  <span className="font-bold text-foreground">{formatCurrency(summary.totalLent)}</span>
-                </div>
-                <Progress value={summary.totalLent > 0 ? (summary.totalLent / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Budget Status Card */}
-        <div
-          className={cn(
-            "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-            "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-            "flex flex-col justify-between"
-          )}
-        >
-          {/* Top Section */}
-          <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
-                02
               </span>
               <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Monthly Budgets
@@ -472,34 +526,235 @@ export function DashboardClient() {
 
           {/* Bottom Section */}
           <div className="p-5 flex-1 flex flex-col justify-between gap-4">
-            <div>
-              <h4 className="text-xl font-bold text-foreground">
-                {summary.budgetUsedPercentage}% Consumed
-              </h4>
+            {budgetsLoading ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <div className="h-3 w-20 bg-muted animate-pulse rounded-sm" />
+                    <div className="h-3 w-16 bg-muted animate-pulse rounded-sm" />
+                  </div>
+                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
+                    <div className="h-3 w-14 bg-muted animate-pulse rounded-sm" />
+                  </div>
+                  <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                </div>
+              </div>
+            ) : budgets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-4 text-center gap-1.5">
+                <p className="text-xs text-muted-foreground font-medium">
+                  No budgets configured for this month.
+                </p>
+                <a
+                  href="/budgets"
+                  className="text-xs font-bold text-primary hover:underline flex items-center gap-1"
+                >
+                  Configure Budgets <ArrowRight className="w-3 h-3" />
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Total Left Summary */}
+                <div className="pb-3 border-b border-border/40">
+                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Total Budget Left
+                  </p>
+                  <div className="flex items-baseline gap-2 mt-1">
+                    <span className="text-2xl font-extrabold text-foreground">
+                      {formatCurrency(budgetSummary.totalLeft)}
+                    </span>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      / {formatCurrency(budgetSummary.totalLimit)}
+                    </span>
+                    <span className={cn(
+                      "text-xs font-bold px-1.5 py-0.5 rounded-md ml-auto",
+                      budgetSummary.percentageLeft > 20
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"
+                        : budgetSummary.percentageLeft > 0
+                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-500"
+                        : "bg-rose-500/10 text-rose-600 dark:text-rose-500"
+                    )}>
+                      {budgetSummary.percentageLeft}% left
+                    </span>
+                  </div>
+                  <Progress 
+                    value={budgetSummary.percentageSpent} 
+                    className={cn(
+                      "h-1.5 bg-muted mt-2",
+                      budgetSummary.percentageSpent >= 100 && "[&>div]:bg-rose-500",
+                      budgetSummary.percentageSpent >= 80 && budgetSummary.percentageSpent < 100 && "[&>div]:bg-amber-500",
+                      budgetSummary.percentageSpent < 80 && "[&>div]:bg-emerald-500"
+                    )}
+                  />
+                </div>
+
+                {/* Individual Category Budgets */}
+                <div className="space-y-3.5 max-h-[140px] overflow-y-auto pr-1 scrollbar-thin">
+                  {budgets.map((b) => {
+                    const percentage = Math.min(b.percentage, 100);
+                    const isWarning = b.percentage >= 80 && b.percentage < 100;
+                    const isDanger = b.percentage >= 100;
+                    return (
+                      <div key={b._id} className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="flex items-center gap-1.5 font-medium text-foreground">
+                            <span className="text-sm">
+                              {CATEGORY_ICONS[b.category as ExpenseCategory] || "📌"}
+                            </span>
+                            <span>{b.category}</span>
+                          </span>
+                          <span className="text-muted-foreground font-mono text-[11px]">
+                            <span className="font-semibold text-foreground">{formatCurrency(b.spent)}</span>
+                            {" / "}
+                            <span>{formatCurrency(b.amount)}</span>
+                          </span>
+                        </div>
+                        <div className="relative pt-1">
+                          <Progress
+                            value={percentage}
+                            className={cn(
+                              "h-1.5 bg-muted",
+                              isDanger && "[&>div]:bg-rose-500",
+                              isWarning && "[&>div]:bg-amber-500",
+                              !isDanger && !isWarning && "[&>div]:bg-emerald-500"
+                            )}
+                          />
+                          <span
+                            className={cn(
+                              "absolute right-0 top-[-10px] text-[9px] font-bold font-mono",
+                              isDanger
+                                ? "text-rose-600 dark:text-rose-400"
+                                : isWarning
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-emerald-600 dark:text-emerald-400"
+                            )}
+                          >
+                            {b.percentage}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Credit & Debt Card */}
+        <div
+          className={cn(
+            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
+            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+          )}
+        >
+          {/* Top Section */}
+          <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+                02
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Credit & Debts
+              </span>
             </div>
-            <div className="space-y-2">
-              <Progress
-                value={summary.budgetUsedPercentage}
-                className="h-2 bg-muted"
-              />
-              <p className="text-xs text-muted-foreground font-medium">
-                {summary.budgetUsedPercentage > 90
-                  ? "Careful! You're approaching your overall budget limit."
-                  : "Stretching well. Keep tracking your daily updates."}
-              </p>
+            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+              <ArrowRight className="w-4 h-4" />
             </div>
+          </div>
+
+          {/* Ticket Cut / Dashed Line Separator */}
+          <div className="relative flex items-center w-full">
+            {/* Left Notch */}
+            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
+            {/* Dashed Line */}
+            <div className="w-full border-t border-dashed border-foreground/15" />
+            {/* Right Notch */}
+            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
+          </div>
+
+          {/* Bottom Section */}
+          <div className="p-5 flex-1 flex flex-col justify-between gap-4">
+            {summaryLoading || !summary ? (
+              <>
+                <div>
+                  <div className="h-6 w-32 bg-muted animate-pulse rounded-md" />
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
+                      <div className="h-3 w-12 bg-muted animate-pulse rounded-sm" />
+                    </div>
+                    <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <div className="h-3 w-24 bg-muted animate-pulse rounded-sm" />
+                      <div className="h-3 w-12 bg-muted animate-pulse rounded-sm" />
+                    </div>
+                    <div className="h-1.5 bg-muted animate-pulse rounded-full" />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <h4 className="text-xl font-bold text-foreground">
+                    Net Owed: {formatCurrency(summary.totalLent - summary.totalBorrowed)}
+                  </h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 font-medium">
+                        <ArrowDownLeft className="w-3.5 h-3.5 text-foreground" />
+                        Borrowed (I owe)
+                      </span>
+                      <span className="font-bold text-foreground">{formatCurrency(summary.totalBorrowed)}</span>
+                    </div>
+                    <Progress value={summary.totalBorrowed > 0 ? (summary.totalBorrowed / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 font-medium">
+                        <ArrowUpRight className="w-3.5 h-3.5 text-foreground" />
+                        Lent (They owe me)
+                      </span>
+                      <span className="font-bold text-foreground">{formatCurrency(summary.totalLent)}</span>
+                    </div>
+                    <Progress value={summary.totalLent > 0 ? (summary.totalLent / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Level & XP Card */}
-        {showGamification && <XpCard stats={summary.stats} />}
+        {showGamification && <XpCard stats={summary?.stats} loading={summaryLoading} />}
       </div>
 
       {/* Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <RecentTransactions expenses={expenses} incomes={incomes} categories={settings?.categories} />
-        <BudgetAlerts budgets={budgets} />
+        <RecentTransactions expenses={expenses} incomes={incomes} categories={settings?.categories} loading={transactionsLoading} />
+        <BudgetAlerts budgets={budgets} loading={budgetsLoading} />
       </div>
+
+      <ExpenseForm
+        open={expenseFormOpen}
+        onOpenChange={setExpenseFormOpen}
+        onSuccess={fetchData}
+      />
+      <IncomeForm
+        open={incomeFormOpen}
+        onOpenChange={setIncomeFormOpen}
+        onSuccess={fetchData}
+      />
     </div>
   );
 }
