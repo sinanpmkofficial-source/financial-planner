@@ -11,6 +11,7 @@ import {
   Settings,
   Target,
   HeartPulse,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DatePeriodFilter } from "@/components/layout/month-year-picker";
@@ -42,6 +43,7 @@ const navGroups = [
     title: "System",
     items: [
       { href: "/settings", label: "Settings", icon: Settings },
+      { href: "/guide", label: "Methodology Guide", icon: HelpCircle },
     ],
   },
 ];

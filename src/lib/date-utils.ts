@@ -41,51 +41,95 @@ export function localToUtc(date: Date): Date {
 export function getClientNow(timezoneOffset?: number): Date {
   const now = new Date();
   if (timezoneOffset === undefined) return now;
-  // Shift server now to match client's local calendar time
+  // Shift absolute now to match client's local calendar time in UTC representation
   return new Date(now.getTime() - timezoneOffset * 60 * 1000);
 }
 
 // Calculate client-timezone-aware start and end of day in UTC
 export function getClientDayBounds(clientNow: Date, timezoneOffset?: number) {
-  const start = fnsStartOfDay(clientNow);
-  const end = fnsEndOfDay(clientNow);
-  if (timezoneOffset === undefined) return { start, end };
+  if (timezoneOffset === undefined) {
+    return {
+      start: fnsStartOfDay(clientNow),
+      end: fnsEndOfDay(clientNow),
+    };
+  }
+  const startLocal = new Date(clientNow);
+  startLocal.setUTCHours(0, 0, 0, 0);
+  
+  const endLocal = new Date(clientNow);
+  endLocal.setUTCHours(23, 59, 59, 999);
+  
   return {
-    start: new Date(start.getTime() + timezoneOffset * 60 * 1000),
-    end: new Date(end.getTime() + timezoneOffset * 60 * 1000),
+    start: new Date(startLocal.getTime() + timezoneOffset * 60 * 1000),
+    end: new Date(endLocal.getTime() + timezoneOffset * 60 * 1000),
   };
 }
 
 // Calculate client-timezone-aware start and end of week in UTC
 export function getClientWeekBounds(clientNow: Date, timezoneOffset?: number) {
-  const start = fnsStartOfWeek(clientNow, { weekStartsOn: 1 });
-  const end = fnsEndOfWeek(clientNow, { weekStartsOn: 1 });
-  if (timezoneOffset === undefined) return { start, end };
+  if (timezoneOffset === undefined) {
+    return {
+      start: fnsStartOfWeek(clientNow, { weekStartsOn: 1 }),
+      end: fnsEndOfWeek(clientNow, { weekStartsOn: 1 }),
+    };
+  }
+  const dayOfWeek = (clientNow.getUTCDay() + 6) % 7;
+  
+  const startLocal = new Date(clientNow);
+  startLocal.setUTCDate(clientNow.getUTCDate() - dayOfWeek);
+  startLocal.setUTCHours(0, 0, 0, 0);
+  
+  const endLocal = new Date(startLocal);
+  endLocal.setUTCDate(startLocal.getUTCDate() + 6);
+  endLocal.setUTCHours(23, 59, 59, 999);
+  
   return {
-    start: new Date(start.getTime() + timezoneOffset * 60 * 1000),
-    end: new Date(end.getTime() + timezoneOffset * 60 * 1000),
+    start: new Date(startLocal.getTime() + timezoneOffset * 60 * 1000),
+    end: new Date(endLocal.getTime() + timezoneOffset * 60 * 1000),
   };
 }
 
 // Calculate client-timezone-aware start and end of year in UTC
 export function getClientYearBounds(clientNow: Date, timezoneOffset?: number) {
-  const start = fnsStartOfYear(clientNow);
-  const end = fnsEndOfYear(clientNow);
-  if (timezoneOffset === undefined) return { start, end };
+  if (timezoneOffset === undefined) {
+    return {
+      start: fnsStartOfYear(clientNow),
+      end: fnsEndOfYear(clientNow),
+    };
+  }
+  const startLocal = new Date(clientNow);
+  startLocal.setUTCMonth(0, 1);
+  startLocal.setUTCHours(0, 0, 0, 0);
+  
+  const endLocal = new Date(clientNow);
+  endLocal.setUTCMonth(11, 31);
+  endLocal.setUTCHours(23, 59, 59, 999);
+  
   return {
-    start: new Date(start.getTime() + timezoneOffset * 60 * 1000),
-    end: new Date(end.getTime() + timezoneOffset * 60 * 1000),
+    start: new Date(startLocal.getTime() + timezoneOffset * 60 * 1000),
+    end: new Date(endLocal.getTime() + timezoneOffset * 60 * 1000),
   };
 }
 
 // Calculate client-timezone-aware start and end of month in UTC
 export function getClientMonthBounds(clientNow: Date, timezoneOffset?: number) {
-  const start = fnsStartOfMonth(clientNow);
-  const end = fnsEndOfMonth(clientNow);
-  if (timezoneOffset === undefined) return { start, end };
+  if (timezoneOffset === undefined) {
+    return {
+      start: fnsStartOfMonth(clientNow),
+      end: fnsEndOfMonth(clientNow),
+    };
+  }
+  const startLocal = new Date(clientNow);
+  startLocal.setUTCDate(1);
+  startLocal.setUTCHours(0, 0, 0, 0);
+  
+  const endLocal = new Date(clientNow);
+  endLocal.setUTCMonth(clientNow.getUTCMonth() + 1, 0);
+  endLocal.setUTCHours(23, 59, 59, 999);
+  
   return {
-    start: new Date(start.getTime() + timezoneOffset * 60 * 1000),
-    end: new Date(end.getTime() + timezoneOffset * 60 * 1000),
+    start: new Date(startLocal.getTime() + timezoneOffset * 60 * 1000),
+    end: new Date(endLocal.getTime() + timezoneOffset * 60 * 1000),
   };
 }
 

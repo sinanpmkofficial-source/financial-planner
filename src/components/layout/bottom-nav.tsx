@@ -12,6 +12,7 @@ import {
   HandCoins,
   TrendingUp,
   Settings,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -88,6 +89,7 @@ export function BottomNav() {
                 { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins, desc: "Track loans & debts" },
                 { href: "/analytics", label: "Reports & Trends", icon: TrendingUp, desc: "Cash flow analytics" },
                 { href: "/settings", label: "Settings", icon: Settings, desc: "System configurations" },
+                { href: "/guide", label: "Calculation Guide", icon: HelpCircle, desc: "Formulas & math rules" },
               ].map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (

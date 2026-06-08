@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
@@ -29,6 +30,7 @@ import {
   Target,
   ArrowRight,
   AlertCircle,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getRecurringExpenses, confirmRecurringPayment } from "@/actions/recurring-expense";
@@ -250,6 +252,30 @@ export function DashboardClient() {
     });
   }, [recurringExpenses]);
 
+  const upcomingUnbudgetedRecurringTotal = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const unbudgetedRecs = recurringExpenses.filter((item) => {
+      if (!item.isActive) return false;
+
+      const dueDate = new Date(item.nextDueDate);
+      const isDueThisMonthOrOverdue =
+        dueDate.getFullYear() < currentYear ||
+        (dueDate.getFullYear() === currentYear && dueDate.getMonth() <= currentMonth);
+
+      if (!isDueThisMonthOrOverdue) return false;
+
+      const isBudgeted = budgets.some(
+        (b) => b.category.toLowerCase() === item.category.toLowerCase()
+      );
+      return !isBudgeted;
+    });
+
+    return unbudgetedRecs.reduce((sum, item) => sum + item.amount, 0);
+  }, [recurringExpenses, budgets]);
+
   const handleConfirmPayment = async (id: string) => {
     const toastId = toast.loading("Confirming and recording payment...");
     try {
@@ -274,10 +300,20 @@ export function DashboardClient() {
         description={currentDateString}
         showMonthPicker={false}
         action={
-          <QuickActions
-            onRecordTransaction={() => setTransactionFormOpen(true)}
-            disabled={summaryLoading}
-          />
+          <div className="flex items-center gap-2">
+            <Link
+              href="/guide"
+              className="h-9 px-3.5 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-xl transition-all text-xs flex items-center gap-1.5 font-semibold shrink-0 cursor-pointer bg-background"
+              title="Methodology & Calculation Guide"
+            >
+              <HelpCircle className="w-4 h-4 text-primary" />
+              <span className="hidden sm:inline">Guide</span>
+            </Link>
+            <QuickActions
+              onRecordTransaction={() => setTransactionFormOpen(true)}
+              disabled={summaryLoading}
+            />
+          </div>
         }
       />
 
@@ -384,7 +420,7 @@ export function DashboardClient() {
           value={
             summaryLoading || budgetsLoading || !summary
               ? "..."
-              : formatCurrency((summary.savings ?? 0) - budgetSummary.totalLeft)
+              : formatCurrency((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal)
           }
           icon={PiggyBank}
           variant="default"
@@ -393,7 +429,7 @@ export function DashboardClient() {
           trend={
             summaryLoading || budgetsLoading || !summary
               ? "..."
-              : ((summary.savings ?? 0) - budgetSummary.totalLeft) >= 0
+              : ((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal) >= 0
               ? "Unallocated surplus"
               : "Deficit risk (over budget)"
           }

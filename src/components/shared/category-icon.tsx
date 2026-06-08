@@ -36,7 +36,7 @@ export function CategoryIcon({ name, className = "w-4 h-4" }: CategoryIconProps)
   };
 
   const resolvedName = emojiMap[name] || name;
-  const IconComponent = (Icons as any)[resolvedName];
+  const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[resolvedName];
 
   if (IconComponent) {
     return <IconComponent className={className} />;
