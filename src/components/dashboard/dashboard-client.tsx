@@ -106,6 +106,11 @@ export function DashboardClient() {
     return { totalLimit, totalSpent, totalLeft, percentageLeft, percentageSpent };
   }, [budgets]);
 
+  const catIconMap = useMemo(() => {
+    const categories = settings?.categories || [];
+    return new Map<string, string>(categories.map((c: any) => [c.name.toLowerCase(), c.icon]));
+  }, [settings]);
+
   const fetchData = useCallback(async () => {
     // Fetch Summary independently
     setSummaryLoading(true);
@@ -672,7 +677,7 @@ export function DashboardClient() {
                         <div className="flex justify-between items-center text-xs">
                           <span className="flex items-center gap-1.5 font-medium text-foreground">
                             <span className="text-sm">
-                              {CATEGORY_ICONS[b.category as ExpenseCategory] || "📌"}
+                              {catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌"}
                             </span>
                             <span>{b.category}</span>
                           </span>
@@ -812,7 +817,7 @@ export function DashboardClient() {
       {/* Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
         <RecentTransactions expenses={expenses} incomes={incomes} categories={settings?.categories} loading={transactionsLoading} />
-        <BudgetAlerts budgets={budgets} loading={budgetsLoading} />
+        <BudgetAlerts budgets={budgets} loading={budgetsLoading} categories={settings?.categories} />
       </div>
 
       <ExpenseForm

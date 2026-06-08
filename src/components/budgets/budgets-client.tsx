@@ -14,12 +14,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Plus, PiggyBank, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { getUserSettings } from "@/actions/settings";
 import type { BudgetWithSpent } from "@/types";
 import { cn } from "@/lib/utils";
 
 export function BudgetsClient() {
   const { dateRange } = useUIStore();
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
+  const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<
@@ -41,6 +43,14 @@ export function BudgetsClient() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    getUserSettings().then((settings) => {
+      setCategories(settings.categories || []);
+    });
+  }, []);
+
+  const catIconMap = new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.icon]));
 
   const handleDelete = async (id: string) => {
     const result = await deleteBudget(id);
@@ -127,7 +137,7 @@ export function BudgetsClient() {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2.5">
                       <span className="text-lg">
-                        {CATEGORY_ICONS[budget.category as ExpenseCategory]}
+                        {catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📌"}
                       </span>
                       <div>
                         <p className="font-medium text-sm">{budget.category}</p>

@@ -1,18 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency } from "@/lib/format";
-import { type ExpenseCategory } from "@/constants";
-import { CategoryIcon } from "@/components/shared/category-icon";
+import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
 import type { BudgetWithSpent } from "@/types";
 import { AlertTriangle } from "lucide-react";
 
 interface BudgetAlertsProps {
   budgets: BudgetWithSpent[];
   loading?: boolean;
+  categories?: { name: string; icon: string }[];
 }
 
-export function BudgetAlerts({ budgets, loading = false }: BudgetAlertsProps) {
+export function BudgetAlerts({ 
+  budgets, 
+  loading = false,
+  categories = [],
+}: BudgetAlertsProps) {
   const warningBudgets = budgets.filter((b) => b.percentage >= 80);
+
+  const catIconMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.icon]));
 
   if (loading) {
     return (
@@ -54,7 +60,9 @@ export function BudgetAlerts({ budgets, loading = false }: BudgetAlertsProps) {
           <div key={b._id} className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CategoryIcon name={b.category} className="w-4 h-4 text-foreground" />
+                <span className="text-sm shrink-0">
+                  {catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌"}
+                </span>
                 <span className="text-sm font-medium">{b.category}</span>
               </div>
               <span

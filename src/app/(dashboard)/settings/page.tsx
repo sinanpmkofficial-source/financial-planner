@@ -48,6 +48,22 @@ const COLOR_PRESETS = [
   { name: "Slate", value: "hsl(200, 15%, 50%)" }
 ];
 
+function hslToHex(hslStr: string): string {
+  if (hslStr.startsWith("#")) return hslStr;
+  const match = hslStr.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
+  if (!match) return "#000000";
+  const h = parseInt(match[1]);
+  const s = parseInt(match[2]) / 100;
+  const l = parseInt(match[3]) / 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 interface CategoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -169,48 +185,52 @@ function CategoryDialog({
             </div>
           </div>
 
-          {/* Color Preset */}
+          {/* Color Picker */}
           <div className="space-y-2">
-            <Label>Label Color</Label>
-            <div className="flex flex-wrap gap-2.5 pt-1">
-              {COLOR_PRESETS.map((preset) => (
-                <button
-                  key={preset.name}
-                  type="button"
-                  onClick={() => setCatColor(preset.value)}
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center border transition-all cursor-pointer hover:scale-110 shrink-0",
-                    catColor === preset.value
-                      ? "ring-2 ring-primary ring-offset-2 border-transparent scale-105"
-                      : "border-border/60 hover:border-foreground/30"
-                  )}
-                  style={{ backgroundColor: preset.value }}
-                  title={preset.name}
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-2 pt-2">
-              <Label htmlFor="custom-color" className="text-xs">Custom Hex/HSL:</Label>
-              <Input
-                id="custom-color"
-                type="text"
-                className="h-7 text-xs w-36 font-mono !px-2.5 !rounded-md"
-                value={catColor}
+            <Label htmlFor="cat-color-input">Label Color</Label>
+            <div className="flex items-center gap-3">
+              {/* Color Swatch / Picker Trigger */}
+              <label 
+                htmlFor="color-picker-input" 
+                className="w-10 h-10 rounded-full border border-border/85 flex items-center justify-center cursor-pointer shadow-xs transition-all hover:scale-105 hover:border-foreground/30 shrink-0"
+                style={{ backgroundColor: catColor }}
+                title="Choose Color"
+              >
+                <span className="sr-only">Choose Color</span>
+              </label>
+              <input
+                id="color-picker-input"
+                type="color"
+                className="sr-only"
+                value={hslToHex(catColor)}
                 onChange={(e) => setCatColor(e.target.value)}
               />
+              
+              {/* Text Input for Hex/HSL */}
+              <Input
+                id="cat-color-input"
+                type="text"
+                className="font-mono text-sm max-w-[200px]"
+                value={catColor}
+                onChange={(e) => setCatColor(e.target.value)}
+                placeholder="e.g. #ff0000 or hsl(...)"
+              />
             </div>
+            <p className="text-xs text-muted-foreground">
+              Click the circular swatch to pick a color, or enter a custom hex/hsl value.
+            </p>
           </div>
 
-          <div className="flex gap-2 pt-4">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1"
+              className="w-full sm:w-auto"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={savingCategory} className="flex-1 cursor-pointer">
+            <Button type="submit" disabled={savingCategory} className="w-full sm:w-auto cursor-pointer">
               {savingCategory ? "Saving..." : category ? "Update" : "Create"}
             </Button>
           </div>
