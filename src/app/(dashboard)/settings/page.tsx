@@ -205,19 +205,19 @@ function CategoryDialog({
             </div>
           </div>
 
-          <DialogFooter className="pt-2">
+          <div className="flex gap-2 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              className="flex-1 sm:flex-none"
+              className="flex-1"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={savingCategory} className="flex-1 sm:flex-none">
+            <Button type="submit" disabled={savingCategory} className="flex-1 cursor-pointer">
               {savingCategory ? "Saving..." : category ? "Update" : "Create"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
