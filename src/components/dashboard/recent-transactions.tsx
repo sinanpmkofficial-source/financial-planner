@@ -59,6 +59,7 @@ export function RecentTransactions({
     })
     .slice(0, 7);
 
+
   if (loading) {
     return (
       <Card className="border border-border/50 shadow-xs">
@@ -93,7 +94,6 @@ export function RecentTransactions({
   if (transactions.length === 0) {
     return null;
   }
-
   return (
     <Card className="border border-border/50 shadow-sm">
       <CardHeader className="pb-3">
