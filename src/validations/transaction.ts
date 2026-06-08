@@ -7,9 +7,13 @@ export const transactionSchema = z
       .number({ message: "Amount is required" })
       .positive("Amount must be positive"),
     category: z.string().optional(),
+    tag: z.enum(["Needs", "Wants", "Investments", "Unnecessary Spending"]).optional(),
     source: z.string().optional(),
     note: z.string().optional(),
     date: z.string({ message: "Date is required" }),
+    // Recurrence fields (optional)
+    isRecurring: z.boolean().optional(),
+    frequency: z.enum(["weekly", "monthly", "yearly"]).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.type === "expense") {
@@ -18,6 +22,13 @@ export const transactionSchema = z
           code: z.ZodIssueCode.custom,
           message: "Category is required for expenses",
           path: ["category"],
+        });
+      }
+      if (!data.tag) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Financial tag is required for expenses",
+          path: ["tag"],
         });
       }
     } else if (data.type === "income") {

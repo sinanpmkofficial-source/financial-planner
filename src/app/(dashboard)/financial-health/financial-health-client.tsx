@@ -3,34 +3,31 @@
 import { useUIStore } from "@/stores/ui-store";
 import { useEffect, useState, useCallback } from "react";
 import { getFinancialHealthData } from "@/actions/financial-health";
-import { getGoalsWithProgress, createGoal, addGoalContribution, deleteGoal } from "@/actions/goals";
 import { formatCurrency } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plus, Target, CheckCircle2, XCircle, AlertCircle, Coins, Trash2, Activity } from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, Sparkles, TrendingUp, TrendingDown, PiggyBank, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+interface FinancialHealthData {
+  totalIncome: number;
+  totalNeeds: number;
+  totalWants: number;
+  totalInvestments: number;
+  totalUnnecessary: number;
+  totalGoals: number;
+  totalSavings: number;
+  rentExpense: number;
+  totalLiquidCash: number;
+  totalBorrowedPending: number;
+}
+
 export function FinancialHealthClient() {
-  const { dateRange, setDashboardDirty } = useUIStore();
+  const { dateRange } = useUIStore();
   const [loading, setLoading] = useState(true);
-  const [healthData, setHealthData] = useState<any>(null);
-  const [goals, setGoals] = useState<any[]>([]);
-
-  // Dialog states
-  const [newGoalOpen, setNewGoalOpen] = useState(false);
-  const [fundGoalOpen, setFundGoalOpen] = useState(false);
-  const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
-
-  // Form states
-  const [goalName, setGoalName] = useState("");
-  const [goalTarget, setGoalTarget] = useState("");
-  const [fundAmount, setFundAmount] = useState("");
+  const [healthData, setHealthData] = useState<FinancialHealthData | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -38,14 +35,9 @@ export function FinancialHealthClient() {
       const month = dateRange.from.getMonth() + 1;
       const year = dateRange.from.getFullYear();
       
-      const [hData, gData] = await Promise.all([
-        getFinancialHealthData(month, year),
-        getGoalsWithProgress()
-      ]);
-      
+      const hData = await getFinancialHealthData(month, year);
       setHealthData(hData);
-      setGoals(gData);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load financial health data");
     } finally {
       setLoading(false);
@@ -56,47 +48,6 @@ export function FinancialHealthClient() {
     fetchData();
   }, [fetchData]);
 
-  const handleCreateGoal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!goalName || !goalTarget) return;
-    
-    const res = await createGoal({ name: goalName, targetAmount: Number(goalTarget) });
-    if (res.success) {
-      toast.success("Goal created");
-      setNewGoalOpen(false);
-      setGoalName("");
-      setGoalTarget("");
-      fetchData();
-    } else {
-      toast.error(res.error);
-    }
-  };
-
-  const handleFundGoal = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedGoalId || !fundAmount) return;
-
-    const res = await addGoalContribution(selectedGoalId, Number(fundAmount), new Date().toISOString());
-    if (res.success) {
-      toast.success("Funds added to goal");
-      setDashboardDirty(true); // Funding a goal affects net balance and dashboard stats
-      setFundGoalOpen(false);
-      setFundAmount("");
-      fetchData();
-    } else {
-      toast.error(res.error);
-    }
-  };
-
-  const handleDeleteGoal = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this goal? All tracked contributions will be lost.")) return;
-    const res = await deleteGoal(id);
-    if (res.success) {
-      toast.success("Goal deleted");
-      fetchData();
-    }
-  };
-
   if (loading || !healthData) {
     return (
       <div className="space-y-6">
@@ -106,43 +57,75 @@ export function FinancialHealthClient() {
     );
   }
 
-  const { totalIncome, totalNeeds, totalFun, totalGoals, totalSavings, rentExpense, totalLiquidCash } = healthData;
+  const {
+    totalIncome,
+    totalNeeds,
+    totalWants,
+    totalUnnecessary,
+    totalGoals,
+    totalSavings,
+    rentExpense,
+    totalLiquidCash,
+    totalBorrowedPending
+  } = healthData;
 
-  // 55/25/15/5 Calculations
+  // 50-30-20 Calculations
   const needsPct = totalIncome > 0 ? (totalNeeds / totalIncome) * 100 : 0;
-  const savingsPct = totalIncome > 0 ? (totalSavings / totalIncome) * 100 : 0;
-  const goalsPct = totalIncome > 0 ? (totalGoals / totalIncome) * 100 : 0;
-  const funPct = totalIncome > 0 ? (totalFun / totalIncome) * 100 : 0;
+  const wantsPct = totalIncome > 0 ? ((totalWants + totalUnnecessary) / totalIncome) * 100 : 0;
+  const savingsPct = totalIncome > 0 ? ((totalSavings + totalGoals) / totalIncome) * 100 : 0;
 
-  // Targets
-  const targetNeeds = totalIncome * 0.55;
-  const targetSavings = totalIncome * 0.25;
-  const targetGoals = totalIncome * 0.15;
-  const targetFun = totalIncome * 0.05;
+  const targetNeeds = totalIncome * 0.50;
+  const targetWants = totalIncome * 0.30;
+  const targetSavings = totalIncome * 0.20;
 
-  // Rules Checklist
+  // Stability Indicators
   const rentRulePassed = totalIncome > 0 && rentExpense <= (totalIncome * 0.30);
-  const emergencyRulePassed = totalLiquidCash >= (totalNeeds * 6);
+  
   const emergencyTarget = totalNeeds * 6;
-  const savingsRatePassed = totalIncome > 0 && (totalSavings + totalGoals) >= (totalIncome * 0.20);
+  const emergencyRulePassed = totalLiquidCash >= emergencyTarget;
+  const emergencyMonthsCovered = totalNeeds > 0 ? totalLiquidCash / totalNeeds : 0;
 
-  // Overall Verdict
+  const dtiRatio = totalIncome > 0 ? (totalBorrowedPending / totalIncome) * 100 : 0;
+  const dtiRulePassed = dtiRatio <= 36;
+
+  // Calculate detailed financial health score (0 - 100)
+  // 1. Savings Rate (30 pts max)
+  let savingsScore = 0;
+  if (totalIncome > 0) {
+    savingsScore = Math.min(30, (savingsPct / 20) * 30);
+  }
+  // 2. Needs Adherence (30 pts max)
+  let needsScore = 0;
+  if (totalIncome > 0) {
+    if (needsPct <= 50) {
+      needsScore = 30;
+    } else {
+      needsScore = Math.max(0, 30 - ((needsPct - 50) / 50) * 30);
+    }
+  }
+  // 3. Debt-to-Income (20 pts max)
+  let dtiScore = 20;
+  if (totalIncome > 0 && totalBorrowedPending > 0) {
+    if (dtiRatio <= 36) {
+      dtiScore = 20;
+    } else {
+      dtiScore = Math.max(0, 20 - ((dtiRatio - 36) / 64) * 20);
+    }
+  }
+  // 4. Emergency Fund cover (20 pts max)
+  const emergencyScore = Math.min(20, (emergencyMonthsCovered / 6) * 20);
+
+  const finalScore = Math.round(savingsScore + needsScore + dtiScore + emergencyScore);
+
+  // Score description
   let verdict = "Needs Attention";
   let verdictColor = "text-rose-500 bg-rose-500/10 border-rose-500/20";
-  let score = 0;
   
   if (totalIncome > 0) {
-    if (needsPct <= 60) score++;
-    if (savingsPct >= 20) score++;
-    if (goalsPct >= 10) score++;
-    if (rentRulePassed) score++;
-    if (emergencyRulePassed) score++;
-    if (savingsRatePassed) score++;
-
-    if (score >= 5) {
+    if (finalScore >= 80) {
       verdict = "Excellent";
       verdictColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
-    } else if (score >= 3) {
+    } else if (finalScore >= 50) {
       verdict = "Good";
       verdictColor = "text-amber-500 bg-amber-500/10 border-amber-500/20";
     }
@@ -151,243 +134,264 @@ export function FinancialHealthClient() {
     verdictColor = "text-muted-foreground bg-muted border-border/50";
   }
 
+  // Dynamic recommendations/tips
+  const tips = [];
+  if (totalIncome > 0) {
+    if (needsPct > 50) {
+      tips.push({
+        title: "Reduce Fixed Expenses",
+        desc: `Your essential needs take up ${needsPct.toFixed(1)}% of income (target: 50%). Review subscription renewals, look for competitive utility rates, or cut rent burdens if possible.`,
+        icon: TrendingDown,
+        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
+      });
+    }
+    if (wantsPct > 30) {
+      tips.push({
+        title: "Curb Lifestyle Creep",
+        desc: `Lifestyle desires take up ${wantsPct.toFixed(1)}% of your income (target: 30%). Try utilizing a 24-hour waiting period before checking out non-essential shopping carts.`,
+        icon: Sparkles,
+        color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
+      });
+    }
+    if (totalUnnecessary > 0) {
+      const savingsImpact = ((totalUnnecessary / totalIncome) * 100).toFixed(1);
+      tips.push({
+        title: "Plug Unnecessary Leaks",
+        desc: `You logged ${formatCurrency(totalUnnecessary)} under 'Unnecessary Spending' this month. Pausing these leaks would boost your savings rate by ${savingsImpact}%!`,
+        icon: AlertCircle,
+        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
+      });
+    }
+    if (savingsPct < 20) {
+      tips.push({
+        title: "Automate Savings First",
+        desc: `Your savings rate is ${savingsPct.toFixed(1)}% (target: 20%). Automate a percentage of your salary to route directly to investments at the start of each month.`,
+        icon: PiggyBank,
+        color: "text-blue-500 bg-blue-500/5 border-blue-500/10"
+      });
+    }
+    if (totalBorrowedPending > 0 && dtiRatio > 36) {
+      tips.push({
+        title: "Tackle Debt Exposure",
+        desc: `Your debt-to-income ratio is ${dtiRatio.toFixed(1)}% (target: <36%). Try the debt avalanche method (paying off high-interest debt first) and freeze new borrows.`,
+        icon: TrendingUp,
+        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
+      });
+    }
+    if (emergencyMonthsCovered < 6) {
+      tips.push({
+        title: "Secure Emergency Buffer",
+        desc: `Your liquid cash covers ${emergencyMonthsCovered.toFixed(1)} months of needs. Prioritize building a cash buffer of ${formatCurrency(emergencyTarget)} in a high-yield account.`,
+        icon: ShieldCheck,
+        color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
+      });
+    }
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 animate-fade-in-up">
       <PageHeader
-        title="Financial Health & Goals"
-        description="Analyze your spending against the 55/25/15/5 rule"
+        title="Financial Health Audit"
+        description="Analysis of monthly spending metrics against the 50-30-20 blueprint"
         showMonthPicker
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* 55/25/15/5 Breakdown */}
-        <Card className="lg:col-span-2 shadow-sm border-border/50 flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/30">
-            <div>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Target className="w-5 h-5 text-primary" />
-                55/25/15/5 Blueprint
-              </CardTitle>
-              <CardDescription>Based on this month's categorized income of {formatCurrency(totalIncome)}</CardDescription>
-            </div>
-            <div className={cn("px-3 py-1 rounded-full border text-xs font-bold uppercase tracking-wider", verdictColor)}>
-              {verdict}
-            </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Visual Health Score Gauge */}
+        <Card className="flex flex-col items-center justify-center p-6 text-center border-border/50 shadow-sm">
+          <CardHeader className="pb-2 text-center w-full">
+            <CardTitle className="text-base font-semibold">Health Score</CardTitle>
+            <CardDescription>Overall index of your wealth stability</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 pt-6">
-            {/* Needs */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="font-semibold text-foreground">Needs (Target: 55%)</span>
-                <div className="text-right">
-                  <span className="font-mono text-muted-foreground block">{formatCurrency(totalNeeds)} ({needsPct.toFixed(1)}%)</span>
-                  {totalIncome > 0 && (
-                    <span className={cn("text-[10px] font-medium block", needsPct > 55 ? "text-rose-500" : "text-emerald-500")}>
-                      {needsPct > 55 ? `Over by ${formatCurrency(totalNeeds - targetNeeds)}` : `Under by ${formatCurrency(targetNeeds - totalNeeds)}`}
-                    </span>
-                  )}
+          <CardContent className="flex flex-col items-center justify-center pt-2 w-full">
+            {totalIncome > 0 ? (
+              <div className="relative flex items-center justify-center w-40 h-40">
+                {/* SVG Circular progress */}
+                <svg className="w-full h-full transform -rotate-90">
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="68"
+                    className="stroke-muted"
+                    strokeWidth="10"
+                    fill="transparent"
+                  />
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="68"
+                    className={cn("stroke-primary transition-all duration-500")}
+                    strokeWidth="10"
+                    fill="transparent"
+                    strokeDasharray={427}
+                    strokeDashoffset={427 - (427 * finalScore) / 100}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute flex flex-col items-center justify-center">
+                  <span className="text-4xl font-extrabold text-foreground">{finalScore}</span>
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground mt-0.5">/ 100</span>
                 </div>
               </div>
-              <Progress value={needsPct} max={100} className={cn("h-2", needsPct > 55 ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500")} />
-              <p className="text-xs text-muted-foreground">Rent, food, utilities, transport. {needsPct > 55 ? "Try to reduce fixed costs." : "Excellent control of fixed costs."}</p>
-            </div>
-
-            {/* Savings */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="font-semibold text-foreground">Savings/Future (Target: 25%)</span>
-                <div className="text-right">
-                  <span className="font-mono text-muted-foreground block">{formatCurrency(totalSavings)} ({savingsPct.toFixed(1)}%)</span>
-                  {totalIncome > 0 && (
-                    <span className={cn("text-[10px] font-medium block", savingsPct < 25 ? "text-amber-500" : "text-emerald-500")}>
-                      {savingsPct < 25 ? `Short by ${formatCurrency(targetSavings - totalSavings)}` : `Surplus of ${formatCurrency(totalSavings - targetSavings)}`}
-                    </span>
-                  )}
-                </div>
+            ) : (
+              <div className="w-40 h-40 rounded-full border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground text-xs p-4">
+                💡 Add income records for this month to generate your health score.
               </div>
-              <Progress value={savingsPct} max={100} className={cn("h-2", savingsPct < 25 ? "[&>div]:bg-amber-500" : "[&>div]:bg-emerald-500")} />
-              <p className="text-xs text-muted-foreground">Investments and unspent cash. {savingsPct < 25 ? "Aim to save more of your income before spending." : "Great job securing your future."}</p>
-            </div>
-
-            {/* Goals */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="font-semibold text-foreground">Goals (Target: 15%)</span>
-                <div className="text-right">
-                  <span className="font-mono text-muted-foreground block">{formatCurrency(totalGoals)} ({goalsPct.toFixed(1)}%)</span>
-                  {totalIncome > 0 && (
-                    <span className="text-[10px] font-medium text-blue-500 block">
-                      {goalsPct < 15 ? `Room for ${formatCurrency(targetGoals - totalGoals)}` : `Above target by ${formatCurrency(totalGoals - targetGoals)}`}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <Progress value={goalsPct} max={100} className="h-2 [&>div]:bg-blue-500" />
-              <p className="text-xs text-muted-foreground">Manual funds routed to specific goals (e.g. Gold, Debt).</p>
-            </div>
-
-            {/* Fun */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="font-semibold text-foreground">Fun (Target: 5%)</span>
-                <div className="text-right">
-                  <span className="font-mono text-muted-foreground block">{formatCurrency(totalFun)} ({funPct.toFixed(1)}%)</span>
-                  {totalIncome > 0 && (
-                    <span className={cn("text-[10px] font-medium block", funPct > 5 ? "text-amber-500" : "text-emerald-500")}>
-                      {funPct > 5 ? `Over by ${formatCurrency(totalFun - targetFun)}` : `Under by ${formatCurrency(targetFun - totalFun)}`}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <Progress value={funPct} max={100} className={cn("h-2", funPct > 5 ? "[&>div]:bg-amber-500" : "[&>div]:bg-emerald-500")} />
-              <p className="text-xs text-muted-foreground">Hobbies, eating out, guilt-free spending.</p>
+            )}
+            
+            <div className={cn("px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider mt-6", verdictColor)}>
+              {verdict}
             </div>
           </CardContent>
         </Card>
 
-        {/* Financial Rules Checklist */}
-        <Card className="shadow-sm border-border/50 bg-muted/10 flex flex-col">
-          <CardHeader className="pb-2 border-b border-border/30">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Activity className="w-5 h-5 text-primary" />
-              Rules Checklist
-            </CardTitle>
-            <CardDescription>Core stability indicators</CardDescription>
+        {/* 50-30-20 Rules Breakdown */}
+        <Card className="md:col-span-2 border-border/50 shadow-sm flex flex-col justify-between">
+          <CardHeader className="pb-3 border-b border-border/30">
+            <CardTitle className="text-base font-semibold">50-30-20 Budget Analysis</CardTitle>
+            <CardDescription>Evaluating categorized expenses against targets</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5 pt-6">
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-sm">
-              {rentRulePassed ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />}
-              <div>
-                <p className="font-semibold text-sm">Housing {"<"} 30%</p>
-                <p className="text-xs text-muted-foreground mt-1">Rent ({formatCurrency(rentExpense)}) is {totalIncome > 0 ? ((rentExpense/totalIncome)*100).toFixed(1) : 0}% of income.</p>
+          <CardContent className="space-y-5 pt-5 flex-1 flex flex-col justify-around">
+            {/* Needs */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-foreground font-semibold">Needs (Target: 50%)</span>
+                <span className="font-mono text-muted-foreground">{formatCurrency(totalNeeds)} ({needsPct.toFixed(1)}%)</span>
               </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-sm">
-              {emergencyRulePassed ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" /> : <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />}
-              <div>
-                <p className="font-semibold text-sm">6-Month Emergency Fund</p>
-                <p className="text-[10px] font-mono mt-1 text-muted-foreground">Target: {formatCurrency(emergencyTarget)}</p>
-                <p className="text-[10px] font-mono mt-0.5 font-bold text-foreground">Current: {formatCurrency(totalLiquidCash)}</p>
-                {!emergencyRulePassed && (
-                  <p className="text-[10px] text-rose-500 mt-1">Shortfall: {formatCurrency(Math.max(0, emergencyTarget - totalLiquidCash))}</p>
+              <Progress value={needsPct} max={100} className={cn("h-2", needsPct > 50 ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500")} />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                <span>Rent, bills, essentials</span>
+                {totalIncome > 0 && (
+                  <span className={cn("font-medium", needsPct > 50 ? "text-rose-500" : "text-emerald-500")}>
+                    {needsPct > 50 ? `Over by ${formatCurrency(totalNeeds - targetNeeds)}` : `Room for ${formatCurrency(targetNeeds - totalNeeds)}`}
+                  </span>
                 )}
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-card border border-border/50 shadow-sm">
-              {savingsRatePassed ? <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />}
-              <div>
-                <p className="font-semibold text-sm">Savings Rate {">="} 20%</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  You are saving/investing {totalIncome > 0 ? (((totalSavings + totalGoals)/totalIncome)*100).toFixed(1) : 0}% of your total income.
-                </p>
+            {/* Wants */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-foreground font-semibold">Wants (Target: 30%)</span>
+                <span className="font-mono text-muted-foreground">{formatCurrency(totalWants + totalUnnecessary)} ({wantsPct.toFixed(1)}%)</span>
+              </div>
+              <Progress value={wantsPct} max={100} className={cn("h-2", wantsPct > 30 ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500")} />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                <span>Lifestyle, hobbies, unnecessary items</span>
+                {totalIncome > 0 && (
+                  <span className={cn("font-medium", wantsPct > 30 ? "text-rose-500" : "text-emerald-500")}>
+                    {wantsPct > 30 ? `Over by ${formatCurrency((totalWants + totalUnnecessary) - targetWants)}` : `Room for ${formatCurrency(targetWants - (totalWants + totalUnnecessary))}`}
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 text-xs text-primary/80 font-medium">
-              Mapping categories in Settings to their correct "Financial Bucket" is required for accurate 55/25/15/5 analysis.
+            {/* Savings */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs font-medium">
+                <span className="text-foreground font-semibold">Savings & Investments (Target: 20%)</span>
+                <span className="font-mono text-muted-foreground">{formatCurrency(totalSavings + totalGoals)} ({savingsPct.toFixed(1)}%)</span>
+              </div>
+              <Progress value={savingsPct} max={100} className={cn("h-2", savingsPct < 20 ? "[&>div]:bg-amber-500" : "[&>div]:bg-emerald-500")} />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
+                <span>SIP, savings, manual goal contributions</span>
+                {totalIncome > 0 && (
+                  <span className={cn("font-medium", savingsPct < 20 ? "text-amber-500" : "text-emerald-500")}>
+                    {savingsPct < 20 ? `Short by ${formatCurrency(targetSavings - (totalSavings + totalGoals))}` : `Surplus of ${formatCurrency((totalSavings + totalGoals) - targetSavings)}`}
+                  </span>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Goal Tracker */}
-      <div className="pt-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-foreground">Goal Tracker</h2>
-            <p className="text-sm text-muted-foreground">Manually allocate funds toward specific objectives</p>
-          </div>
-          <Button size="sm" className="gap-1.5 cursor-pointer" onClick={() => setNewGoalOpen(true)}>
-            <Plus className="w-4 h-4" /> New Goal
-          </Button>
-          <Dialog open={newGoalOpen} onOpenChange={setNewGoalOpen}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create Financial Goal</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateGoal} className="space-y-4 pt-2">
-                <div className="space-y-2">
-                  <Label>Goal Name</Label>
-                  <Input required placeholder="e.g., Emergency Fund, Laptop" value={goalName} onChange={e => setGoalName(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Target Amount (₹)</Label>
-                  <Input required type="number" step="1" value={goalTarget} onChange={e => setGoalTarget(e.target.value)} />
-                </div>
-                <Button type="submit" className="w-full">Save Goal</Button>
-              </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {goals.length === 0 ? (
-            <div className="col-span-full py-12 text-center border border-dashed rounded-2xl bg-muted/5">
-              <p className="text-muted-foreground font-medium">No goals tracked yet.</p>
-            </div>
-          ) : (
-            goals.map((goal) => (
-              <Card key={goal._id} className="relative shadow-sm border-border/50 group transition-all hover:border-foreground/30">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-rose-500 cursor-pointer"
-                  onClick={() => handleDeleteGoal(goal._id)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="text-2xl">{goal.icon}</span>
-                    <div>
-                      <h4 className="font-semibold leading-none pr-6">{goal.name}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">Target: {formatCurrency(goal.targetAmount)}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5 mb-4">
-                    <div className="flex justify-between text-xs font-mono font-medium">
-                      <span>{formatCurrency(goal.totalContributed)}</span>
-                      <span>{goal.progressPercentage.toFixed(0)}%</span>
-                    </div>
-                    <Progress value={goal.progressPercentage} className="h-2" />
-                    {goal.targetAmount - goal.totalContributed > 0 && (
-                      <p className="text-[10px] text-muted-foreground text-right mt-1">
-                        {formatCurrency(goal.targetAmount - goal.totalContributed)} left
-                      </p>
-                    )}
-                  </div>
-                  <Button 
-                    variant="secondary" 
-                    size="sm" 
-                    className="w-full gap-1.5 cursor-pointer"
-                    onClick={() => { setSelectedGoalId(goal._id); setFundGoalOpen(true); }}
-                  >
-                    <Coins className="w-3.5 h-3.5" /> Add Funds
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-
-        <Dialog open={fundGoalOpen} onOpenChange={setFundGoalOpen}>
-          <DialogContent className="sm:max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Add Funds to Goal</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleFundGoal} className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Contribution Amount (₹)</Label>
-                <Input required type="number" step="0.01" value={fundAmount} onChange={e => setFundAmount(e.target.value)} />
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* Core Rules Checklist */}
+        <Card className="md:col-span-1 border-border/50 shadow-sm flex flex-col justify-between">
+          <CardHeader className="pb-3 border-b border-border/30">
+            <CardTitle className="text-base font-semibold">Stability Indicators</CardTitle>
+            <CardDescription>Core rules checklists</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 pt-5 flex-1 flex flex-col justify-center">
+            {/* Rent indicator */}
+            <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-card shadow-xs">
+              {rentRulePassed ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              )}
+              <div className="text-xs">
+                <p className="font-bold text-foreground">Rent Budget ({"<"} 30%)</p>
+                <p className="text-muted-foreground mt-0.5">
+                  Housing rent is {totalIncome > 0 ? ((rentExpense / totalIncome) * 100).toFixed(0) : 0}% of income.
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">This amount will be tracked towards this goal and counted as 'Goals' in your 55/25/15/5 analysis for this month.</p>
-              <Button type="submit" className="w-full cursor-pointer">Record Contribution</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </div>
 
+            {/* Emergency fund indicator */}
+            <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-card shadow-xs">
+              {emergencyRulePassed ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+              )}
+              <div className="text-xs">
+                <p className="font-bold text-foreground">Emergency Cover (6-Mo)</p>
+                <p className="text-muted-foreground mt-0.5">
+                  Buffer: {emergencyMonthsCovered.toFixed(1)} months of needs ({formatCurrency(totalLiquidCash)} / {formatCurrency(emergencyTarget)} target)
+                </p>
+              </div>
+            </div>
+
+            {/* Debt to Income ratio indicator */}
+            <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-card shadow-xs">
+              {dtiRulePassed ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+              ) : (
+                <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+              )}
+              <div className="text-xs">
+                <p className="font-bold text-foreground">Debt-to-Income ({"<"} 36%)</p>
+                <p className="text-muted-foreground mt-0.5">
+                  DTI is {dtiRatio.toFixed(1)}% based on pending borrowed amount of {formatCurrency(totalBorrowedPending)}.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Actionable Tips Column */}
+        <Card className="md:col-span-2 border-border/50 shadow-sm flex flex-col justify-between">
+          <CardHeader className="pb-3 border-b border-border/30">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+              Actionable Wealth Tips
+            </CardTitle>
+            <CardDescription>Tailored suggestions to optimize cash flows</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-5 flex-1">
+            {tips.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-2" />
+                <p className="font-bold text-foreground text-sm">Perfect Financial Health!</p>
+                <p className="text-xs mt-0.5">All rule thresholds check out positive this month. Keep up the disciplined habits!</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {tips.map((tip, idx) => (
+                  <div key={idx} className={cn("p-3.5 border rounded-xl flex items-start gap-3 text-xs leading-relaxed", tip.color)}>
+                    <tip.icon className="w-4 h-4 shrink-0 mt-0.5 text-foreground" />
+                    <div>
+                      <p className="font-bold text-foreground">{tip.title}</p>
+                      <p className="text-muted-foreground mt-1 leading-normal">{tip.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
