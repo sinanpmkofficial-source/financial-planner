@@ -159,66 +159,15 @@ function CategoryDialog({
 
           {/* Icon (Emoji) */}
           <div className="space-y-2">
-            <Label>Select Emoji Icon</Label>
-            <div className="flex gap-2 w-full min-w-0">
-              <Input
-                className="w-12 text-center text-lg h-9 !px-1 !rounded-md"
-                value={catIcon}
-                onChange={(e) => setCatIcon(e.target.value)}
-                maxLength={2}
-              />
-              <div className="flex-1 min-w-0 flex items-center overflow-x-auto gap-1.5 p-1 border border-border/40 rounded-lg bg-muted/20 scrollbar-none">
-                {EMOJI_PRESETS.map((emoji) => (
-                  <button
-                    key={emoji}
-                    type="button"
-                    onClick={() => setCatIcon(emoji)}
-                    className={cn(
-                      "w-7 h-7 flex items-center justify-center text-sm !rounded-md transition-all hover:scale-110",
-                      catIcon === emoji ? "bg-primary text-primary-foreground scale-105" : "hover:bg-muted"
-                    )}
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Color Picker */}
-          <div className="space-y-2">
-            <Label htmlFor="cat-color-input">Label Color</Label>
-            <div className="flex items-center gap-3">
-              {/* Color Swatch / Picker Trigger */}
-              <label 
-                htmlFor="color-picker-input" 
-                className="w-10 h-10 rounded-full border border-border/85 flex items-center justify-center cursor-pointer shadow-xs transition-all hover:scale-105 hover:border-foreground/30 shrink-0"
-                style={{ backgroundColor: catColor }}
-                title="Choose Color"
-              >
-                <span className="sr-only">Choose Color</span>
-              </label>
-              <input
-                id="color-picker-input"
-                type="color"
-                className="sr-only"
-                value={hslToHex(catColor)}
-                onChange={(e) => setCatColor(e.target.value)}
-              />
-              
-              {/* Text Input for Hex/HSL */}
-              <Input
-                id="cat-color-input"
-                type="text"
-                className="font-mono text-sm max-w-[200px]"
-                value={catColor}
-                onChange={(e) => setCatColor(e.target.value)}
-                placeholder="e.g. #ff0000 or hsl(...)"
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Click the circular swatch to pick a color, or enter a custom hex/hsl value.
-            </p>
+            <Label htmlFor="cat-icon">Emoji Icon</Label>
+            <Input
+              id="cat-icon"
+              className="w-16 text-center text-lg h-9 !px-1 !rounded-md"
+              value={catIcon}
+              onChange={(e) => setCatIcon(e.target.value)}
+              maxLength={2}
+              placeholder="📁"
+            />
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
@@ -502,23 +451,11 @@ export default function SettingsPage() {
                     className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-muted/20"
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shadow-xs"
-                        style={{ backgroundColor: cat.color + "15", border: `1px solid ${cat.color}25` }}
-                      >
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shadow-xs border border-border bg-muted/20">
                         {cat.icon}
                       </div>
                       <div>
                         <p className="font-medium text-sm text-foreground">{cat.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span
-                            className="inline-block w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: cat.color }}
-                          />
-                          <span className="text-[10px] text-muted-foreground uppercase font-mono tracking-wider">
-                            {cat.color}
-                          </span>
-                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5">
