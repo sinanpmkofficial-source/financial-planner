@@ -108,8 +108,15 @@ export function TransactionsClient() {
       ...expenses.map((e) => ({ ...e, type: "expense" as const })),
       ...incomes.map((i) => ({ ...i, type: "income" as const })),
     ];
-    // Sort descending by date
-    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Sort descending by date, fallback to createdAt timestamp
+    return list.sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      if (timeA !== timeB) return timeB - timeA;
+      const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return createdB - createdA;
+    });
   }, [expenses, incomes]);
 
   const filteredTransactions = useMemo(() => {

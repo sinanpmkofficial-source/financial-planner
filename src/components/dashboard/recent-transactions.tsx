@@ -17,6 +17,7 @@ type Transaction = {
   amount: number;
   label: string;
   date: string;
+  createdAt?: string;
   type: "expense" | "income";
   icon?: string;
 };
@@ -35,6 +36,7 @@ export function RecentTransactions({
       amount: e.amount,
       label: e.category,
       date: e.date,
+      createdAt: e.createdAt,
       type: "expense" as const,
       icon: catIconMap.get(e.category.toLowerCase()) ?? CATEGORY_ICONS[e.category as ExpenseCategory] ?? "📌",
     })),
@@ -43,10 +45,18 @@ export function RecentTransactions({
       amount: i.amount,
       label: i.source,
       date: i.date,
+      createdAt: i.createdAt,
       type: "income" as const,
     })),
   ]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      if (timeA !== timeB) return timeB - timeA;
+      const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return createdB - createdA;
+    })
     .slice(0, 7);
 
   if (loading) {
