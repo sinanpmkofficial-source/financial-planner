@@ -33,7 +33,7 @@ type UnifiedTransaction =
   | (Income & { type: "income" });
 
 export function TransactionsClient() {
-  const { dateRange } = useUIStore();
+  const { dateRange, setDashboardDirty } = useUIStore();
   const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -85,6 +85,7 @@ export function TransactionsClient() {
     const result = type === "expense" ? await deleteExpense(id) : await deleteIncome(id);
     if (result.success) {
       toast.success(`${type === "expense" ? "Expense" : "Income"} deleted`);
+      setDashboardDirty(true);
       await fetchData();
     } else {
       toast.error(result.error);

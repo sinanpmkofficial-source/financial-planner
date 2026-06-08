@@ -33,8 +33,10 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { BorrowLend } from "@/types";
+import { useUIStore } from "@/stores/ui-store";
 
 export function BorrowLendClient() {
+  const { setDashboardDirty } = useUIStore();
   const [records, setRecords] = useState<BorrowLend[]>([]);
   const [summary, setSummary] = useState({
     totalBorrowed: 0,

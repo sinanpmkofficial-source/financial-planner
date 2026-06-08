@@ -19,7 +19,7 @@ import type { BudgetWithSpent } from "@/types";
 import { cn } from "@/lib/utils";
 
 export function BudgetsClient() {
-  const { dateRange } = useUIStore();
+  const { dateRange, setDashboardDirty } = useUIStore();
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +56,7 @@ export function BudgetsClient() {
     const result = await deleteBudget(id);
     if (result.success) {
       toast.success("Budget deleted");
+      setDashboardDirty(true);
       await fetchData();
     } else {
       toast.error(result.error);

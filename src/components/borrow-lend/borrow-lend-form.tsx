@@ -8,6 +8,7 @@ import {
   type BorrowLendFormData,
 } from "@/validations/borrow-lend";
 import { createBorrowLend, updateBorrowLend } from "@/actions/borrow-lend";
+import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,7 @@ export function BorrowLendForm({
 }: BorrowLendFormProps) {
   const [loading, setLoading] = useState(false);
   const isEditing = !!record;
+  const { setDashboardDirty } = useUIStore();
 
   const {
     register,
@@ -111,6 +113,7 @@ export function BorrowLendForm({
 
       if (result.success) {
         toast.success(isEditing ? "Record updated" : "Record added");
+        setDashboardDirty(true);
         reset();
         onOpenChange(false);
         onSuccess?.();

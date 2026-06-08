@@ -45,7 +45,7 @@ export function BudgetForm({
 }: BudgetFormProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
-  const { dateRange } = useUIStore();
+  const { dateRange, setDashboardDirty } = useUIStore();
   const selectedMonth = dateRange.from.getMonth() + 1;
   const selectedYear = dateRange.from.getFullYear();
   const isEditing = !!budget;
@@ -117,6 +117,7 @@ export function BudgetForm({
 
       if (result.success) {
         toast.success(isEditing ? "Budget updated" : "Budget created");
+        setDashboardDirty(true);
         reset();
         onOpenChange(false);
         onSuccess?.();

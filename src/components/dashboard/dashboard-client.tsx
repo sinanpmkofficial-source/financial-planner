@@ -1,7 +1,7 @@
 "use client";
 
 import { useUIStore } from "@/stores/ui-store";
-import { useEffect, useState, startTransition, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";

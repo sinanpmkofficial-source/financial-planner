@@ -27,6 +27,7 @@ import type { Expense, Income } from "@/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getUserSettings } from "@/actions/settings";
+import { useUIStore } from "@/stores/ui-store";
 
 interface TransactionFormProps {
   open: boolean;
@@ -72,6 +73,8 @@ export function TransactionForm({
         : format(new Date(), "yyyy-MM-dd"),
     },
   });
+
+  const { setDashboardDirty } = useUIStore();
 
   const type = watch("type");
   const category = watch("category");
@@ -141,6 +144,7 @@ export function TransactionForm({
             ? `${data.type === "expense" ? "Expense" : "Income"} updated`
             : `${data.type === "expense" ? "Expense" : "Income"} added`
         );
+        setDashboardDirty(true);
         reset();
         onOpenChange(false);
         onSuccess?.();

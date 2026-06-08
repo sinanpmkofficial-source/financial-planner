@@ -55,10 +55,27 @@ interface UIState {
   preset: PeriodPreset;
   customRange: DateRange | undefined;
   dateRange: { from: Date; to: Date };
+  
+  // Dashboard Cache & Optimization
+  isDashboardDirty: boolean;
+  dashboardCache: {
+    summary: unknown | null;
+    expenses: unknown[];
+    incomes: unknown[];
+    budgets: unknown[];
+    chartData: unknown[];
+    settings: unknown | null;
+    lastFetched?: number;
+  };
+  
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setPreset: (preset: PeriodPreset) => void;
   setCustomRange: (range: DateRange | undefined) => void;
+  
+  // Cache Actions
+  setDashboardDirty: (dirty: boolean) => void;
+  updateDashboardCache: (data: Partial<UIState["dashboardCache"]>) => void;
 }
 
 const defaultPreset: PeriodPreset = "This Month";
@@ -72,6 +89,18 @@ export const useUIStore = create<UIState>((set) => ({
     to: initialRange.to,
   },
   dateRange: initialRange,
+  
+  // Cache Initial State
+  isDashboardDirty: true, // Initial load is always "dirty"
+  dashboardCache: {
+    summary: null,
+    expenses: [],
+    incomes: [],
+    budgets: [],
+    chartData: [],
+    settings: null,
+  },
+
   toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setPreset: (preset) =>
@@ -84,4 +113,12 @@ export const useUIStore = create<UIState>((set) => ({
       const dateRange = getDateRangeForPreset("Custom", customRange);
       return { customRange, dateRange };
     }),
+
+  // Cache Actions Implementation
+  setDashboardDirty: (dirty) => set({ isDashboardDirty: dirty }),
+  updateDashboardCache: (data) => 
+    set((state) => ({
+      dashboardCache: { ...state.dashboardCache, ...data, lastFetched: Date.now() }
+    })),
 }));
+
