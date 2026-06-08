@@ -10,13 +10,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Finance Tracker — Personal Finance Dashboard",
+  title: "Nova Finance — Personal Wealth Dashboard",
   description:
-    "Track your expenses, income, budgets, and savings with a clean, minimal personal finance dashboard.",
+    "Track your expenses, income, budgets, and savings with Nova Finance, a clean and minimal personal finance dashboard.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Finance Tracker",
+    title: "Nova",
   },
 };
 

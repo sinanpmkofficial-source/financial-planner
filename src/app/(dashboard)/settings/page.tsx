@@ -24,6 +24,7 @@ interface Category {
   name: string;
   icon: string;
   color: string;
+  bucket?: "Needs" | "Fun" | "Investments" | "Other";
 }
 
 interface UserSettings {
@@ -80,6 +81,7 @@ function CategoryDialog({
   const [catName, setCatName] = useState("");
   const [catIcon, setCatIcon] = useState("📁");
   const [catColor, setCatColor] = useState("hsl(200, 15%, 50%)");
+  const [catBucket, setCatBucket] = useState<"Needs" | "Fun" | "Investments" | "Other">("Other");
   const [savingCategory, setSavingCategory] = useState(false);
 
   useEffect(() => {
@@ -88,10 +90,12 @@ function CategoryDialog({
         setCatName(category.name);
         setCatIcon(category.icon);
         setCatColor(category.color);
+        setCatBucket(category.bucket || "Other");
       } else {
         setCatName("");
         setCatIcon("📁");
         setCatColor("hsl(200, 15%, 50%)");
+        setCatBucket("Other");
       }
     }
   }, [open, category]);
@@ -110,12 +114,14 @@ function CategoryDialog({
           name: catName.trim(),
           icon: catIcon,
           color: catColor,
+          bucket: catBucket,
         });
       } else {
         res = await addCategory({
           name: catName.trim(),
           icon: catIcon,
           color: catColor,
+          bucket: catBucket,
         });
       }
 
@@ -157,17 +163,34 @@ function CategoryDialog({
             )}
           </div>
 
-          {/* Icon (Emoji) */}
-          <div className="space-y-2">
-            <Label htmlFor="cat-icon">Emoji Icon</Label>
-            <Input
-              id="cat-icon"
-              className="w-16 text-center text-lg h-9 !px-1 !rounded-md"
-              value={catIcon}
-              onChange={(e) => setCatIcon(e.target.value)}
-              maxLength={2}
-              placeholder="📁"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            {/* Icon (Emoji) */}
+            <div className="space-y-2">
+              <Label htmlFor="cat-icon">Emoji Icon</Label>
+              <Input
+                id="cat-icon"
+                className="w-full text-center text-lg h-9 !px-1 !rounded-md"
+                value={catIcon}
+                onChange={(e) => setCatIcon(e.target.value)}
+                maxLength={2}
+                placeholder="📁"
+              />
+            </div>
+
+            {/* Bucket Mapping */}
+            <div className="space-y-2">
+              <Label>Financial Bucket</Label>
+              <select
+                className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                value={catBucket}
+                onChange={(e) => setCatBucket(e.target.value as any)}
+              >
+                <option value="Needs">Needs (Survival)</option>
+                <option value="Fun">Fun (Lifestyle)</option>
+                <option value="Investments">Investments</option>
+                <option value="Other">Other / Uncategorized</option>
+              </select>
+            </div>
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">

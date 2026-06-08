@@ -6,6 +6,8 @@ import Expense from "@/models/expense";
 import Budget from "@/models/budget";
 import { revalidatePath } from "next/cache";
 
+type CategoryType = { name: string; icon: string; color: string; bucket?: string };
+
 export async function getUserSettings() {
   await dbConnect();
   let settings = await UserSettings.findOne().lean();
@@ -47,11 +49,7 @@ export async function updateUserSettings(data: {
   }
 }
 
-export async function addCategory(category: {
-  name: string;
-  icon: string;
-  color: string;
-}) {
+export async function addCategory(category: CategoryType) {
   try {
     await dbConnect();
     let settings = await UserSettings.findOne();
@@ -60,7 +58,7 @@ export async function addCategory(category: {
     }
     
     const exists = settings.categories.some(
-      (c: any) => c.name.toLowerCase() === category.name.toLowerCase()
+      (c: CategoryType) => c.name.toLowerCase() === category.name.toLowerCase()
     );
     if (exists) {
       return { success: false, error: "Category already exists" };
@@ -83,7 +81,7 @@ export async function addCategory(category: {
 
 export async function updateCategory(
   oldName: string,
-  category: { name: string; icon: string; color: string }
+  category: CategoryType
 ) {
   try {
     await dbConnect();
@@ -93,7 +91,7 @@ export async function updateCategory(
     }
     
     const catIndex = settings.categories.findIndex(
-      (c: any) => c.name.toLowerCase() === oldName.toLowerCase()
+      (c: CategoryType) => c.name.toLowerCase() === oldName.toLowerCase()
     );
     if (catIndex === -1) {
       return { success: false, error: "Category not found" };
@@ -101,7 +99,7 @@ export async function updateCategory(
     
     if (oldName.toLowerCase() !== category.name.toLowerCase()) {
       const exists = settings.categories.some(
-        (c: any) => c.name.toLowerCase() === category.name.toLowerCase()
+        (c: CategoryType) => c.name.toLowerCase() === category.name.toLowerCase()
       );
       if (exists) {
         return { success: false, error: "Category name already exists" };
@@ -144,17 +142,17 @@ export async function deleteCategory(name: string) {
     }
     
     const catIndex = settings.categories.findIndex(
-      (c: any) => c.name.toLowerCase() === name.toLowerCase()
+      (c: CategoryType) => c.name.toLowerCase() === name.toLowerCase()
     );
     if (catIndex === -1) {
       return { success: false, error: "Category not found" };
     }
     
     const hasOther = settings.categories.some(
-      (c: any) => c.name.toLowerCase() === "other"
+      (c: CategoryType) => c.name.toLowerCase() === "other"
     );
     if (!hasOther) {
-      settings.categories.push({ name: "Other", icon: "📁", color: "hsl(200, 15%, 50%)" });
+      settings.categories.push({ name: "Other", icon: "📁", color: "hsl(200, 15%, 50%)", bucket: "Other" });
     }
     
     settings.categories.splice(catIndex, 1);

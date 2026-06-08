@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -11,6 +12,7 @@ import {
   BarChart3,
   TrendingUp,
   Settings,
+  HeartPulse,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DatePeriodFilter } from "@/components/layout/month-year-picker";
@@ -21,6 +23,7 @@ const navItems = [
   { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins },
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/analytics", label: "Reports", icon: TrendingUp },
+  { href: "/financial-health", label: "Financial Health", icon: HeartPulse },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -31,10 +34,10 @@ export function Sidebar() {
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-border bg-card">
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-6 h-16 border-b border-border">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-sm">₹</span>
+        <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg overflow-hidden shrink-0">
+          <Image src="/logo.svg" alt="Logo" width={32} height={32} />
         </div>
-        <span className="font-semibold text-lg tracking-tight">Finance</span>
+        <span className="font-semibold text-lg tracking-tight">Nova</span>
       </div>
 
       {/* Nav */}
