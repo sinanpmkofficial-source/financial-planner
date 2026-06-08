@@ -85,6 +85,21 @@ export function DashboardClient() {
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [transactionFormOpen, setTransactionFormOpen] = useState(false);
 
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning! ☀️";
+    if (hour < 17) return "Good afternoon! 🌤️";
+    return "Good evening! 🌙";
+  }, []);
+
+  const currentDateString = useMemo(() => {
+    return new Date().toLocaleDateString("en-US", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }, []);
+
   const periodMetrics = useMemo(() => {
     let totalIncome = 0;
     let totalExpenses = 0;
@@ -210,7 +225,8 @@ export function DashboardClient() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Dashboard"
+        title={greeting}
+        description={currentDateString}
         showMonthPicker={false}
         action={
           <QuickActions
