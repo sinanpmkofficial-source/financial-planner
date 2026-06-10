@@ -18,7 +18,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
@@ -42,11 +41,6 @@ export function BorrowLendClient() {
     totalLent: 0,
     pendingCollections: 0,
     pendingPayments: 0,
-    monthlyRepayments: 0,
-    repaymentPercentage: 0,
-    totalBorrowedAllTime: 0,
-    totalPaidBackAllTime: 0,
-    globalRepaymentProgress: 0,
   });
 
   const [loading, setLoading] = useState(true);
@@ -277,7 +271,7 @@ export function BorrowLendClient() {
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Borrowed"
           value={formatCurrency(summary.totalBorrowed)}
@@ -291,65 +285,18 @@ export function BorrowLendClient() {
           index="02"
         />
         <StatCard
-          label="Repayment %"
-          value={`${summary.repaymentPercentage.toFixed(1)}%`}
-          icon={HandCoins}
-          index="03"
-          trend={`Paid ${formatCurrency(summary.monthlyRepayments)}`}
-        />
-        <StatCard
           label="Pending Payments"
           value={formatCurrency(summary.pendingPayments)}
           icon={Clock}
-          index="04"
+          index="03"
         />
         <StatCard
           label="Pending Collections"
           value={formatCurrency(summary.pendingCollections)}
           icon={Banknote}
-          index="05"
+          index="04"
         />
       </div>
-
-      {/* Global Progress Bar */}
-      {!loading && summary.totalBorrowedAllTime > 0 && (
-        <Card className="border border-border/50 bg-card overflow-hidden rounded-2xl shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-500">
-                    <HandCoins className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">Overall Debt Clearance</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                      Paid Back: {formatCurrency(summary.totalPaidBackAllTime)} / {formatCurrency(summary.totalBorrowedAllTime)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-xl font-black text-foreground">
-                    {Math.round(summary.globalRepaymentProgress)}%
-                  </span>
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Progress 
-                  value={summary.globalRepaymentProgress} 
-                  className="h-2.5 bg-muted [&>div]:bg-emerald-500" 
-                />
-                <div className="flex justify-between text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                  <span>Start</span>
-                  <span className="text-rose-600 dark:text-rose-500">{formatCurrency(summary.totalBorrowedAllTime - summary.totalPaidBackAllTime)} Remaining</span>
-                  <span className="text-emerald-600 dark:text-emerald-500">Debt Free</span>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Tabs */}
       {loading ? (

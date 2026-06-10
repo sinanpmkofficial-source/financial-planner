@@ -8,7 +8,7 @@ import {
   borrowLendSchema,
   type BorrowLendFormData,
 } from "@/validations/borrow-lend";
-import { serializeDoc, getMonthDateRange } from "@/lib/format";
+import { serializeDoc } from "@/lib/format";
 import { revalidatePath } from "next/cache";
 import type { BorrowLend as BorrowLendType } from "@/types";
 
@@ -213,27 +213,7 @@ export async function recordRepayment(
 
 export async function getBorrowLendSummary() {
   await dbConnect();
-  
-  const now = new Date();
-  const { start: monthStart, end: monthEnd } = getMonthDateRange(now.getMonth() + 1, now.getFullYear());
-
-  const [records, monthIncomeAgg, monthRepaymentsAgg] = await Promise.all([
-    BorrowLend.find().lean(),
-    Income.aggregate([
-      { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]),
-    Expense.aggregate([
-      { 
-        $match: { 
-          date: { $gte: monthStart, $lte: monthEnd },
-          category: "Debt",
-          note: { $regex: /Repayment/i }
-        } 
-      },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]),
-  ]);
+  const records = await BorrowLend.find().lean();
 
   let totalBorrowed = 0;
   let totalLent = 0;
@@ -256,31 +236,5 @@ export async function getBorrowLendSummary() {
     }
   }
 
-  const monthlyIncome = monthIncomeAgg[0]?.total ?? 0;
-  const monthlyRepayments = monthRepaymentsAgg[0]?.total ?? 0;
-  const repaymentPercentage = monthlyIncome > 0 ? (monthlyRepayments / monthlyIncome) * 100 : 0;
-
-  // Calculate total paid back vs total borrowed across all time
-  let totalBorrowedAllTime = 0;
-  let totalPaidBackAllTime = 0;
-  for (const r of records) {
-    if (r.type === "borrowed") {
-      totalBorrowedAllTime += r.amount;
-      totalPaidBackAllTime += (r.paidAmount ?? 0);
-    }
-  }
-  const globalRepaymentProgress = totalBorrowedAllTime > 0 ? (totalPaidBackAllTime / totalBorrowedAllTime) * 100 : 0;
-
-  return { 
-    totalBorrowed, 
-    totalLent, 
-    pendingCollections, 
-    pendingPayments,
-    monthlyIncome,
-    monthlyRepayments,
-    repaymentPercentage,
-    totalBorrowedAllTime,
-    totalPaidBackAllTime,
-    globalRepaymentProgress
-  };
+  return { totalBorrowed, totalLent, pendingCollections, pendingPayments };
 }
