@@ -11,6 +11,15 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MONTHS } from "@/constants";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+} from "recharts";
+import { ValueType } from "recharts/types/component/DefaultTooltipContent";
 
 interface FinancialHealthData {
   totalIncome: number;
@@ -104,6 +113,13 @@ export function FinancialHealthClient() {
   const needsPct = totalIncome > 0 ? (totalNeeds / totalIncome) * 100 : 0;
   const wantsPct = totalIncome > 0 ? ((totalWants + totalUnnecessary) / totalIncome) * 100 : 0;
   const savingsPct = totalIncome > 0 ? ((totalSavings + totalGoals) / totalIncome) * 100 : 0;
+
+  const chartData = [
+    { name: "Needs", value: totalNeeds, color: "oklch(0.65 0.15 140)" }, // Emerald
+    { name: "Wants", value: totalWants, color: "oklch(0.60 0.18 25)" }, // Rose/Red
+    { name: "Investments", value: totalSavings + totalGoals, color: "oklch(0.70 0.12 210)" }, // Blue
+    { name: "Unnecessary", value: totalUnnecessary, color: "oklch(0.60 0.15 35)" }, // Amber/Orange
+  ].filter(d => d.value > 0);
 
   const targetNeeds = totalIncome * 0.50;
   const targetWants = totalIncome * 0.30;
@@ -366,6 +382,56 @@ export function FinancialHealthClient() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
+        {/* Spending Distribution Pie Chart */}
+        <Card className="border-border/50 shadow-sm flex flex-col">
+          <CardHeader className="pb-3 border-b border-border/30">
+            <CardTitle className="text-base font-semibold">Spending Distribution</CardTitle>
+            <CardDescription>Visual breakdown of tagged expenses</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-5 flex-1 flex flex-col justify-center min-h-[300px]">
+            {chartData.length > 0 ? (
+              <div className="h-full w-full">
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: ValueType | undefined) => value ? formatCurrency(Number(value)) : ""}
+                      contentStyle={{ 
+                        backgroundColor: "hsl(var(--popover))", 
+                        borderColor: "hsl(var(--border))",
+                        borderRadius: "12px",
+                        fontSize: "12px"
+                      }}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      align="center"
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: "10px", fontWeight: "600", paddingTop: "20px" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground italic text-xs">
+                No expense data for this month.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Core Rules Checklist */}
         <Card className="md:col-span-1 border-border/50 shadow-sm flex flex-col justify-between">
           <CardHeader className="pb-3 border-b border-border/30">
