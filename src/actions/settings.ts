@@ -60,7 +60,7 @@ export async function addCategory(category: {
     }
     
     const exists = settings.categories.some(
-      (c: any) => c.name.toLowerCase() === category.name.toLowerCase()
+      (c: { name: string }) => c.name.toLowerCase() === category.name.toLowerCase()
     );
     if (exists) {
       return { success: false, error: "Category already exists" };
@@ -93,7 +93,7 @@ export async function updateCategory(
     }
     
     const catIndex = settings.categories.findIndex(
-      (c: any) => c.name.toLowerCase() === oldName.toLowerCase()
+      (c: { name: string }) => c.name.toLowerCase() === oldName.toLowerCase()
     );
     if (catIndex === -1) {
       return { success: false, error: "Category not found" };
@@ -101,7 +101,7 @@ export async function updateCategory(
     
     if (oldName.toLowerCase() !== category.name.toLowerCase()) {
       const exists = settings.categories.some(
-        (c: any) => c.name.toLowerCase() === category.name.toLowerCase()
+        (c: { name: string }) => c.name.toLowerCase() === category.name.toLowerCase()
       );
       if (exists) {
         return { success: false, error: "Category name already exists" };
@@ -144,14 +144,14 @@ export async function deleteCategory(name: string) {
     }
     
     const catIndex = settings.categories.findIndex(
-      (c: any) => c.name.toLowerCase() === name.toLowerCase()
+      (c: { name: string }) => c.name.toLowerCase() === name.toLowerCase()
     );
     if (catIndex === -1) {
       return { success: false, error: "Category not found" };
     }
     
     const hasOther = settings.categories.some(
-      (c: any) => c.name.toLowerCase() === "other"
+      (c: { name: string }) => c.name.toLowerCase() === "other"
     );
     if (!hasOther) {
       settings.categories.push({ name: "Other", icon: "📁", color: "hsl(200, 15%, 50%)" });

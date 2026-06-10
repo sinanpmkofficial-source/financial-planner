@@ -1,21 +1,32 @@
 "use server";
 
 import { dbConnect } from "@/lib/db";
-import Goal from "@/models/goal";
+import Goal, { type IGoal } from "@/models/goal";
 import GoalContribution from "@/models/goal-contribution";
 import { revalidatePath } from "next/cache";
 
-export async function getGoalsWithProgress() {
+interface GoalProgressResult {
+  _id: string;
+  name: string;
+  targetAmount: number;
+  icon: string;
+  color: string;
+  createdAt: string;
+  totalContributed: number;
+  progressPercentage: number;
+}
+
+export async function getGoalsWithProgress(): Promise<GoalProgressResult[]> {
   await dbConnect();
-  const goals = await Goal.find().sort({ createdAt: -1 }).lean();
+  const goals = await Goal.find().sort({ createdAt: -1 }).lean() as unknown as IGoal[];
 
   const results = await Promise.all(
-    goals.map(async (goal: any) => {
-      const contributions = await GoalContribution.find({ goalId: goal._id }).lean();
-      const totalContributed = contributions.reduce((sum: number, c: any) => sum + c.amount, 0);
+    goals.map(async (goal) => {
+      const contributions = await GoalContribution.find({ goalId: goal._id }).lean() as unknown as { amount: number }[];
+      const totalContributed = contributions.reduce((sum: number, c) => sum + c.amount, 0);
       
       return {
-        _id: goal._id.toString(),
+        _id: (goal._id as { toString(): string }).toString(),
         name: goal.name,
         targetAmount: goal.targetAmount,
         icon: goal.icon,
@@ -42,9 +53,13 @@ export async function createGoal(data: { name: string; targetAmount: number; ico
       color: data.color || "hsl(217, 91%, 60%)",
     });
     revalidatePath("/financial-health");
+    revalidatePath("/goals");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to create goal" 
+    };
   }
 }
 
@@ -57,9 +72,13 @@ export async function addGoalContribution(goalId: string, amount: number, date: 
       date: new Date(date),
     });
     revalidatePath("/financial-health");
+    revalidatePath("/goals");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to add goal contribution" 
+    };
   }
 }
 
@@ -69,8 +88,12 @@ export async function deleteGoal(goalId: string) {
     await GoalContribution.deleteMany({ goalId });
     await Goal.findByIdAndDelete(goalId);
     revalidatePath("/financial-health");
+    revalidatePath("/goals");
     return { success: true };
-  } catch (error: any) {
-    return { success: false, error: error.message };
+  } catch (error: unknown) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : "Failed to delete goal" 
+    };
   }
 }

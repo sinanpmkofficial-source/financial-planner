@@ -1,6 +1,5 @@
 "use client";
 
-import { useUIStore } from "@/stores/ui-store";
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
@@ -16,6 +15,7 @@ import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PageHeader } from "@/components/layout/header";
 import { TransactionForm } from "@/components/transactions/transaction-form";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
@@ -28,7 +28,10 @@ import {
   ArrowUpRight,
   Target,
   ArrowRight,
+  AlertCircle,
 } from "lucide-react";
+import { toast } from "sonner";
+import { getRecurringExpenses, confirmRecurringPayment } from "@/actions/recurring-expense";
 import {
   AreaChart,
   Area,
@@ -39,7 +42,19 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { StatCard } from "@/components/shared/stat-card";
-import type { DashboardSummary, Expense, Income, BudgetWithSpent } from "@/types";
+import type { DashboardSummary, Expense, Income, BudgetWithSpent, RecurringExpense } from "@/types";
+
+interface DashboardUserSettings {
+  categories?: { name: string; icon: string; color: string }[];
+  showGamification?: boolean;
+  currency?: string;
+}
+
+interface DashboardChartData {
+  label: string;
+  expenses: number;
+  income: number;
+}
 import {
   startOfDay,
   endOfDay,
@@ -72,14 +87,14 @@ export function DashboardClient() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
-  const [settings, setSettings] = useState<any>(null);
-  const [chartData, setChartData] = useState<any[]>([]);
+  const [settings, setSettings] = useState<DashboardUserSettings | null>(null);
+  const [chartData, setChartData] = useState<DashboardChartData[]>([]);
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
 
   // Decoupled loading states
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [transactionsLoading, setTransactionsLoading] = useState(true);
   const [budgetsLoading, setBudgetsLoading] = useState(true);
-  const [settingsLoading, setSettingsLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
 
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
@@ -113,7 +128,7 @@ export function DashboardClient() {
   const budgetSummary = useMemo(() => {
     const totalLimit = budgets.reduce((sum, b) => sum + b.amount, 0);
     const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
-    const totalLeft = Math.max(0, totalLimit - totalSpent);
+    const totalLeft = budgets.reduce((sum, b) => sum + b.remaining, 0);
     const percentageLeft = totalLimit > 0 ? Math.round((totalLeft / totalLimit) * 100) : 0;
     const percentageSpent = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
     return { totalLimit, totalSpent, totalLeft, percentageLeft, percentageSpent };
@@ -121,7 +136,7 @@ export function DashboardClient() {
 
   const catIconMap = useMemo(() => {
     const categories = settings?.categories || [];
-    return new Map<string, string>(categories.map((c: any) => [c.name.toLowerCase(), c.icon]));
+    return new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.icon]));
   }, [settings]);
 
   const fetchData = useCallback(async () => {
@@ -166,15 +181,21 @@ export function DashboardClient() {
       });
 
     // Fetch User Settings independently
-    setSettingsLoading(true);
     getUserSettings()
       .then((setts) => {
         setSettings(setts);
-        setSettingsLoading(false);
       })
       .catch((err) => {
         console.error("Settings load error", err);
-        setSettingsLoading(false);
+      });
+
+    // Fetch Recurring Expenses
+    getRecurringExpenses()
+      .then((recs) => {
+        setRecurringExpenses(recs);
+      })
+      .catch((err) => {
+        console.error("Recurring load error", err);
       });
   }, []);
 
@@ -220,6 +241,54 @@ export function DashboardClient() {
     fetchTrend();
   }, [fetchTrend]);
 
+  const dueReminders = useMemo(() => {
+    const today = new Date();
+    return recurringExpenses.filter((item) => {
+      if (!item.isActive) return false;
+      const dueDate = new Date(item.nextDueDate);
+      return dueDate <= today;
+    });
+  }, [recurringExpenses]);
+
+  const upcomingUnbudgetedRecurringTotal = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    const unbudgetedRecs = recurringExpenses.filter((item) => {
+      if (!item.isActive) return false;
+
+      const dueDate = new Date(item.nextDueDate);
+      const isDueThisMonthOrOverdue =
+        dueDate.getFullYear() < currentYear ||
+        (dueDate.getFullYear() === currentYear && dueDate.getMonth() <= currentMonth);
+
+      if (!isDueThisMonthOrOverdue) return false;
+
+      const isBudgeted = budgets.some(
+        (b) => b.category.toLowerCase() === item.category.toLowerCase()
+      );
+      return !isBudgeted;
+    });
+
+    return unbudgetedRecs.reduce((sum, item) => sum + item.amount, 0);
+  }, [recurringExpenses, budgets]);
+
+  const handleConfirmPayment = async (id: string) => {
+    const toastId = toast.loading("Confirming and recording payment...");
+    try {
+      const res = await confirmRecurringPayment(id);
+      if (res.success) {
+        toast.success("Payment confirmed and logged as an expense", { id: toastId });
+        fetchData();
+      } else {
+        toast.error(res.error || "Failed to confirm payment", { id: toastId });
+      }
+    } catch {
+      toast.error("Failed to confirm payment", { id: toastId });
+    }
+  };
+
   const showGamification = settings?.showGamification !== false;
 
   return (
@@ -229,12 +298,56 @@ export function DashboardClient() {
         description={currentDateString}
         showMonthPicker={false}
         action={
-          <QuickActions
-            onRecordTransaction={() => setTransactionFormOpen(true)}
-            disabled={summaryLoading}
-          />
+          <div className="flex items-center gap-2">
+            <QuickActions
+              onRecordTransaction={() => setTransactionFormOpen(true)}
+              disabled={summaryLoading}
+            />
+          </div>
         }
       />
+
+      {/* Due Reminders Banner */}
+      {dueReminders.length > 0 && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-up">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0">
+              <AlertCircle className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-sm text-foreground">Pending Bill Reminders</h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                You have {dueReminders.length} recurring {dueReminders.length === 1 ? "expense" : "expenses"} due for payment confirmation.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none max-w-full md:max-w-md">
+            {dueReminders.map((reminder) => (
+              <div
+                key={reminder._id}
+                className="flex items-center gap-3 bg-card border border-border/80 px-3.5 py-2 rounded-xl text-xs shrink-0 shadow-xs hover:border-amber-500/30 transition-all"
+              >
+                <div>
+                  <p className="font-bold text-foreground">
+                    {reminder.category} • {formatCurrency(reminder.amount)}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+                    Due {new Date(reminder.nextDueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer font-semibold px-2.5 rounded-lg text-[10px]"
+                  onClick={() => handleConfirmPayment(reminder._id)}
+                >
+                  Confirm
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -293,18 +406,22 @@ export function DashboardClient() {
           }
         />
         <StatCard
-          label="Net Savings (Month)"
-          value={summaryLoading || !summary ? "..." : formatCurrency(summary.savings ?? 0)}
+          label="Safe to Spend"
+          value={
+            summaryLoading || budgetsLoading || !summary
+              ? "..."
+              : formatCurrency((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal)
+          }
           icon={PiggyBank}
           variant="default"
           index="04"
           className="animate-fade-in-up opacity-0 animation-delay-225"
           trend={
-            summaryLoading || !summary
+            summaryLoading || budgetsLoading || !summary
               ? "..."
-              : (summary.savings ?? 0) >= 0
-              ? "Positive cash flow"
-              : "Negative cash flow"
+              : ((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal) >= 0
+              ? "Unallocated surplus"
+              : "Deficit risk (over budget)"
           }
         />
       </div>
@@ -684,7 +801,7 @@ export function DashboardClient() {
                 </div>
 
                 {/* Individual Category Budgets */}
-                <div className="space-y-3.5 max-h-[140px] overflow-y-auto pr-1 scrollbar-thin">
+                <div className="space-y-3.5 pr-1">
                   {budgets.map((b) => {
                     const percentage = Math.min(b.percentage, 100);
                     const isWarning = b.percentage >= 80 && b.percentage < 100;

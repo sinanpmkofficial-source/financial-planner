@@ -12,6 +12,7 @@ import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -103,6 +104,8 @@ export function BorrowLendForm({
   }, [record, open, reset]);
 
   const type = watch("type");
+  const dateValue = watch("date");
+  const dueDateValue = watch("dueDate");
 
   const onSubmit = async (data: BorrowLendFormData) => {
     setLoading(true);
@@ -186,13 +189,26 @@ export function BorrowLendForm({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col">
               <Label htmlFor="bl-date">Date</Label>
-              <Input id="bl-date" type="date" {...register("date")} />
+              <DatePicker
+                date={dateValue ? new Date(dateValue) : new Date()}
+                onSelect={(d) => {
+                  if (d) {
+                    setValue("date", format(d, "yyyy-MM-dd"), { shouldValidate: true });
+                  }
+                }}
+              />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col">
               <Label htmlFor="bl-due">Due Date</Label>
-              <Input id="bl-due" type="date" {...register("dueDate")} />
+              <DatePicker
+                date={dueDateValue ? new Date(dueDateValue) : undefined}
+                onSelect={(d) => {
+                  setValue("dueDate", d ? format(d, "yyyy-MM-dd") : undefined, { shouldValidate: true });
+                }}
+                placeholder="Optional due date"
+              />
             </div>
           </div>
 

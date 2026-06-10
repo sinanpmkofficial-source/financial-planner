@@ -4,8 +4,23 @@ export interface Expense {
   _id: string;
   amount: number;
   category: ExpenseCategory;
+  tag: "Needs" | "Wants" | "Investments" | "Unnecessary Spending";
   note?: string;
   date: string;
+  recurringExpenseId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RecurringExpense {
+  _id: string;
+  amount: number;
+  category: string;
+  tag: "Needs" | "Wants" | "Investments" | "Unnecessary Spending";
+  note?: string;
+  frequency: "weekly" | "monthly" | "yearly";
+  nextDueDate: string;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
 }

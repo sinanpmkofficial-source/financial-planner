@@ -76,7 +76,7 @@ export async function getUnifiedData(
   const isCategoryFilter = category && category.toLowerCase() !== "all";
 
   // Build match filters
-  const expenseMatch: any = { date: { $gte: start, $lte: end } };
+  const expenseMatch: Record<string, unknown> = { date: { $gte: start, $lte: end } };
   if (isCategoryFilter) {
     expenseMatch.category = category;
   }
@@ -197,7 +197,7 @@ export async function getUnifiedData(
   const settings = await UserSettings.findOne().lean();
   const catColorMap: Record<string, string> = {};
   if (settings && settings.categories) {
-    settings.categories.forEach((cat: any) => {
+    settings.categories.forEach((cat: { name: string; color: string }) => {
       catColorMap[cat.name] = cat.color;
     });
   }

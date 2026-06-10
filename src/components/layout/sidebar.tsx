@@ -5,23 +5,47 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Receipt,
-  Wallet,
   HandCoins,
   PiggyBank,
-  BarChart3,
   TrendingUp,
   Settings,
+  Target,
+  HeartPulse,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/transactions", label: "Transactions", icon: Receipt },
-  { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins },
-  { href: "/budgets", label: "Budgets", icon: PiggyBank },
-  { href: "/analytics", label: "Reports", icon: TrendingUp },
-  { href: "/settings", label: "Settings", icon: Settings },
+const navGroups = [
+  {
+    title: "Core",
+    items: [
+      { href: "/", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/transactions", label: "Transactions", icon: Receipt },
+    ],
+  },
+  {
+    title: "Planning",
+    items: [
+      { href: "/budgets", label: "Budgets", icon: PiggyBank },
+      { href: "/goals", label: "Goals", icon: Target },
+    ],
+  },
+  {
+    title: "Analytics & Health",
+    items: [
+      { href: "/financial-health", label: "Financial Health", icon: HeartPulse },
+      { href: "/analytics", label: "Reports", icon: TrendingUp },
+      { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      { href: "/settings", label: "Settings", icon: Settings },
+      { href: "/guide", label: "Methodology Guide", icon: HelpCircle },
+    ],
+  },
 ];
 
 export function Sidebar() {
@@ -38,32 +62,41 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              )}
-            >
-              <item.icon className="w-[18px] h-[18px]" />
-              {item.label}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-4 py-6 space-y-5 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.title} className="space-y-1.5">
+            <span className="text-[9px] font-bold text-muted-foreground/80 uppercase tracking-widest px-3 block">
+              {group.title}
+            </span>
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const isActive =
+                  item.href === "/"
+                    ? pathname === "/"
+                    : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-xs font-bold"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Month/Year Picker */}
-      {pathname !== "/" && (
+      {pathname !== "/" && pathname !== "/financial-health" && (
         <div className="px-3 py-4 border-t border-border">
           <DatePeriodFilter />
         </div>

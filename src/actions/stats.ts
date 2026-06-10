@@ -6,6 +6,7 @@ import Expense from "@/models/expense";
 import Income from "@/models/income";
 import BorrowLend from "@/models/borrow-lend";
 import Budget from "@/models/budget";
+import GoalContribution from "@/models/goal-contribution";
 import { calculateLevel } from "@/lib/xp";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import type { UserStats, DashboardSummary } from "@/types";
@@ -69,6 +70,7 @@ export async function getDashboardSummary(
     borrowLendRecords,
     budgets,
     stats,
+    allContributionsAgg,
   ] = await Promise.all([
     Income.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
     Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
@@ -113,11 +115,13 @@ export async function getDashboardSummary(
     BorrowLend.find({ status: "pending" }).lean(),
     Budget.find({ month: currentMonth, year: currentYear }).lean(),
     getOrCreateStats(),
+    GoalContribution.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
   ]);
   
   const allIncome = allIncomeAgg[0]?.total ?? 0;
   const allExpense = allExpenseAgg[0]?.total ?? 0;
-  const currentBalance = allIncome - allExpense;
+  const allContributions = allContributionsAgg[0]?.total ?? 0;
+  const currentBalance = allIncome - allExpense - allContributions;
   
   const monthlyIncome = monthIncomeAgg[0]?.total ?? 0;
   const monthlyExpenses = monthExpenseAgg[0]?.total ?? 0;
