@@ -23,7 +23,7 @@ export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
   Health: "🏥",
   Education: "🎓",
   Debt: "🤝",
-  Other: "📁",
+  Other: "📂",
 };
 
 export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {

@@ -6,48 +6,26 @@ interface CategoryIconProps {
 }
 
 export function CategoryIcon({ name, className = "w-4 h-4" }: CategoryIconProps) {
-  // Map emoji characters to corresponding Lucide React icon names for backward compatibility
-  const emojiMap: Record<string, string> = {
-    "🍔": "Utensils",
-    "🍽️": "Utensils",
-    "🚗": "Car",
-    "✈️": "Plane",
-    "🏠": "Home",
-    "🛍️": "ShoppingBag",
-    "⚡": "Zap",
-    "📄": "Receipt",
-    "🏥": "HeartPulse",
-    "💊": "HeartPulse",
-    "🎓": "GraduationCap",
-    "📚": "GraduationCap",
-    "📁": "FolderOpen",
-    "📌": "Folder",
-    "🎮": "Gamepad2",
-    "🎬": "Film",
-    "🍷": "GlassWater",
-    "🏋️": "Dumbbell",
-    "🐱": "Cat",
-    "🎨": "Palette",
-    "🧱": "Grid",
-    "💻": "Laptop",
-    "🎵": "Music",
-    "🎁": "Gift",
-    "☕": "Coffee",
-    "🤝": "HandCoins",
-    "💰": "Coins",
+  // Regex to detect if the string contains an emoji
+  const isEmoji = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/.test(name);
+
+  if (isEmoji) {
+    return <span className={className}>{name}</span>;
+  }
+
+  // If not an emoji, try to resolve as a Lucide icon name
+  // Map some old emoji strings to icons just in case they are still used as keys
+  const emojiToIconMap: Record<string, string> = {
+    "hamburger": "Utensils",
+    "car": "Car",
+    "house": "Home",
   };
 
-  const resolvedName = emojiMap[name] || name;
+  const resolvedName = emojiToIconMap[name] || name;
   const IconComponent = (Icons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[resolvedName];
 
   if (IconComponent) {
     return <IconComponent className={className} />;
-  }
-
-  // If it's an emoji but not in our map, try to render it as text
-  // Check if name is likely an emoji (basic check)
-  if (name.length <= 2) {
-    return <span className={className}>{name}</span>;
   }
 
   // Fallback to a default Folder icon
