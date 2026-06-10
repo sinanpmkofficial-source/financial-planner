@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Receipt, Pencil, Wallet, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { Plus, Receipt, Pencil, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import type { Expense, Income } from "@/types";
 import { getUserSettings } from "@/actions/settings";
@@ -40,7 +40,6 @@ export function TransactionsClient() {
     transactionsCache, 
     updateTransactionsCache, 
     setSyncStatus,
-    isDashboardDirty
   } = useUIStore();
 
   const searchParams = useSearchParams();
@@ -197,7 +196,6 @@ export function TransactionsClient() {
           label="Total Income"
           value={`+${formatCurrency(summaryMetrics.totalIncome)}`}
           icon={TrendingUp}
-          variant="success"
           index="01"
           className="animate-fade-in-up opacity-0"
         />
@@ -205,7 +203,6 @@ export function TransactionsClient() {
           label="Total Expenses"
           value={`-${formatCurrency(summaryMetrics.totalExpense)}`}
           icon={TrendingDown}
-          variant="danger"
           index="02"
           className="animate-fade-in-up opacity-0 animation-delay-75"
         />
@@ -213,7 +210,6 @@ export function TransactionsClient() {
           label="Net Balance"
           value={`${summaryMetrics.netSavings >= 0 ? "+" : ""}${formatCurrency(summaryMetrics.netSavings)}`}
           icon={ArrowRight}
-          variant="default"
           index="03"
           className="col-span-2 md:col-span-1 animate-fade-in-up opacity-0 animation-delay-150"
         />

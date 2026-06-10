@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { budgetSchema, type BudgetFormData } from "@/validations/budget";
 import { createBudget, updateBudget } from "@/actions/budget";
-import { EXPENSE_CATEGORIES } from "@/constants";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

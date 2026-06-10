@@ -387,7 +387,6 @@ export function DashboardClient() {
           label="Spent Today"
           value={summaryLoading || !summary ? "..." : formatCurrency(summary.todayExpenses ?? 0)}
           icon={TrendingDown}
-          variant="danger"
           index="01"
           className="animate-fade-in-up opacity-0"
           trend={
@@ -411,7 +410,6 @@ export function DashboardClient() {
           label="Monthly Spend"
           value={summaryLoading || !summary ? "..." : formatCurrency(summary.monthlyExpenses ?? 0)}
           icon={TrendingDown}
-          variant="warning"
           index="02"
           className="animate-fade-in-up opacity-0 animation-delay-75"
           trend={
@@ -426,7 +424,6 @@ export function DashboardClient() {
           label="Remaining Budget"
           value={summaryLoading || !summary ? "..." : formatCurrency(budgetSummary.totalLeft)}
           icon={Target}
-          variant="success"
           index="03"
           className="animate-fade-in-up opacity-0 animation-delay-150"
           trend={
@@ -445,7 +442,6 @@ export function DashboardClient() {
               : formatCurrency((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal)
           }
           icon={PiggyBank}
-          variant="default"
           index="04"
           className="animate-fade-in-up opacity-0 animation-delay-225"
           trend={

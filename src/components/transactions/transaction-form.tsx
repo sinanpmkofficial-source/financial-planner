@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { transactionSchema, type TransactionFormData } from "@/validations/transaction";
@@ -30,7 +30,7 @@ import type { Expense, Income } from "@/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getUserSettings } from "@/actions/settings";
-import { useUIStore } from "@/stores/ui-store";
+import { useUIStore, type Transaction } from "@/stores/ui-store";
 
 interface TransactionFormProps {
   open: boolean;
@@ -51,10 +51,10 @@ export function TransactionForm({
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
   const isEditing = !!transaction;
 
-  const getTransactionType = (t?: Expense | Income): "expense" | "income" => {
+  const getTransactionType = useCallback((t?: Expense | Income): "expense" | "income" => {
     if (!t) return defaultType;
     return "category" in t ? "expense" : "income";
-  };
+  }, [defaultType]);
 
   const {
     register,
@@ -126,7 +126,7 @@ export function TransactionForm({
             }
       );
     }
-  }, [transaction, open, reset, defaultType]);
+  }, [transaction, open, reset, defaultType, getTransactionType]);
 
   const onSubmit = async (data: TransactionFormData) => {
     setLoading(true);
@@ -143,7 +143,8 @@ export function TransactionForm({
         : { source: data.source || "" }
       ),
       createdAt: new Date().toISOString(),
-    };
+      updatedAt: new Date().toISOString(),
+    } as Transaction;
 
     if (!isEditing) {
       addOptimisticTransaction(optimisticTransaction);

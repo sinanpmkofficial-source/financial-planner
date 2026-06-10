@@ -33,10 +33,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import type { BorrowLend } from "@/types";
-import { useUIStore } from "@/stores/ui-store";
 
 export function BorrowLendClient() {
-  const { setDashboardDirty } = useUIStore();
   const [records, setRecords] = useState<BorrowLend[]>([]);
   const [summary, setSummary] = useState({
     totalBorrowed: 0,
@@ -278,28 +276,24 @@ export function BorrowLendClient() {
           label="Total Borrowed"
           value={formatCurrency(summary.totalBorrowed)}
           icon={ArrowDownLeft}
-          variant="danger"
           index="01"
         />
         <StatCard
           label="Total Lent"
           value={formatCurrency(summary.totalLent)}
           icon={ArrowUpRight}
-          variant="success"
           index="02"
         />
         <StatCard
           label="Pending Payments"
           value={formatCurrency(summary.pendingPayments)}
           icon={Clock}
-          variant="warning"
           index="03"
         />
         <StatCard
           label="Pending Collections"
           value={formatCurrency(summary.pendingCollections)}
           icon={Banknote}
-          variant="default"
           index="04"
         />
       </div>

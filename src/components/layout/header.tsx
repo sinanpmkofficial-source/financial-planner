@@ -4,7 +4,7 @@ import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 
 interface PageHeaderProps {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   action?: React.ReactNode;
   showMonthPicker?: boolean;
 }
@@ -22,9 +22,9 @@ export function PageHeader({
           {title}
         </h1>
         {description && (
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <div className="text-xs text-muted-foreground mt-0.5">
             {description}
-          </p>
+          </div>
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">

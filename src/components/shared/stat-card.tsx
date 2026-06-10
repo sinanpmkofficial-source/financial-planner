@@ -6,7 +6,6 @@ interface StatCardProps {
   value: string;
   icon: LucideIcon;
   trend?: string;
-  variant?: "default" | "success" | "danger" | "warning";
   index?: string;
   className?: string;
 }
@@ -16,7 +15,6 @@ export function StatCard({
   value,
   icon: Icon,
   trend,
-  variant = "default",
   index,
   className,
 }: StatCardProps) {

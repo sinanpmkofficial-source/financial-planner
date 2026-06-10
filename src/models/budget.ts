@@ -1,5 +1,4 @@
 import mongoose, { Schema, type Document } from "mongoose";
-import { EXPENSE_CATEGORIES } from "@/constants";
 
 export interface IBudget extends Document {
   category: string;

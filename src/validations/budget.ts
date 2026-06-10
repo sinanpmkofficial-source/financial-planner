@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { EXPENSE_CATEGORIES } from "@/constants";
 
 export const budgetSchema = z.object({
   category: z.string().min(1, "Category is required"),

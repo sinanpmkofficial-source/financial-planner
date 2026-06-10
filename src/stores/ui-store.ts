@@ -11,6 +11,13 @@ import {
   startOfDay,
   endOfDay,
 } from "date-fns";
+import { 
+  Expense, 
+  Income, 
+  BudgetWithSpent, 
+  DashboardSummary, 
+  RecurringExpense 
+} from "@/types";
 
 export type PeriodPreset =
   | "Today"
@@ -23,6 +30,21 @@ export type PeriodPreset =
   | "Custom";
 
 export type SyncStatus = "synced" | "syncing" | "error";
+
+export type Transaction = Expense | Income;
+
+export interface DashboardChartData {
+  label: string;
+  expenses: number;
+  income: number;
+}
+
+export interface UIUserSettings {
+  currency: string;
+  budgetStartDay: number;
+  showGamification: boolean;
+  categories: Array<{ name: string; icon: string; color: string }>;
+}
 
 export function getDateRangeForPreset(preset: string, customRange?: DateRange) {
   const now = new Date();
@@ -63,23 +85,23 @@ interface UIState {
   isDashboardDirty: boolean;
   syncStatus: SyncStatus;
   dashboardCache: {
-    summary: any | null;
-    expenses: any[];
-    incomes: any[];
-    budgets: any[];
-    chartData: any[];
-    settings: any | null;
-    recurringExpenses: any[];
+    summary: DashboardSummary | null;
+    expenses: Expense[];
+    incomes: Income[];
+    budgets: BudgetWithSpent[];
+    chartData: DashboardChartData[];
+    settings: UIUserSettings | null;
+    recurringExpenses: RecurringExpense[];
     lastFetched?: number;
   };
   
   // More generic cache for other pages
   transactionsCache: {
-    data: any[];
+    data: Transaction[];
     lastFetched?: number;
   };
   budgetsCache: {
-    data: any[];
+    data: BudgetWithSpent[];
     lastFetched?: number;
   };
 
@@ -92,11 +114,11 @@ interface UIState {
   setDashboardDirty: (dirty: boolean) => void;
   setSyncStatus: (status: SyncStatus) => void;
   updateDashboardCache: (data: Partial<UIState["dashboardCache"]>) => void;
-  updateTransactionsCache: (data: any[]) => void;
-  updateBudgetsCache: (data: any[]) => void;
+  updateTransactionsCache: (data: Transaction[]) => void;
+  updateBudgetsCache: (data: BudgetWithSpent[]) => void;
   
   // Optimistic Actions
-  addOptimisticTransaction: (transaction: any) => void;
+  addOptimisticTransaction: (transaction: Transaction) => void;
   
   clearCache: () => void;
 }
@@ -142,7 +164,7 @@ export const useUIStore = create<UIState>()(
           return { preset, dateRange };
         }),
       setCustomRange: (customRange) =>
-        set((state) => {
+        set(() => {
           const dateRange = getDateRangeForPreset("Custom", customRange);
           return { customRange, dateRange };
         }),
@@ -163,8 +185,8 @@ export const useUIStore = create<UIState>()(
       addOptimisticTransaction: (t) =>
         set((state) => {
           const isExp = "category" in t;
-          const newExpenses = isExp ? [t, ...state.dashboardCache.expenses].slice(0, 5) : state.dashboardCache.expenses;
-          const newIncomes = !isExp ? [t, ...state.dashboardCache.incomes].slice(0, 5) : state.dashboardCache.incomes;
+          const newExpenses = isExp ? [t as Expense, ...state.dashboardCache.expenses].slice(0, 5) : state.dashboardCache.expenses;
+          const newIncomes = !isExp ? [t as Income, ...state.dashboardCache.incomes].slice(0, 5) : state.dashboardCache.incomes;
           
           return {
             dashboardCache: {
@@ -208,3 +230,4 @@ export const useUIStore = create<UIState>()(
     }
   )
 );
+

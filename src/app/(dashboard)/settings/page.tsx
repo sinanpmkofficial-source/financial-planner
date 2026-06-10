@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
 import { toast } from "sonner";
 import { Plus, Pencil, Check, Info } from "lucide-react";
@@ -30,38 +30,6 @@ interface UserSettings {
   budgetStartDay: number;
   showGamification: boolean;
   categories: Category[];
-}
-
-const EMOJI_PRESETS = [
-  "🍔", "🚗", "🏠", "🛍️", "⚡", "🏥", "🎓", "🎮", "✈️", "🎬", 
-  "🍷", "🏋️", "🐱", "🎨", "🧱", "💻", "🎵", "🎁", "💊", "☕"
-];
-
-const COLOR_PRESETS = [
-  { name: "Emerald", value: "hsl(142, 72%, 29%)" },
-  { name: "Blue", value: "hsl(217, 91%, 60%)" },
-  { name: "Orange", value: "hsl(25, 95%, 53%)" },
-  { name: "Rose", value: "hsl(350, 89%, 60%)" },
-  { name: "Amber", value: "hsl(43, 96%, 50%)" },
-  { name: "Violet", value: "hsl(271, 91%, 65%)" },
-  { name: "Cyan", value: "hsl(188, 86%, 53%)" },
-  { name: "Slate", value: "hsl(200, 15%, 50%)" }
-];
-
-function hslToHex(hslStr: string): string {
-  if (hslStr.startsWith("#")) return hslStr;
-  const match = hslStr.match(/hsl\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
-  if (!match) return "#000000";
-  const h = parseInt(match[1]);
-  const s = parseInt(match[2]) / 100;
-  const l = parseInt(match[3]) / 100;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) => {
-    const k = (n + h / 30) % 12;
-    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
-    return Math.round(255 * color).toString(16).padStart(2, "0");
-  };
-  return `#${f(0)}${f(8)}${f(4)}`;
 }
 
 interface CategoryDialogProps {

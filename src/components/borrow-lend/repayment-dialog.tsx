@@ -76,7 +76,7 @@ export function RepaymentDialog({
       } else {
         toast.error(result.error || "Failed to record repayment");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setLoading(false);

@@ -48,7 +48,7 @@ export function GoalsClient() {
     try {
       const gData = await getGoalsWithProgress();
       setGoals(gData);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load goals");
     } finally {
       setLoading(false);
