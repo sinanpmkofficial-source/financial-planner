@@ -41,6 +41,8 @@ export function BorrowLendClient() {
     totalLent: 0,
     pendingCollections: 0,
     pendingPayments: 0,
+    monthlyRepayments: 0,
+    repaymentPercentage: 0,
   });
 
   const [loading, setLoading] = useState(true);
@@ -271,7 +273,7 @@ export function BorrowLendClient() {
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           label="Total Borrowed"
           value={formatCurrency(summary.totalBorrowed)}
@@ -285,16 +287,23 @@ export function BorrowLendClient() {
           index="02"
         />
         <StatCard
+          label="Repayment %"
+          value={`${summary.repaymentPercentage.toFixed(1)}%`}
+          icon={HandCoins}
+          index="03"
+          trend={`Paid ${formatCurrency(summary.monthlyRepayments)}`}
+        />
+        <StatCard
           label="Pending Payments"
           value={formatCurrency(summary.pendingPayments)}
           icon={Clock}
-          index="03"
+          index="04"
         />
         <StatCard
           label="Pending Collections"
           value={formatCurrency(summary.pendingCollections)}
           icon={Banknote}
-          index="04"
+          index="05"
         />
       </div>
 
