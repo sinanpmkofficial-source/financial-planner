@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import type { Budget } from "@/types";
+import { CategoryIcon } from "@/components/shared/category-icon";
 
 import { getUserSettings } from "@/actions/settings";
 
@@ -155,8 +156,10 @@ export function BudgetForm({
                   .filter((c) => availableCategories.includes(c.name))
                   .map((c) => (
                     <SelectItem key={c.name} value={c.name}>
-                      <span className="mr-2">{c.icon}</span>
-                      <span>{c.name}</span>
+                      <div className="flex items-center gap-2">
+                        <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
+                        <span>{c.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
               </SelectContent>

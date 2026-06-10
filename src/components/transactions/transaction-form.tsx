@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getUserSettings } from "@/actions/settings";
 import { useUIStore, type Transaction } from "@/stores/ui-store";
+import { CategoryIcon } from "@/components/shared/category-icon";
 
 interface TransactionFormProps {
   open: boolean;
@@ -246,7 +247,7 @@ export function TransactionForm({
                   isEditing && "opacity-60 cursor-not-allowed"
                 )}
               >
-                💸 Expense
+                <CategoryIcon name="💸" className="w-3.5 h-3.5" /> Expense
               </button>
               <button
                 type="button"
@@ -260,7 +261,7 @@ export function TransactionForm({
                   isEditing && "opacity-60 cursor-not-allowed"
                 )}
               >
-                💰 Income
+                <CategoryIcon name="💰" className="w-3.5 h-3.5" /> Income
               </button>
             </div>
           </div>
@@ -300,8 +301,10 @@ export function TransactionForm({
                   <SelectContent>
                     {categories.map((c) => (
                       <SelectItem key={c.name} value={c.name}>
-                        <span className="mr-2">{c.icon}</span>
-                        <span>{c.name}</span>
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon name={c.icon} className="w-3.5 h-3.5" />
+                          <span>{c.name}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>

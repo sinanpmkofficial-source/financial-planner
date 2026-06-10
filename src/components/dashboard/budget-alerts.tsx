@@ -4,6 +4,7 @@ import { formatCurrency } from "@/lib/format";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
 import type { BudgetWithSpent } from "@/types";
 import { AlertTriangle } from "lucide-react";
+import { CategoryIcon } from "@/components/shared/category-icon";
 
 interface BudgetAlertsProps {
   budgets: BudgetWithSpent[];
@@ -60,8 +61,8 @@ export function BudgetAlerts({
           <div key={b._id} className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">
-                  {catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌"}
+                <span className="text-sm shrink-0 w-4 h-4 flex items-center justify-center">
+                  <CategoryIcon name={catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📁"} className="w-3.5 h-3.5" />
                 </span>
                 <span className="text-sm font-medium">{b.category}</span>
               </div>

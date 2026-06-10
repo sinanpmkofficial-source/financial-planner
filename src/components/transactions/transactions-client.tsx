@@ -12,6 +12,7 @@ import { TransactionForm } from "@/components/transactions/transaction-form";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatCard } from "@/components/shared/stat-card";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -308,9 +309,18 @@ export function TransactionsClient() {
         <div className="space-y-2.5">
           {filteredTransactions.map((transaction) => {
             const isExp = transaction.type === "expense";
-            const icon = isExp
-              ? catIconMap.get(transaction.category.toLowerCase()) ?? CATEGORY_ICONS[transaction.category as ExpenseCategory] ?? "📌"
+            const isDebt = isExp && transaction.category === "Debt";
+            const isLend = !isExp && transaction.source.toLowerCase().includes("repayment from");
+            const isBorrowed = !isExp && transaction.source.toLowerCase().includes("borrowed from");
+
+            let iconName = isExp
+              ? catIconMap.get(transaction.category.toLowerCase()) ?? CATEGORY_ICONS[transaction.category as ExpenseCategory] ?? "📁"
               : "💰";
+            
+            if (isDebt) iconName = "🤝";
+            if (isBorrowed) iconName = "🤝";
+            if (isLend) iconName = "💰";
+
             const label = isExp ? transaction.category : transaction.source;
 
             return (
@@ -326,7 +336,7 @@ export function TransactionsClient() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-xl w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center border border-border/10">
-                        {icon}
+                        <CategoryIcon name={iconName} className="w-4 h-4" />
                       </span>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">

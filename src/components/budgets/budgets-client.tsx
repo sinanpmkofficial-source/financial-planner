@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/layout/header";
 import { BudgetForm } from "@/components/budgets/budget-form";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
 import { EmptyState } from "@/components/shared/empty-state";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -33,6 +34,7 @@ export function BudgetsClient() {
   
   // Use cached data for initial state
   const [loading, setLoading] = useState(budgetsCache.data.length === 0);
+  const [loadingSettings, setLoadingSettings] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetWithSpent | undefined>();
 
@@ -58,9 +60,11 @@ export function BudgetsClient() {
   }, [fetchData]);
 
   useEffect(() => {
+    setLoadingSettings(true);
     getUserSettings().then((settings) => {
       setCategories(settings.categories || []);
-    });
+      setLoadingSettings(false);
+    }).catch(() => setLoadingSettings(false));
   }, []);
 
   const catIconMap = new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.icon]));
@@ -156,9 +160,16 @@ export function BudgetsClient() {
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-lg">
-                        {catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📌"}
-                      </span>
+                      <div className="w-9 h-9 rounded-full bg-muted/40 flex items-center justify-center border border-border/10 shrink-0">
+                        {loadingSettings ? (
+                          <div className="w-5 h-5 rounded-full bg-muted animate-pulse" />
+                        ) : (
+                          <CategoryIcon 
+                            name={catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📁"} 
+                            className="w-5 h-5" 
+                          />
+                        )}
+                      </div>
                       <div>
                         <p className="font-medium text-sm">{budget.category}</p>
                         <p className="text-xs text-muted-foreground">

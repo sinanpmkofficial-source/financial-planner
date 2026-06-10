@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDateShort } from "@/lib/format";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
 import type { Expense, Income } from "@/types";
+import { CategoryIcon } from "@/components/shared/category-icon";
 
 interface RecentTransactionsProps {
   expenses: Expense[];
@@ -30,23 +31,38 @@ export function RecentTransactions({
   const catIconMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.icon]));
 
   const transactions: Transaction[] = [
-    ...expenses.map((e) => ({
-      id: e._id,
-      amount: e.amount,
-      label: e.category,
-      date: e.date,
-      createdAt: e.createdAt,
-      type: "expense" as const,
-      icon: catIconMap.get(e.category.toLowerCase()) ?? CATEGORY_ICONS[e.category as ExpenseCategory] ?? "📌",
-    })),
-    ...incomes.map((i) => ({
-      id: i._id,
-      amount: i.amount,
-      label: i.source,
-      date: i.date,
-      createdAt: i.createdAt,
-      type: "income" as const,
-    })),
+    ...expenses.map((e) => {
+      const isDebt = e.category === "Debt";
+      let icon = catIconMap.get(e.category.toLowerCase()) ?? CATEGORY_ICONS[e.category as ExpenseCategory] ?? "📁";
+      if (isDebt) icon = "🤝";
+      
+      return {
+        id: e._id,
+        amount: e.amount,
+        label: e.category,
+        date: e.date,
+        createdAt: e.createdAt,
+        type: "expense" as const,
+        icon,
+      };
+    }),
+    ...incomes.map((i) => {
+      const isBorrowed = i.source.toLowerCase().includes("borrowed from");
+      const isLend = i.source.toLowerCase().includes("repayment from");
+      let icon = "💰";
+      if (isBorrowed) icon = "🤝";
+      if (isLend) icon = "💰";
+
+      return {
+        id: i._id,
+        amount: i.amount,
+        label: i.source,
+        date: i.date,
+        createdAt: i.createdAt,
+        type: "income" as const,
+        icon,
+      };
+    }),
   ]
     .sort((a, b) => {
       const timeA = new Date(a.date).getTime();
@@ -108,7 +124,9 @@ export function RecentTransactions({
               className="flex items-center justify-between px-5 py-3"
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg">{t.icon ?? "💰"}</span>
+                <span className="text-lg w-5 h-5 flex items-center justify-center">
+                  <CategoryIcon name={t.icon ?? "💰"} className="w-4 h-4" />
+                </span>
                 <div>
                   <p className="text-sm font-medium">{t.label}</p>
                   <p className="text-xs text-muted-foreground">

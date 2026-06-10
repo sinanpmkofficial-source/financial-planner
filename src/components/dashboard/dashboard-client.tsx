@@ -44,6 +44,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { StatCard } from "@/components/shared/stat-card";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import type { DashboardSummary, Expense, Income, BudgetWithSpent, RecurringExpense } from "@/types";
 
 interface DashboardUserSettings {
@@ -838,8 +839,8 @@ export function DashboardClient() {
                       <div key={b._id} className="space-y-1">
                         <div className="flex justify-between items-center text-xs">
                           <span className="flex items-center gap-1.5 font-medium text-foreground">
-                            <span className="text-sm">
-                              {catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌"}
+                            <span className="text-sm w-4 h-4 flex items-center justify-center">
+                              <CategoryIcon name={catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📁"} className="w-3.5 h-3.5" />
                             </span>
                             <span>{b.category}</span>
                           </span>
