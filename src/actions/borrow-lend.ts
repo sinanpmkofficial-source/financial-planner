@@ -37,6 +37,24 @@ export async function createBorrowLend(
       date: new Date(parsed.date),
       dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
     });
+
+    // Create corresponding transaction to affect balance
+    if (parsed.type === "borrowed") {
+      await Income.create({
+        amount: parsed.amount,
+        source: `Borrowed from ${parsed.personName}`,
+        note: parsed.notes || `Initial debt recording`,
+        date: new Date(parsed.date),
+      });
+    } else {
+      await Expense.create({
+        amount: parsed.amount,
+        category: "Debt",
+        note: `Lent to ${parsed.personName}`,
+        date: new Date(parsed.date),
+      });
+    }
+
     revalidatePath("/");
     revalidatePath("/borrow-lend");
     return { success: true };

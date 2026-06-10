@@ -8,6 +8,7 @@ export const EXPENSE_CATEGORIES = [
   "Bills",
   "Health",
   "Education",
+  "Debt",
   "Other",
 ] as const;
 
@@ -21,6 +22,7 @@ export const CATEGORY_ICONS: Record<ExpenseCategory, string> = {
   Bills: "Receipt",
   Health: "HeartPulse",
   Education: "GraduationCap",
+  Debt: "HandCoins",
   Other: "FolderOpen",
 };
 
@@ -32,6 +34,7 @@ export const CATEGORY_COLORS: Record<ExpenseCategory, string> = {
   Bills: "hsl(45, 70%, 50%)",
   Health: "hsl(0, 65%, 50%)",
   Education: "hsl(270, 60%, 50%)",
+  Debt: "hsl(280, 65%, 50%)",
   Other: "hsl(200, 15%, 50%)",
 };
 
