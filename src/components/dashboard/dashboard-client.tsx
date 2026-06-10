@@ -16,8 +16,18 @@ import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { QuickActions } from "@/components/dashboard/quick-actions";
 import { PageHeader } from "@/components/layout/header";
-import { TransactionForm } from "@/components/transactions/transaction-form";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
+
+const TransactionForm = dynamic(() => import("@/components/transactions/transaction-form").then(mod => mod.TransactionForm), {
+  ssr: false,
+  loading: () => null
+});
+const CashFlowChart = dynamic(() => import("@/components/dashboard/cash-flow-chart").then(mod => mod.CashFlowChart), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-muted/20 animate-pulse rounded-2xl" />
+});
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
@@ -34,15 +44,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getRecurringExpenses, confirmRecurringPayment } from "@/actions/recurring-expense";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { StatCard } from "@/components/shared/stat-card";
 import { CategoryIcon } from "@/components/shared/category-icon";
 import type { DashboardSummary, Expense, Income, BudgetWithSpent, RecurringExpense } from "@/types";
@@ -66,24 +67,6 @@ import {
   startOfMonth,
   endOfMonth,
 } from "date-fns";
-
-// Custom tooltip for premium look
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label }: any) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-popover border border-border rounded-xl px-3 py-2.5 shadow-md text-xs">
-        <p className="text-muted-foreground mb-1.5 font-medium">{label}</p>
-        {payload.map((entry: { name: string; value: number; color: string }, i: number) => (
-          <p key={i} className="text-sm font-semibold" style={{ color: entry.color }}>
-            {entry.name}: {formatCurrency(entry.value)}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
-}
 
 export function DashboardClient() {
   const { 
@@ -559,42 +542,7 @@ export function DashboardClient() {
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorInc" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="oklch(0.75 0.15 140)" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="oklch(0.75 0.15 140)" stopOpacity={0.01}/>
-                    </linearGradient>
-                    <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="oklch(0.60 0.18 25)" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="oklch(0.60 0.18 25)" stopOpacity={0.01}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                  <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area
-                    name="Income"
-                    type="monotone"
-                    dataKey="income"
-                    stroke="oklch(0.65 0.15 140)"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorInc)"
-                  />
-                  <Area
-                    name="Expenses"
-                    type="monotone"
-                    dataKey="expenses"
-                    stroke="oklch(0.60 0.18 25)"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorExp)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <CashFlowChart data={chartData} />
             </div>
           </CardContent>
         </Card>

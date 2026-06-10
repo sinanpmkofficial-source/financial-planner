@@ -6,8 +6,13 @@ import { getBudgetsWithSpent, deleteBudget } from "@/actions/budget";
 import { formatCurrency } from "@/lib/format";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
 import { PageHeader } from "@/components/layout/header";
-import { BudgetForm } from "@/components/budgets/budget-form";
+import dynamic from "next/dynamic";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
+
+const BudgetForm = dynamic(() => import("@/components/budgets/budget-form").then(mod => mod.BudgetForm), {
+  ssr: false,
+  loading: () => null
+});
 import { EmptyState } from "@/components/shared/empty-state";
 import { CategoryIcon } from "@/components/shared/category-icon";
 import { Button } from "@/components/ui/button";

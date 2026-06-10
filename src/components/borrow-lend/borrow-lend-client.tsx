@@ -9,9 +9,18 @@ import {
 } from "@/actions/borrow-lend";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
-import { BorrowLendForm } from "@/components/borrow-lend/borrow-lend-form";
-import { RepaymentDialog } from "@/components/borrow-lend/repayment-dialog";
+import dynamic from "next/dynamic";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
+
+const BorrowLendForm = dynamic(() => import("@/components/borrow-lend/borrow-lend-form").then(mod => mod.BorrowLendForm), {
+  ssr: false,
+  loading: () => null
+});
+
+const RepaymentDialog = dynamic(() => import("@/components/borrow-lend/repayment-dialog").then(mod => mod.RepaymentDialog), {
+  ssr: false,
+  loading: () => null
+});
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { StatCard } from "@/components/shared/stat-card";
 import { EmptyState } from "@/components/shared/empty-state";

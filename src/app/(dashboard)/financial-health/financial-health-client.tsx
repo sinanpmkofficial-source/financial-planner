@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { getFinancialHealthData } from "@/actions/financial-health";
 import { formatCurrency } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
@@ -11,15 +11,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MONTHS } from "@/constants";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Legend,
-  Tooltip,
-} from "recharts";
-import { ValueType } from "recharts/types/component/DefaultTooltipContent";
+import dynamic from "next/dynamic";
+
+const HealthPieChart = dynamic(() => import("@/components/analytics/analytics-charts").then(mod => mod.DistributionPieChart), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-muted/20 animate-pulse rounded-2xl" />
+});
 
 interface FinancialHealthData {
   totalIncome: number;
@@ -55,6 +52,169 @@ export function FinancialHealthClient() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const {
+    totalIncome,
+    totalNeeds,
+    totalWants,
+    totalUnnecessary,
+    totalGoals,
+    totalSavings,
+    rentExpense,
+    totalLiquidCash,
+    totalBorrowedPending
+  } = healthData || {
+    totalIncome: 0,
+    totalNeeds: 0,
+    totalWants: 0,
+    totalUnnecessary: 0,
+    totalGoals: 0,
+    totalSavings: 0,
+    rentExpense: 0,
+    totalLiquidCash: 0,
+    totalBorrowedPending: 0
+  };
+
+  // 50-30-20 Calculations
+  const { needsPct, wantsPct, savingsPct, targetNeeds, targetWants, targetSavings } = useMemo(() => {
+    const needsPct = totalIncome > 0 ? (totalNeeds / totalIncome) * 100 : 0;
+    const wantsPct = totalIncome > 0 ? ((totalWants + totalUnnecessary) / totalIncome) * 100 : 0;
+    const savingsPct = totalIncome > 0 ? ((totalSavings + totalGoals) / totalIncome) * 100 : 0;
+
+    const targetNeeds = totalIncome * 0.50;
+    const targetWants = totalIncome * 0.30;
+    const targetSavings = totalIncome * 0.20;
+
+    return { needsPct, wantsPct, savingsPct, targetNeeds, targetWants, targetSavings };
+  }, [totalIncome, totalNeeds, totalWants, totalUnnecessary, totalSavings, totalGoals]);
+
+  const chartData = useMemo(() => [
+    { category: "Needs", amount: totalNeeds, color: "oklch(0.65 0.15 140)" }, // Emerald
+    { category: "Wants", amount: totalWants, color: "oklch(0.60 0.18 25)" }, // Rose/Red
+    { category: "Investments", amount: totalSavings + totalGoals, color: "oklch(0.70 0.12 210)" }, // Blue
+    { category: "Unnecessary", amount: totalUnnecessary, color: "oklch(0.60 0.15 35)" }, // Amber/Orange
+  ].filter(d => d.amount > 0), [totalNeeds, totalWants, totalSavings, totalGoals, totalUnnecessary]);
+
+  // Stability Indicators
+  const { rentRulePassed, emergencyTarget, emergencyRulePassed, emergencyMonthsCovered, dtiRatio, dtiRulePassed } = useMemo(() => {
+    const rentRulePassed = totalIncome > 0 && rentExpense <= (totalIncome * 0.30);
+    
+    const emergencyTarget = totalNeeds * 6;
+    const emergencyRulePassed = totalLiquidCash >= emergencyTarget;
+    const emergencyMonthsCovered = totalNeeds > 0 ? totalLiquidCash / totalNeeds : 0;
+
+    const dtiRatio = totalIncome > 0 ? (totalBorrowedPending / totalIncome) * 100 : 0;
+    const dtiRulePassed = dtiRatio <= 36;
+
+    return { rentRulePassed, emergencyTarget, emergencyRulePassed, emergencyMonthsCovered, dtiRatio, dtiRulePassed };
+  }, [totalIncome, rentExpense, totalNeeds, totalLiquidCash, totalBorrowedPending]);
+
+  // Calculate detailed financial health score (0 - 100)
+  const { finalScore, verdict, verdictColor } = useMemo(() => {
+    // 1. Savings Rate (30 pts max)
+    let savingsScore = 0;
+    if (totalIncome > 0) {
+      savingsScore = Math.min(30, (savingsPct / 20) * 30);
+    }
+    // 2. Needs Adherence (30 pts max)
+    let needsScore = 0;
+    if (totalIncome > 0) {
+      if (needsPct <= 50) {
+        needsScore = 30;
+      } else {
+        needsScore = Math.max(0, 30 - ((needsPct - 50) / 50) * 30);
+      }
+    }
+    // 3. Debt-to-Income (20 pts max)
+    let dtiScore = 20;
+    if (totalIncome > 0 && totalBorrowedPending > 0) {
+      if (dtiRatio <= 36) {
+        dtiScore = 20;
+      } else {
+        dtiScore = Math.max(0, 20 - ((dtiRatio - 36) / 64) * 20);
+      }
+    }
+    // 4. Emergency Fund cover (20 pts max)
+    const emergencyScore = Math.min(20, (emergencyMonthsCovered / 6) * 20);
+
+    const finalScore = Math.round(savingsScore + needsScore + dtiScore + emergencyScore);
+
+    // Score description
+    let verdict = "Needs Attention";
+    let verdictColor = "text-rose-500 bg-rose-500/10 border-rose-500/20";
+    
+    if (totalIncome > 0) {
+      if (finalScore >= 80) {
+        verdict = "Excellent";
+        verdictColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+      } else if (finalScore >= 50) {
+        verdict = "Good";
+        verdictColor = "text-amber-500 bg-amber-500/10 border-amber-500/20";
+      }
+    } else {
+      verdict = "No Income Data";
+      verdictColor = "text-muted-foreground bg-muted border-border/50";
+    }
+
+    return { finalScore, verdict, verdictColor };
+  }, [totalIncome, savingsPct, needsPct, totalBorrowedPending, dtiRatio, emergencyMonthsCovered]);
+
+  // Dynamic recommendations/tips
+  const tips = useMemo(() => {
+    const list = [];
+    if (totalIncome > 0) {
+      if (needsPct > 50) {
+        list.push({
+          title: "Reduce Fixed Expenses",
+          desc: `Your essential needs take up ${needsPct.toFixed(1)}% of income (target: 50%). Review subscription renewals, look for competitive utility rates, or cut rent burdens if possible.`,
+          icon: TrendingDown,
+          color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
+        });
+      }
+      if (wantsPct > 30) {
+        list.push({
+          title: "Curb Lifestyle Creep",
+          desc: `Lifestyle desires take up ${wantsPct.toFixed(1)}% of your income (target: 30%). Try utilizing a 24-hour waiting period before checking out non-essential shopping carts.`,
+          icon: Sparkles,
+          color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
+        });
+      }
+      if (totalUnnecessary > 0) {
+        const savingsImpact = ((totalUnnecessary / totalIncome) * 100).toFixed(1);
+        list.push({
+          title: "Plug Unnecessary Leaks",
+          desc: `You logged ${formatCurrency(totalUnnecessary)} under 'Unnecessary Spending' this month. Pausing these leaks would boost your savings rate by ${savingsImpact}%!`,
+          icon: AlertCircle,
+          color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
+        });
+      }
+      if (savingsPct < 20) {
+        list.push({
+          title: "Automate Savings First",
+          desc: `Your savings rate is ${savingsPct.toFixed(1)}% (target: 20%). Automate a percentage of your salary to route directly to investments at the start of each month.`,
+          icon: PiggyBank,
+          color: "text-blue-500 bg-blue-500/5 border-blue-500/10"
+        });
+      }
+      if (totalBorrowedPending > 0 && dtiRatio > 36) {
+        list.push({
+          title: "Tackle Debt Exposure",
+          desc: `Your debt-to-income ratio is ${dtiRatio.toFixed(1)}% (target: <36%). Try the debt avalanche method (paying off high-interest debt first) and freeze new borrows.`,
+          icon: TrendingUp,
+          color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
+        });
+      }
+      if (emergencyMonthsCovered < 6) {
+        list.push({
+          title: "Secure Emergency Buffer",
+          desc: `Your liquid cash covers ${emergencyMonthsCovered.toFixed(1)} months of needs. Prioritize building a cash buffer of ${formatCurrency(emergencyTarget)} in a high-yield account.`,
+          icon: ShieldCheck,
+          color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
+        });
+      }
+    }
+    return list;
+  }, [totalIncome, needsPct, wantsPct, totalUnnecessary, savingsPct, totalBorrowedPending, dtiRatio, emergencyMonthsCovered, emergencyTarget]);
 
   if (loading || !healthData) {
     return (
@@ -95,144 +255,6 @@ export function FinancialHealthClient() {
         <div className="h-64 bg-muted/20 animate-pulse rounded-2xl border border-border/10" />
       </div>
     );
-  }
-
-  const {
-    totalIncome,
-    totalNeeds,
-    totalWants,
-    totalUnnecessary,
-    totalGoals,
-    totalSavings,
-    rentExpense,
-    totalLiquidCash,
-    totalBorrowedPending
-  } = healthData;
-
-  // 50-30-20 Calculations
-  const needsPct = totalIncome > 0 ? (totalNeeds / totalIncome) * 100 : 0;
-  const wantsPct = totalIncome > 0 ? ((totalWants + totalUnnecessary) / totalIncome) * 100 : 0;
-  const savingsPct = totalIncome > 0 ? ((totalSavings + totalGoals) / totalIncome) * 100 : 0;
-
-  const chartData = [
-    { name: "Needs", value: totalNeeds, color: "oklch(0.65 0.15 140)" }, // Emerald
-    { name: "Wants", value: totalWants, color: "oklch(0.60 0.18 25)" }, // Rose/Red
-    { name: "Investments", value: totalSavings + totalGoals, color: "oklch(0.70 0.12 210)" }, // Blue
-    { name: "Unnecessary", value: totalUnnecessary, color: "oklch(0.60 0.15 35)" }, // Amber/Orange
-  ].filter(d => d.value > 0);
-
-  const targetNeeds = totalIncome * 0.50;
-  const targetWants = totalIncome * 0.30;
-  const targetSavings = totalIncome * 0.20;
-
-  // Stability Indicators
-  const rentRulePassed = totalIncome > 0 && rentExpense <= (totalIncome * 0.30);
-  
-  const emergencyTarget = totalNeeds * 6;
-  const emergencyRulePassed = totalLiquidCash >= emergencyTarget;
-  const emergencyMonthsCovered = totalNeeds > 0 ? totalLiquidCash / totalNeeds : 0;
-
-  const dtiRatio = totalIncome > 0 ? (totalBorrowedPending / totalIncome) * 100 : 0;
-  const dtiRulePassed = dtiRatio <= 36;
-
-  // Calculate detailed financial health score (0 - 100)
-  // 1. Savings Rate (30 pts max)
-  let savingsScore = 0;
-  if (totalIncome > 0) {
-    savingsScore = Math.min(30, (savingsPct / 20) * 30);
-  }
-  // 2. Needs Adherence (30 pts max)
-  let needsScore = 0;
-  if (totalIncome > 0) {
-    if (needsPct <= 50) {
-      needsScore = 30;
-    } else {
-      needsScore = Math.max(0, 30 - ((needsPct - 50) / 50) * 30);
-    }
-  }
-  // 3. Debt-to-Income (20 pts max)
-  let dtiScore = 20;
-  if (totalIncome > 0 && totalBorrowedPending > 0) {
-    if (dtiRatio <= 36) {
-      dtiScore = 20;
-    } else {
-      dtiScore = Math.max(0, 20 - ((dtiRatio - 36) / 64) * 20);
-    }
-  }
-  // 4. Emergency Fund cover (20 pts max)
-  const emergencyScore = Math.min(20, (emergencyMonthsCovered / 6) * 20);
-
-  const finalScore = Math.round(savingsScore + needsScore + dtiScore + emergencyScore);
-
-  // Score description
-  let verdict = "Needs Attention";
-  let verdictColor = "text-rose-500 bg-rose-500/10 border-rose-500/20";
-  
-  if (totalIncome > 0) {
-    if (finalScore >= 80) {
-      verdict = "Excellent";
-      verdictColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
-    } else if (finalScore >= 50) {
-      verdict = "Good";
-      verdictColor = "text-amber-500 bg-amber-500/10 border-amber-500/20";
-    }
-  } else {
-    verdict = "No Income Data";
-    verdictColor = "text-muted-foreground bg-muted border-border/50";
-  }
-
-  // Dynamic recommendations/tips
-  const tips = [];
-  if (totalIncome > 0) {
-    if (needsPct > 50) {
-      tips.push({
-        title: "Reduce Fixed Expenses",
-        desc: `Your essential needs take up ${needsPct.toFixed(1)}% of income (target: 50%). Review subscription renewals, look for competitive utility rates, or cut rent burdens if possible.`,
-        icon: TrendingDown,
-        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
-      });
-    }
-    if (wantsPct > 30) {
-      tips.push({
-        title: "Curb Lifestyle Creep",
-        desc: `Lifestyle desires take up ${wantsPct.toFixed(1)}% of your income (target: 30%). Try utilizing a 24-hour waiting period before checking out non-essential shopping carts.`,
-        icon: Sparkles,
-        color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
-      });
-    }
-    if (totalUnnecessary > 0) {
-      const savingsImpact = ((totalUnnecessary / totalIncome) * 100).toFixed(1);
-      tips.push({
-        title: "Plug Unnecessary Leaks",
-        desc: `You logged ${formatCurrency(totalUnnecessary)} under 'Unnecessary Spending' this month. Pausing these leaks would boost your savings rate by ${savingsImpact}%!`,
-        icon: AlertCircle,
-        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
-      });
-    }
-    if (savingsPct < 20) {
-      tips.push({
-        title: "Automate Savings First",
-        desc: `Your savings rate is ${savingsPct.toFixed(1)}% (target: 20%). Automate a percentage of your salary to route directly to investments at the start of each month.`,
-        icon: PiggyBank,
-        color: "text-blue-500 bg-blue-500/5 border-blue-500/10"
-      });
-    }
-    if (totalBorrowedPending > 0 && dtiRatio > 36) {
-      tips.push({
-        title: "Tackle Debt Exposure",
-        desc: `Your debt-to-income ratio is ${dtiRatio.toFixed(1)}% (target: <36%). Try the debt avalanche method (paying off high-interest debt first) and freeze new borrows.`,
-        icon: TrendingUp,
-        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
-      });
-    }
-    if (emergencyMonthsCovered < 6) {
-      tips.push({
-        title: "Secure Emergency Buffer",
-        desc: `Your liquid cash covers ${emergencyMonthsCovered.toFixed(1)} months of needs. Prioritize building a cash buffer of ${formatCurrency(emergencyTarget)} in a high-yield account.`,
-        icon: ShieldCheck,
-        color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
-      });
-    }
   }
 
   return (
@@ -390,39 +412,8 @@ export function FinancialHealthClient() {
           </CardHeader>
           <CardContent className="pt-5 flex-1 flex flex-col justify-center min-h-[300px]">
             {chartData.length > 0 ? (
-              <div className="h-full w-full">
-                <ResponsiveContainer width="100%" height={240}>
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: ValueType | undefined) => value ? formatCurrency(Number(value)) : ""}
-                      contentStyle={{ 
-                        backgroundColor: "hsl(var(--popover))", 
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "12px",
-                        fontSize: "12px"
-                      }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      align="center"
-                      iconType="circle"
-                      wrapperStyle={{ fontSize: "10px", fontWeight: "600", paddingTop: "20px" }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="h-[240px] w-full">
+                <HealthPieChart data={chartData} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground italic text-xs">

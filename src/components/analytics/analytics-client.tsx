@@ -7,6 +7,18 @@ import { formatCurrency } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
 import { StatCard } from "@/components/shared/stat-card";
 import { cn } from "@/lib/utils";
+import dynamic from "next/dynamic";
+
+const TrendChart = dynamic(() => import("@/components/analytics/analytics-charts").then(mod => mod.TrendChart), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
+});
+
+const DistributionPieChart = dynamic(() => import("@/components/analytics/analytics-charts").then(mod => mod.DistributionPieChart), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
+});
+
 import {
   Select,
   SelectContent,
@@ -14,19 +26,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  LineChart,
-  Line,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
 import {
   TrendingUp,
   TrendingDown,
@@ -83,23 +82,6 @@ function ChartCard({
       </div>
     </div>
   );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label }: any) {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-popover border border-border rounded-xl px-3 py-2 shadow-md">
-        <p className="text-xs text-muted-foreground mb-1 font-medium">{label}</p>
-        {payload.map((entry: { name: string; value: number; color: string }, i: number) => (
-          <p key={i} className="text-sm font-semibold" style={{ color: entry.color }}>
-            {entry.name}: {formatCurrency(entry.value)}
-          </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
 }
 
 type PeriodPreset = 
@@ -300,23 +282,7 @@ export function AnalyticsClient() {
           {loading ? (
              <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={expenseTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                <Tooltip content={<CustomTooltip />} />
-                <Line
-                  name="Expenses"
-                  type="monotone"
-                  dataKey="value"
-                  stroke="oklch(0.60 0.18 25)"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <TrendChart data={expenseTrend} name="Expenses" color="oklch(0.60 0.18 25)" />
           )}
         </ChartCard>
 
@@ -332,23 +298,7 @@ export function AnalyticsClient() {
           ) : loading ? (
             <div className="w-full h-full bg-muted/20 animate-pulse rounded-lg" />
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={incomeTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                <Tooltip content={<CustomTooltip />} />
-                <Line
-                  name="Income"
-                  type="monotone"
-                  dataKey="value"
-                  stroke="oklch(0.65 0.15 140)"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <TrendChart data={incomeTrend} name="Income" color="oklch(0.65 0.15 140)" />
           )}
         </ChartCard>
 
@@ -368,33 +318,7 @@ export function AnalyticsClient() {
               No expense data available for this selection
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={distribution}
-                  cx="50%"
-                  cy="45%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={3}
-                  dataKey="amount"
-                  nameKey="category"
-                >
-                  {distribution.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) => formatCurrency(Number(value))}
-                />
-                <Legend
-                  wrapperStyle={{ fontSize: 11 }}
-                  formatter={(value) => (
-                    <span className="text-xs text-foreground">{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <DistributionPieChart data={distribution} />
           )}
         </ChartCard>
       </div>
