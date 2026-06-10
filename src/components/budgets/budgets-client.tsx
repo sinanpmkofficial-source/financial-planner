@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { SyncStatus } from "@/components/layout/sync-status";
 import { Plus, PiggyBank, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { getUserSettings } from "@/actions/settings";
@@ -19,26 +20,38 @@ import type { BudgetWithSpent } from "@/types";
 import { cn } from "@/lib/utils";
 
 export function BudgetsClient() {
-  const { dateRange, setDashboardDirty } = useUIStore();
+  const { 
+    dateRange, 
+    setDashboardDirty, 
+    budgetsCache, 
+    updateBudgetsCache, 
+    setSyncStatus 
+  } = useUIStore();
+  
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use cached data for initial state
+  const [loading, setLoading] = useState(budgetsCache.data.length === 0);
   const [formOpen, setFormOpen] = useState(false);
-  const [editingBudget, setEditingBudget] = useState<
-    BudgetWithSpent | undefined
-  >();
+  const [editingBudget, setEditingBudget] = useState<BudgetWithSpent | undefined>();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setSyncStatus("syncing");
     try {
       const month = dateRange.from.getMonth() + 1;
       const year = dateRange.from.getFullYear();
       const data = await getBudgetsWithSpent(month, year);
       setBudgets(data);
+      updateBudgetsCache(data);
+    } catch (err) {
+      console.error("Failed to fetch budgets", err);
+      setSyncStatus("error");
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, setSyncStatus, updateBudgetsCache]);
 
   useEffect(() => {
     fetchData();
@@ -73,14 +86,20 @@ export function BudgetsClient() {
     if (!open) setEditingBudget(undefined);
   };
 
-  const totalBudget = budgets.reduce((s, b) => s + b.amount, 0);
-  const totalSpent = budgets.reduce((s, b) => s + b.spent, 0);
+  const currentBudgets = budgets.length > 0 ? budgets : (budgetsCache.data as BudgetWithSpent[]);
+  const totalBudget = currentBudgets.reduce((s, b) => s + b.amount, 0);
+  const totalSpent = currentBudgets.reduce((s, b) => s + b.spent, 0);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Budgets"
-        description={`${formatCurrency(totalSpent)} of ${formatCurrency(totalBudget)} spent`}
+        description={
+          <div className="flex flex-col gap-1.5">
+            <span>{formatCurrency(totalSpent)} of {formatCurrency(totalBudget)} spent</span>
+            <SyncStatus />
+          </div>
+        }
         showMonthPicker
         action={
           <Button onClick={() => setFormOpen(true)} size="sm" className="gap-1.5">
@@ -90,7 +109,7 @@ export function BudgetsClient() {
         }
       />
 
-      {loading ? (
+      {loading && currentBudgets.length === 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="p-5 rounded-xl border border-border/10 bg-card animate-pulse space-y-3.5 shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
@@ -106,7 +125,7 @@ export function BudgetsClient() {
             </div>
           ))}
         </div>
-      ) : budgets.length === 0 ? (
+      ) : currentBudgets.length === 0 ? (
         <EmptyState
           icon={PiggyBank}
           title="No budgets set"
@@ -116,7 +135,7 @@ export function BudgetsClient() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          {budgets.map((budget) => {
+          {currentBudgets.map((budget) => {
             const isWarning = budget.percentage >= 80 && budget.percentage < 100;
             const isDanger = budget.percentage >= 100;
 
@@ -199,7 +218,7 @@ export function BudgetsClient() {
         onOpenChange={handleFormClose}
         budget={editingBudget}
         onSuccess={fetchData}
-        existingCategories={budgets.map((b) => b.category)}
+        existingCategories={currentBudgets.map((b) => b.category)}
       />
     </div>
   );

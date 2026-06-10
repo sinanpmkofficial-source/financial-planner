@@ -15,6 +15,7 @@ import { StatCard } from "@/components/shared/stat-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { SyncStatus } from "@/components/layout/sync-status";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -33,12 +34,22 @@ type UnifiedTransaction =
   | (Income & { type: "income" });
 
 export function TransactionsClient() {
-  const { dateRange, setDashboardDirty } = useUIStore();
+  const { 
+    dateRange, 
+    setDashboardDirty, 
+    transactionsCache, 
+    updateTransactionsCache, 
+    setSyncStatus,
+    isDashboardDirty
+  } = useUIStore();
+
   const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
-  const [loading, setLoading] = useState(true);
+  
+  // Use cached data for initial state
+  const [loading, setLoading] = useState(transactionsCache.data.length === 0);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Expense | Income | undefined>();
   const [filterType, setFilterType] = useState<"all" | "expense" | "income">("all");
@@ -46,6 +57,7 @@ export function TransactionsClient() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    setSyncStatus("syncing");
     try {
       const [expenseData, incomeData] = await Promise.all([
         getExpensesByDateRange(dateRange.from, dateRange.to),
@@ -53,13 +65,21 @@ export function TransactionsClient() {
       ]);
       setExpenses(expenseData);
       setIncomes(incomeData);
+      
+      // Update cache
+      const merged = [
+        ...expenseData.map(e => ({ ...e, type: 'expense' as const })),
+        ...incomeData.map(i => ({ ...i, type: 'income' as const }))
+      ];
+      updateTransactionsCache(merged);
     } catch (err) {
       console.error("Failed to fetch transaction data", err);
       toast.error("Failed to load transactions");
+      setSyncStatus("error");
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, setSyncStatus, updateTransactionsCache]);
 
   useEffect(() => {
     fetchData();
@@ -104,12 +124,16 @@ export function TransactionsClient() {
 
   // Merge & filter transactions
   const mergedTransactions = useMemo(() => {
-    const list: UnifiedTransaction[] = [
-      ...expenses.map((e) => ({ ...e, type: "expense" as const })),
-      ...incomes.map((i) => ({ ...i, type: "income" as const })),
-    ];
+    // If we have actual fetched data, use it, otherwise use cache
+    const baseList = expenses.length > 0 || incomes.length > 0
+      ? [
+          ...expenses.map((e) => ({ ...e, type: "expense" as const })),
+          ...incomes.map((i) => ({ ...i, type: "income" as const })),
+        ]
+      : (transactionsCache.data as UnifiedTransaction[]);
+
     // Sort descending by date, fallback to createdAt timestamp
-    return list.sort((a, b) => {
+    return baseList.sort((a, b) => {
       const timeA = new Date(a.date).getTime();
       const timeB = new Date(b.date).getTime();
       if (timeA !== timeB) return timeB - timeA;
@@ -117,7 +141,7 @@ export function TransactionsClient() {
       const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return createdB - createdA;
     });
-  }, [expenses, incomes]);
+  }, [expenses, incomes, transactionsCache.data]);
 
   const filteredTransactions = useMemo(() => {
     return mergedTransactions.filter((t) => {
@@ -136,17 +160,28 @@ export function TransactionsClient() {
 
   // Calculations for cards
   const summaryMetrics = useMemo(() => {
-    const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
-    const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const totalIncome = incomes.length > 0 
+      ? incomes.reduce((sum, i) => sum + i.amount, 0)
+      : (transactionsCache.data as UnifiedTransaction[]).filter(t => t.type === 'income').reduce((sum, i) => sum + i.amount, 0);
+      
+    const totalExpense = expenses.length > 0
+      ? expenses.reduce((sum, e) => sum + e.amount, 0)
+      : (transactionsCache.data as UnifiedTransaction[]).filter(t => t.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+      
     const netSavings = totalIncome - totalExpense;
     return { totalIncome, totalExpense, netSavings };
-  }, [expenses, incomes]);
+  }, [expenses, incomes, transactionsCache.data]);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Transactions"
-        description={`${filteredTransactions.length} entries in selected period`}
+        description={
+          <div className="flex flex-col gap-1.5">
+            <span>{filteredTransactions.length} entries in selected period</span>
+            <SyncStatus />
+          </div>
+        }
         showMonthPicker
         action={
           <Button onClick={() => setFormOpen(true)} size="sm" className="gap-1.5 cursor-pointer">
@@ -250,7 +285,7 @@ export function TransactionsClient() {
       </div>
 
       {/* Transaction List */}
-      {loading ? (
+      {loading && mergedTransactions.length === 0 ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/10 bg-card animate-pulse shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">

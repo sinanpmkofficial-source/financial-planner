@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useUIStore } from "@/stores/ui-store";
+import { SyncStatus } from "@/components/layout/sync-status";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
@@ -83,18 +85,26 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 export function DashboardClient() {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
-  const [settings, setSettings] = useState<DashboardUserSettings | null>(null);
-  const [chartData, setChartData] = useState<DashboardChartData[]>([]);
-  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+  const { 
+    dashboardCache, 
+    updateDashboardCache, 
+    setSyncStatus, 
+    isDashboardDirty, 
+    setDashboardDirty 
+  } = useUIStore();
 
-  // Decoupled loading states
-  const [summaryLoading, setSummaryLoading] = useState(true);
-  const [transactionsLoading, setTransactionsLoading] = useState(true);
-  const [budgetsLoading, setBudgetsLoading] = useState(true);
+  const [summary, setSummary] = useState<DashboardSummary | null>(dashboardCache.summary);
+  const [expenses, setExpenses] = useState<Expense[]>(dashboardCache.expenses);
+  const [incomes, setIncomes] = useState<Income[]>(dashboardCache.incomes);
+  const [budgets, setBudgets] = useState<BudgetWithSpent[]>(dashboardCache.budgets);
+  const [settings, setSettings] = useState<DashboardUserSettings | null>(dashboardCache.settings);
+  const [chartData, setChartData] = useState<DashboardChartData[]>(dashboardCache.chartData);
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>(dashboardCache.recurringExpenses);
+
+  // Decoupled loading states - initialized based on whether we have cached data
+  const [summaryLoading, setSummaryLoading] = useState(!dashboardCache.summary);
+  const [transactionsLoading, setTransactionsLoading] = useState(dashboardCache.expenses.length === 0);
+  const [budgetsLoading, setBudgetsLoading] = useState(dashboardCache.budgets.length === 0);
   const [trendLoading, setTrendLoading] = useState(false);
 
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
@@ -140,16 +150,20 @@ export function DashboardClient() {
   }, [settings]);
 
   const fetchData = useCallback(async () => {
+    setSyncStatus("syncing");
+    
     // Fetch Summary independently
     setSummaryLoading(true);
     getDashboardSummary(undefined, undefined, new Date().getTimezoneOffset())
       .then((s) => {
         setSummary(s);
+        updateDashboardCache({ summary: s });
         setSummaryLoading(false);
       })
       .catch((err) => {
         console.error("Dashboard summary load error", err);
         setSummaryLoading(false);
+        setSyncStatus("error");
       });
 
     // Fetch Transactions (expenses & incomes) independently
@@ -158,11 +172,13 @@ export function DashboardClient() {
       .then(([e, i]) => {
         setExpenses(e);
         setIncomes(i);
+        updateDashboardCache({ expenses: e, incomes: i });
         setTransactionsLoading(false);
       })
       .catch((err) => {
         console.error("Transactions load error", err);
         setTransactionsLoading(false);
+        setSyncStatus("error");
       });
 
     // Fetch Budgets independently
@@ -173,17 +189,20 @@ export function DashboardClient() {
     getBudgetsWithSpent(currentMonth, currentYear)
       .then((b) => {
         setBudgets(b);
+        updateDashboardCache({ budgets: b });
         setBudgetsLoading(false);
       })
       .catch((err) => {
         console.error("Budgets load error", err);
         setBudgetsLoading(false);
+        setSyncStatus("error");
       });
 
     // Fetch User Settings independently
     getUserSettings()
       .then((setts) => {
         setSettings(setts);
+        updateDashboardCache({ settings: setts });
       })
       .catch((err) => {
         console.error("Settings load error", err);
@@ -193,14 +212,18 @@ export function DashboardClient() {
     getRecurringExpenses()
       .then((recs) => {
         setRecurringExpenses(recs);
+        updateDashboardCache({ recurringExpenses: recs });
       })
       .catch((err) => {
         console.error("Recurring load error", err);
       });
-  }, []);
+    
+    setDashboardDirty(false);
+  }, [updateDashboardCache, setSyncStatus, setDashboardDirty]);
 
   const fetchTrend = useCallback(async () => {
     setTrendLoading(true);
+    setSyncStatus("syncing");
     try {
       const now = new Date();
       let start: Date;
@@ -226,16 +249,20 @@ export function DashboardClient() {
         income: data.incomeTrend[idx]?.value ?? 0,
       }));
       setChartData(merged);
+      updateDashboardCache({ chartData: merged });
     } catch (err) {
       console.error("Dashboard trend load error", err);
+      setSyncStatus("error");
     } finally {
       setTrendLoading(false);
     }
-  }, [graphPeriod]);
+  }, [graphPeriod, updateDashboardCache, setSyncStatus]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (isDashboardDirty || !dashboardCache.summary) {
+      fetchData();
+    }
+  }, [fetchData, isDashboardDirty, dashboardCache.summary]);
 
   useEffect(() => {
     fetchTrend();
@@ -295,7 +322,12 @@ export function DashboardClient() {
     <div className="space-y-6">
       <PageHeader
         title={greeting}
-        description={currentDateString}
+        description={
+          <div className="flex flex-col gap-1.5">
+            <span>{currentDateString}</span>
+            <SyncStatus />
+          </div>
+        }
         showMonthPicker={false}
         action={
           <div className="flex items-center gap-2">

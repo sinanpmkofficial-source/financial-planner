@@ -80,7 +80,7 @@ export function TransactionForm({
     },
   });
 
-  const { setDashboardDirty } = useUIStore();
+  const { setDashboardDirty, addOptimisticTransaction, setSyncStatus } = useUIStore();
 
   const type = watch("type");
   const category = watch("category");
@@ -130,6 +130,25 @@ export function TransactionForm({
 
   const onSubmit = async (data: TransactionFormData) => {
     setLoading(true);
+
+    // Create optimistic object for immediate LocalStorage update
+    const optimisticId = `temp-${Date.now()}`;
+    const optimisticTransaction = {
+      _id: optimisticId,
+      amount: data.amount,
+      note: data.note,
+      date: new Date(data.date).toISOString(),
+      ...(data.type === "expense" 
+        ? { category: data.category || "", tag: data.tag || "Needs" } 
+        : { source: data.source || "" }
+      ),
+      createdAt: new Date().toISOString(),
+    };
+
+    if (!isEditing) {
+      addOptimisticTransaction(optimisticTransaction);
+    }
+
     try {
       let result;
       if (data.type === "expense") {
@@ -187,10 +206,12 @@ export function TransactionForm({
         onOpenChange(false);
         onSuccess?.();
       } else {
+        setSyncStatus("error");
         toast.error(result.error || "Something went wrong");
       }
     } catch (err) {
       console.error(err);
+      setSyncStatus("error");
       toast.error("Failed to save transaction");
     } finally {
       setLoading(false);

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { DateRange } from "react-day-picker";
 import {
   startOfMonth,
@@ -20,6 +21,8 @@ export type PeriodPreset =
   | "Last Month"
   | "This Year"
   | "Custom";
+
+export type SyncStatus = "synced" | "syncing" | "error";
 
 export function getDateRangeForPreset(preset: string, customRange?: DateRange) {
   const now = new Date();
@@ -58,16 +61,28 @@ interface UIState {
   
   // Dashboard Cache & Optimization
   isDashboardDirty: boolean;
+  syncStatus: SyncStatus;
   dashboardCache: {
-    summary: unknown | null;
-    expenses: unknown[];
-    incomes: unknown[];
-    budgets: unknown[];
-    chartData: unknown[];
-    settings: unknown | null;
+    summary: any | null;
+    expenses: any[];
+    incomes: any[];
+    budgets: any[];
+    chartData: any[];
+    settings: any | null;
+    recurringExpenses: any[];
     lastFetched?: number;
   };
   
+  // More generic cache for other pages
+  transactionsCache: {
+    data: any[];
+    lastFetched?: number;
+  };
+  budgetsCache: {
+    data: any[];
+    lastFetched?: number;
+  };
+
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setPreset: (preset: PeriodPreset) => void;
@@ -75,50 +90,121 @@ interface UIState {
   
   // Cache Actions
   setDashboardDirty: (dirty: boolean) => void;
+  setSyncStatus: (status: SyncStatus) => void;
   updateDashboardCache: (data: Partial<UIState["dashboardCache"]>) => void;
+  updateTransactionsCache: (data: any[]) => void;
+  updateBudgetsCache: (data: any[]) => void;
+  
+  // Optimistic Actions
+  addOptimisticTransaction: (transaction: any) => void;
+  
+  clearCache: () => void;
 }
 
 const defaultPreset: PeriodPreset = "This Month";
 const initialRange = getDateRangeForPreset(defaultPreset);
 
-export const useUIStore = create<UIState>((set) => ({
-  sidebarOpen: false,
-  preset: defaultPreset,
-  customRange: {
-    from: initialRange.from,
-    to: initialRange.to,
-  },
-  dateRange: initialRange,
-  
-  // Cache Initial State
-  isDashboardDirty: true, // Initial load is always "dirty"
-  dashboardCache: {
-    summary: null,
-    expenses: [],
-    incomes: [],
-    budgets: [],
-    chartData: [],
-    settings: null,
-  },
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      sidebarOpen: false,
+      preset: defaultPreset,
+      customRange: {
+        from: initialRange.from,
+        to: initialRange.to,
+      },
+      dateRange: initialRange,
+      
+      // Cache Initial State
+      isDashboardDirty: true,
+      syncStatus: "synced",
+      dashboardCache: {
+        summary: null,
+        expenses: [],
+        incomes: [],
+        budgets: [],
+        chartData: [],
+        settings: null,
+        recurringExpenses: [],
+      },
+      transactionsCache: {
+        data: [],
+      },
+      budgetsCache: {
+        data: [],
+      },
 
-  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  setPreset: (preset) =>
-    set((state) => {
-      const dateRange = getDateRangeForPreset(preset, state.customRange);
-      return { preset, dateRange };
+      toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      setPreset: (preset) =>
+        set((state) => {
+          const dateRange = getDateRangeForPreset(preset, state.customRange);
+          return { preset, dateRange };
+        }),
+      setCustomRange: (customRange) =>
+        set((state) => {
+          const dateRange = getDateRangeForPreset("Custom", customRange);
+          return { customRange, dateRange };
+        }),
+
+      // Cache Actions Implementation
+      setDashboardDirty: (dirty) => set({ isDashboardDirty: dirty }),
+      setSyncStatus: (status) => set({ syncStatus: status }),
+      updateDashboardCache: (data) => 
+        set((state) => ({
+          dashboardCache: { ...state.dashboardCache, ...data, lastFetched: Date.now() },
+          syncStatus: "synced"
+        })),
+      updateTransactionsCache: (data) =>
+        set({ transactionsCache: { data, lastFetched: Date.now() }, syncStatus: "synced" }),
+      updateBudgetsCache: (data) =>
+        set({ budgetsCache: { data, lastFetched: Date.now() }, syncStatus: "synced" }),
+      
+      addOptimisticTransaction: (t) =>
+        set((state) => {
+          const isExp = "category" in t;
+          const newExpenses = isExp ? [t, ...state.dashboardCache.expenses].slice(0, 5) : state.dashboardCache.expenses;
+          const newIncomes = !isExp ? [t, ...state.dashboardCache.incomes].slice(0, 5) : state.dashboardCache.incomes;
+          
+          return {
+            dashboardCache: {
+              ...state.dashboardCache,
+              expenses: newExpenses,
+              incomes: newIncomes,
+            },
+            transactionsCache: {
+              ...state.transactionsCache,
+              data: [t, ...state.transactionsCache.data]
+            },
+            syncStatus: "syncing"
+          };
+        }),
+
+      clearCache: () => set({
+        dashboardCache: {
+          summary: null,
+          expenses: [],
+          incomes: [],
+          budgets: [],
+          chartData: [],
+          settings: null,
+          recurringExpenses: [],
+        },
+        transactionsCache: { data: [] },
+        budgetsCache: { data: [] }
+      }),
     }),
-  setCustomRange: (customRange) =>
-    set((state) => {
-      const dateRange = getDateRangeForPreset("Custom", customRange);
-      return { customRange, dateRange };
-    }),
-
-  // Cache Actions Implementation
-  setDashboardDirty: (dirty) => set({ isDashboardDirty: dirty }),
-  updateDashboardCache: (data) => 
-    set((state) => ({
-      dashboardCache: { ...state.dashboardCache, ...data, lastFetched: Date.now() }
-    })),
-}));
-
+    {
+      name: "money-management-storage",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        dashboardCache: state.dashboardCache,
+        transactionsCache: state.transactionsCache,
+        budgetsCache: state.budgetsCache,
+        preset: state.preset,
+        customRange: state.customRange,
+        dateRange: state.dateRange,
+      }),
+    }
+  )
+);
