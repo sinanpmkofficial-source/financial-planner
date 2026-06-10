@@ -260,6 +260,17 @@ export async function getBorrowLendSummary() {
   const monthlyRepayments = monthRepaymentsAgg[0]?.total ?? 0;
   const repaymentPercentage = monthlyIncome > 0 ? (monthlyRepayments / monthlyIncome) * 100 : 0;
 
+  // Calculate total paid back vs total borrowed across all time
+  let totalBorrowedAllTime = 0;
+  let totalPaidBackAllTime = 0;
+  for (const r of records) {
+    if (r.type === "borrowed") {
+      totalBorrowedAllTime += r.amount;
+      totalPaidBackAllTime += (r.paidAmount ?? 0);
+    }
+  }
+  const globalRepaymentProgress = totalBorrowedAllTime > 0 ? (totalPaidBackAllTime / totalBorrowedAllTime) * 100 : 0;
+
   return { 
     totalBorrowed, 
     totalLent, 
@@ -267,6 +278,9 @@ export async function getBorrowLendSummary() {
     pendingPayments,
     monthlyIncome,
     monthlyRepayments,
-    repaymentPercentage
+    repaymentPercentage,
+    totalBorrowedAllTime,
+    totalPaidBackAllTime,
+    globalRepaymentProgress
   };
 }
