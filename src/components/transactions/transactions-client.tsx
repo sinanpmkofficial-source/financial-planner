@@ -278,7 +278,7 @@ export function TransactionsClient() {
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/10 bg-card animate-pulse shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+            <div key={i} className="flex items-center justify-between p-4 rounded-xl border border-border/20 bg-card animate-pulse">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />
                 <div className="space-y-1.5">
@@ -311,9 +311,7 @@ export function TransactionsClient() {
               <Card
                 key={transaction._id}
                 className={cn(
-                  "border bg-card transition-all duration-300",
-                  "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
-                  "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+                  "border border-border/50 bg-card transition-all duration-300 hover:border-border hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
                 )}
               >
                 <CardContent className="p-4">

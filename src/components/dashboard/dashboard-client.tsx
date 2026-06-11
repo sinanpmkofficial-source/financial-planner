@@ -59,13 +59,12 @@ interface DashboardChartData {
   income: number;
 }
 import {
-  startOfDay,
-  endOfDay,
   startOfWeek,
   endOfWeek,
   startOfMonth,
   endOfMonth,
 } from "date-fns";
+
 
 // Custom tooltip for premium look
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,7 +124,8 @@ export function DashboardClient() {
   const [budgetsLoading, setBudgetsLoading] = useState(true);
   const [trendLoading, setTrendLoading] = useState(false);
 
-  const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
+  const [graphPeriod, setGraphPeriod] = useState<"weekly" | "monthly">("weekly");
+
   const [transactionFormOpen, setTransactionFormOpen] = useState(false);
 
   const [isMounted, setIsMounted] = useState(false);
@@ -283,10 +283,7 @@ export function DashboardClient() {
       let start: Date;
       let end: Date;
 
-      if (graphPeriod === "daily") {
-        start = startOfDay(now);
-        end = endOfDay(now);
-      } else if (graphPeriod === "weekly") {
+      if (graphPeriod === "weekly") {
         start = startOfWeek(now, { weekStartsOn: 1 });
         end = endOfWeek(now, { weekStartsOn: 1 });
       } else {
@@ -547,26 +544,15 @@ export function DashboardClient() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle className="text-base font-semibold text-foreground">Cash Flow</CardTitle>
-                <CardDescription>
-                  {graphPeriod === "daily"
-                    ? "Today's hourly comparison"
-                    : graphPeriod === "weekly"
+                 <CardDescription>
+                  {graphPeriod === "weekly"
                     ? "This week's daily comparison"
                     : "This month's daily comparison"}
-                </CardDescription>
+                 </CardDescription>
               </div>
               <div className="flex items-center gap-3.5">
                 {/* Period Selector Tabs/Buttons */}
                 <div className="flex rounded-lg bg-muted p-0.5 text-xs mr-2 border border-border/40">
-                  <button
-                    onClick={() => setGraphPeriod("daily")}
-                    className={cn(
-                      "px-3 py-1 rounded-md font-semibold transition-all cursor-pointer",
-                      graphPeriod === "daily" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Day
-                  </button>
                   <button
                     onClick={() => setGraphPeriod("weekly")}
                     className={cn(
@@ -812,35 +798,28 @@ export function DashboardClient() {
         {/* Budget Status Card */}
         <div
           className={cn(
-            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
-            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
-            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+            "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[0_1px_3px_oklch(0_0_0/6%),0_1px_2px_oklch(0_0_0/4%)] hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] hover:border-border",
+            "dark:shadow-[0_1px_3px_oklch(0_0_0/30%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
           )}
         >
           {/* Top Section */}
           <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+              <span className="text-[10px] font-mono text-muted-foreground/60 border border-border px-1.5 py-0.5 rounded-md">
                 01
               </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Monthly Budgets
               </span>
             </div>
-            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+            <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
               <Target className="w-4 h-4" />
             </div>
           </div>
 
-          {/* Ticket Cut / Dashed Line Separator */}
-          <div className="relative flex items-center w-full">
-            {/* Left Notch */}
-            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-            {/* Dashed Line */}
-            <div className="w-full border-t border-dashed border-foreground/15" />
-            {/* Right Notch */}
-            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
-          </div>
+          {/* Thin Separator */}
+          <div className="w-full border-t border-border/50 border-dashed" />
 
           {/* Bottom Section */}
           <div className="p-5 flex-1 flex flex-col justify-between gap-4">
@@ -965,35 +944,28 @@ export function DashboardClient() {
         {/* Credit & Debt Card */}
         <div
           className={cn(
-            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
-            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
-            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+            "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[0_1px_3px_oklch(0_0_0/6%),0_1px_2px_oklch(0_0_0/4%)] hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] hover:border-border",
+            "dark:shadow-[0_1px_3px_oklch(0_0_0/30%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
           )}
         >
           {/* Top Section */}
           <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+              <span className="text-[10px] font-mono text-muted-foreground/60 border border-border px-1.5 py-0.5 rounded-md">
                 02
               </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Credit & Debts
               </span>
             </div>
-            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+            <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
               <ArrowRight className="w-4 h-4" />
             </div>
           </div>
 
-          {/* Ticket Cut / Dashed Line Separator */}
-          <div className="relative flex items-center w-full">
-            {/* Left Notch */}
-            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-            {/* Dashed Line */}
-            <div className="w-full border-t border-dashed border-foreground/15" />
-            {/* Right Notch */}
-            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
-          </div>
+          {/* Thin Separator */}
+          <div className="w-full border-t border-border/50 border-dashed" />
 
           {/* Bottom Section */}
           <div className="p-5 flex-1 flex flex-col justify-between gap-4">

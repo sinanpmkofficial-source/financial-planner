@@ -63,8 +63,9 @@ function ChartCard({
   return (
     <div
       className={cn(
-        "relative overflow-hidden border border-foreground/15 rounded-2xl bg-card transition-all duration-300",
-        "hover:border-foreground/30 hover:shadow-[4px_4px_0px_var(--foreground)] dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
+        "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300",
+        "shadow-[0_1px_3px_oklch(0_0_0/6%),0_1px_2px_oklch(0_0_0/4%)] hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] hover:border-border",
+        "dark:shadow-[0_1px_3px_oklch(0_0_0/30%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]",
         "flex flex-col justify-between"
       )}
     >
@@ -72,11 +73,8 @@ function ChartCard({
         <h3 className="text-base font-semibold text-foreground">{title}</h3>
       </div>
 
-      <div className="relative flex items-center w-full">
-        <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-        <div className="w-full border-t border-dashed border-foreground/15" />
-        <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
-      </div>
+      {/* Thin Separator */}
+      <div className="w-full border-t border-border/50 border-dashed" />
 
       <div className="p-5">
         <div className="h-[280px] w-full">{children}</div>
@@ -84,6 +82,7 @@ function ChartCard({
     </div>
   );
 }
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload, label }: any) {
