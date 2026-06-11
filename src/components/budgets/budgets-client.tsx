@@ -19,7 +19,7 @@ import type { BudgetWithSpent } from "@/types";
 import { cn } from "@/lib/utils";
 
 export function BudgetsClient() {
-  const { dateRange, setDashboardDirty } = useUIStore();
+  const { dateRange, setDashboardDirty, budgetsCache, updateBudgetsCache } = useUIStore();
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,17 +28,37 @@ export function BudgetsClient() {
     BudgetWithSpent | undefined
   >();
 
+  const cacheKey = `${dateRange.from.getMonth() + 1}-${dateRange.from.getFullYear()}`;
+
+  // Hydrate budgets state from local cache on client mount / period change
+  useEffect(() => {
+    const cached = budgetsCache[cacheKey];
+    if (cached) {
+      setBudgets(cached);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+  }, [cacheKey, budgetsCache]);
+
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    const currentCache = useUIStore.getState().budgetsCache[cacheKey];
+    if (!currentCache) {
+      setLoading(true);
+    }
     try {
       const month = dateRange.from.getMonth() + 1;
       const year = dateRange.from.getFullYear();
       const data = await getBudgetsWithSpent(month, year);
       setBudgets(data);
+      updateBudgetsCache(cacheKey, data);
+    } catch (err) {
+      console.error("Failed to fetch budgets", err);
+      toast.error("Failed to load budgets");
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, cacheKey, updateBudgetsCache]);
 
   useEffect(() => {
     fetchData();

@@ -33,7 +33,7 @@ type UnifiedTransaction =
   | (Income & { type: "income" });
 
 export function TransactionsClient() {
-  const { dateRange, setDashboardDirty } = useUIStore();
+  const { dateRange, setDashboardDirty, expensesCache, incomesCache, updateExpensesCache, updateIncomesCache } = useUIStore();
   const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -44,8 +44,31 @@ export function TransactionsClient() {
   const [filterType, setFilterType] = useState<"all" | "expense" | "income">("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
 
+  const cacheKey = `${dateRange.from.toISOString()}_${dateRange.to.toISOString()}`;
+
+  // Hydrate transactions state from local cache on mount / period change
+  useEffect(() => {
+    const cachedExpenses = expensesCache[cacheKey];
+    const cachedIncomes = incomesCache[cacheKey];
+    if (cachedExpenses) {
+      setExpenses(cachedExpenses);
+    }
+    if (cachedIncomes) {
+      setIncomes(cachedIncomes);
+    }
+    if (cachedExpenses || cachedIncomes) {
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+  }, [cacheKey, expensesCache, incomesCache]);
+
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    const currentExpCache = useUIStore.getState().expensesCache[cacheKey];
+    const currentIncCache = useUIStore.getState().incomesCache[cacheKey];
+    if (!currentExpCache && !currentIncCache) {
+      setLoading(true);
+    }
     try {
       const [expenseData, incomeData] = await Promise.all([
         getExpensesByDateRange(dateRange.from, dateRange.to),
@@ -53,13 +76,15 @@ export function TransactionsClient() {
       ]);
       setExpenses(expenseData);
       setIncomes(incomeData);
+      updateExpensesCache(cacheKey, expenseData);
+      updateIncomesCache(cacheKey, incomeData);
     } catch (err) {
       console.error("Failed to fetch transaction data", err);
       toast.error("Failed to load transactions");
     } finally {
       setLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, cacheKey, updateExpensesCache, updateIncomesCache]);
 
   useEffect(() => {
     fetchData();

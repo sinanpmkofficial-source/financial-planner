@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   getBorrowLendRecords,
   deleteBorrowLend,
   settleBorrowLend,
-  getBorrowLendSummary,
 } from "@/actions/borrow-lend";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
@@ -36,14 +35,8 @@ import type { BorrowLend } from "@/types";
 import { useUIStore } from "@/stores/ui-store";
 
 export function BorrowLendClient() {
-  const { setDashboardDirty } = useUIStore();
+  const { setDashboardDirty, borrowLendCache, updateBorrowLendCache } = useUIStore();
   const [records, setRecords] = useState<BorrowLend[]>([]);
-  const [summary, setSummary] = useState({
-    totalBorrowed: 0,
-    totalLent: 0,
-    pendingCollections: 0,
-    pendingPayments: 0,
-  });
 
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -51,19 +44,56 @@ export function BorrowLendClient() {
   const [repayOpen, setRepayOpen] = useState(false);
   const [repayRecord, setRepayRecord] = useState<BorrowLend | null>(null);
 
+  // Compute summary metrics on the client side
+  const summary = useMemo(() => {
+    let totalBorrowed = 0;
+    let totalLent = 0;
+    let pendingCollections = 0;
+    let pendingPayments = 0;
+
+    for (const r of records) {
+      const paid = r.paidAmount ?? 0;
+      const remaining = r.amount - paid;
+      if (r.type === "borrowed") {
+        totalBorrowed += r.amount;
+        if (r.status === "pending") {
+          pendingPayments += remaining;
+        }
+      } else {
+        totalLent += r.amount;
+        if (r.status === "pending") {
+          pendingCollections += remaining;
+        }
+      }
+    }
+
+    return { totalBorrowed, totalLent, pendingCollections, pendingPayments };
+  }, [records]);
+
+  // Hydrate state from local cache on client mount
+  useEffect(() => {
+    if (borrowLendCache && borrowLendCache.length > 0) {
+      setRecords(borrowLendCache);
+      setLoading(false);
+    }
+  }, [borrowLendCache]);
+
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    const currentCache = useUIStore.getState().borrowLendCache;
+    if (!currentCache || currentCache.length === 0) {
+      setLoading(true);
+    }
     try {
-      const [data, sum] = await Promise.all([
-        getBorrowLendRecords(),
-        getBorrowLendSummary(),
-      ]);
+      const data = await getBorrowLendRecords();
       setRecords(data);
-      setSummary(sum);
+      updateBorrowLendCache(data);
+    } catch (err) {
+      console.error("Failed to fetch borrow/lend records", err);
+      toast.error("Failed to load records");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [updateBorrowLendCache]);
 
   useEffect(() => {
     fetchData();

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { DateRange } from "react-day-picker";
 import {
   startOfMonth,
@@ -59,14 +60,23 @@ interface UIState {
   // Dashboard Cache & Optimization
   isDashboardDirty: boolean;
   dashboardCache: {
-    summary: unknown | null;
-    expenses: unknown[];
-    incomes: unknown[];
-    budgets: unknown[];
-    chartData: unknown[];
-    settings: unknown | null;
+    summary: any | null;
+    expenses: any[];
+    incomes: any[];
+    budgets: any[];
+    chartData: any[];
+    settings: any | null;
+    recurringExpenses: any[];
     lastFetched?: number;
   };
+
+  // Screen-specific caches for offline and background sync
+  expensesCache: Record<string, any[]>;
+  incomesCache: Record<string, any[]>;
+  budgetsCache: Record<string, any[]>;
+  goalsCache: any[];
+  borrowLendCache: any[];
+  settingsCache: any | null;
   
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
@@ -76,49 +86,97 @@ interface UIState {
   // Cache Actions
   setDashboardDirty: (dirty: boolean) => void;
   updateDashboardCache: (data: Partial<UIState["dashboardCache"]>) => void;
+  updateExpensesCache: (key: string, data: any[]) => void;
+  updateIncomesCache: (key: string, data: any[]) => void;
+  updateBudgetsCache: (key: string, data: any[]) => void;
+  updateGoalsCache: (data: any[]) => void;
+  updateBorrowLendCache: (data: any[]) => void;
+  updateSettingsCache: (data: any) => void;
 }
 
 const defaultPreset: PeriodPreset = "This Month";
 const initialRange = getDateRangeForPreset(defaultPreset);
 
-export const useUIStore = create<UIState>((set) => ({
-  sidebarOpen: false,
-  preset: defaultPreset,
-  customRange: {
-    from: initialRange.from,
-    to: initialRange.to,
-  },
-  dateRange: initialRange,
-  
-  // Cache Initial State
-  isDashboardDirty: true, // Initial load is always "dirty"
-  dashboardCache: {
-    summary: null,
-    expenses: [],
-    incomes: [],
-    budgets: [],
-    chartData: [],
-    settings: null,
-  },
+const isDateString = (value: unknown): value is string =>
+  typeof value === "string" &&
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/.test(value);
 
-  toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
-  setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  setPreset: (preset) =>
-    set((state) => {
-      const dateRange = getDateRangeForPreset(preset, state.customRange);
-      return { preset, dateRange };
+const reviver = (key: string, value: unknown) => {
+  if (isDateString(value)) {
+    return new Date(value);
+  }
+  return value;
+};
+
+export const useUIStore = create<UIState>()(
+  persist(
+    (set) => ({
+      sidebarOpen: false,
+      preset: defaultPreset,
+      customRange: {
+        from: initialRange.from,
+        to: initialRange.to,
+      },
+      dateRange: initialRange,
+      
+      // Cache Initial State
+      isDashboardDirty: true,
+      dashboardCache: {
+        summary: null,
+        expenses: [],
+        incomes: [],
+        budgets: [],
+        chartData: [],
+        settings: null,
+        recurringExpenses: [],
+      },
+
+      // Screen Cache Initial State
+      expensesCache: {},
+      incomesCache: {},
+      budgetsCache: {},
+      goalsCache: [],
+      borrowLendCache: [],
+      settingsCache: null,
+
+      toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
+      setSidebarOpen: (open) => set({ sidebarOpen: open }),
+      setPreset: (preset) =>
+        set((state) => {
+          const dateRange = getDateRangeForPreset(preset, state.customRange);
+          return { preset, dateRange };
+        }),
+      setCustomRange: (customRange) =>
+        set((state) => {
+          const dateRange = getDateRangeForPreset("Custom", customRange);
+          return { customRange, dateRange };
+        }),
+
+      // Cache Actions Implementation
+      setDashboardDirty: (dirty) => set({ isDashboardDirty: dirty }),
+      updateDashboardCache: (data) => 
+        set((state) => ({
+          dashboardCache: { ...state.dashboardCache, ...data, lastFetched: Date.now() }
+        })),
+      updateExpensesCache: (key, data) =>
+        set((state) => ({
+          expensesCache: { ...state.expensesCache, [key]: data }
+        })),
+      updateIncomesCache: (key, data) =>
+        set((state) => ({
+          incomesCache: { ...state.incomesCache, [key]: data }
+        })),
+      updateBudgetsCache: (key, data) =>
+        set((state) => ({
+          budgetsCache: { ...state.budgetsCache, [key]: data }
+        })),
+      updateGoalsCache: (data) => set({ goalsCache: data }),
+      updateBorrowLendCache: (data) => set({ borrowLendCache: data }),
+      updateSettingsCache: (data) => set({ settingsCache: data }),
     }),
-  setCustomRange: (customRange) =>
-    set((state) => {
-      const dateRange = getDateRangeForPreset("Custom", customRange);
-      return { customRange, dateRange };
-    }),
-
-  // Cache Actions Implementation
-  setDashboardDirty: (dirty) => set({ isDashboardDirty: dirty }),
-  updateDashboardCache: (data) => 
-    set((state) => ({
-      dashboardCache: { ...state.dashboardCache, ...data, lastFetched: Date.now() }
-    })),
-}));
-
+    {
+      name: "finance-tracker-ui-store",
+      storage: createJSONStorage(() => localStorage, { reviver }),
+    }
+  )
+);

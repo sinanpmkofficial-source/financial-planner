@@ -27,7 +27,7 @@ interface GoalWithProgress {
 }
 
 export function GoalsClient() {
-  const { setDashboardDirty } = useUIStore();
+  const { setDashboardDirty, goalsCache, updateGoalsCache } = useUIStore();
   const [loading, setLoading] = useState(true);
   const [goals, setGoals] = useState<GoalWithProgress[]>([]);
 
@@ -43,17 +43,30 @@ export function GoalsClient() {
   const [goalColor, setGoalColor] = useState("hsl(217, 91%, 60%)");
   const [fundAmount, setFundAmount] = useState("");
 
+  // Hydrate goals state from local cache on client mount
+  useEffect(() => {
+    if (goalsCache && goalsCache.length > 0) {
+      setGoals(goalsCache as GoalWithProgress[]);
+      setLoading(false);
+    }
+  }, [goalsCache]);
+
   const fetchData = useCallback(async () => {
-    setLoading(true);
+    const currentCache = useUIStore.getState().goalsCache;
+    if (!currentCache || currentCache.length === 0) {
+      setLoading(true);
+    }
     try {
       const gData = await getGoalsWithProgress();
-      setGoals(gData);
+      setGoals(gData as GoalWithProgress[]);
+      updateGoalsCache(gData);
     } catch (err) {
+      console.error("Failed to fetch goals", err);
       toast.error("Failed to load goals");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [updateGoalsCache]);
 
   useEffect(() => {
     fetchData();

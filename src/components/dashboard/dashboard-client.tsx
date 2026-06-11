@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { useUIStore } from "@/stores/ui-store";
 import { getDashboardSummary } from "@/actions/stats";
 import { getRecentExpenses } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
@@ -83,6 +84,7 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 export function DashboardClient() {
+  const { dashboardCache, updateDashboardCache } = useUIStore();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
@@ -99,6 +101,38 @@ export function DashboardClient() {
 
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [transactionFormOpen, setTransactionFormOpen] = useState(false);
+
+  // Load from cache on initial client mount
+  useEffect(() => {
+    if (dashboardCache) {
+      if (dashboardCache.summary) {
+        setSummary(dashboardCache.summary);
+        setSummaryLoading(false);
+      }
+      if (dashboardCache.expenses && dashboardCache.expenses.length > 0) {
+        setExpenses(dashboardCache.expenses);
+      }
+      if (dashboardCache.incomes && dashboardCache.incomes.length > 0) {
+        setIncomes(dashboardCache.incomes);
+      }
+      if (dashboardCache.expenses && dashboardCache.incomes && (dashboardCache.expenses.length > 0 || dashboardCache.incomes.length > 0)) {
+        setTransactionsLoading(false);
+      }
+      if (dashboardCache.budgets && dashboardCache.budgets.length > 0) {
+        setBudgets(dashboardCache.budgets);
+        setBudgetsLoading(false);
+      }
+      if (dashboardCache.settings) {
+        setSettings(dashboardCache.settings);
+      }
+      if (dashboardCache.recurringExpenses && dashboardCache.recurringExpenses.length > 0) {
+        setRecurringExpenses(dashboardCache.recurringExpenses);
+      }
+      if (dashboardCache.chartData && dashboardCache.chartData.length > 0) {
+        setChartData(dashboardCache.chartData);
+      }
+    }
+  }, []);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -140,12 +174,20 @@ export function DashboardClient() {
   }, [settings]);
 
   const fetchData = useCallback(async () => {
+    // Only show loading spinner if we don't have cached data
+    const currentCache = useUIStore.getState().dashboardCache;
+    if (!currentCache.summary) setSummaryLoading(true);
+    if (!currentCache.expenses || currentCache.expenses.length === 0) setTransactionsLoading(true);
+    if (!currentCache.budgets || currentCache.budgets.length === 0) setBudgetsLoading(true);
+
+    const timezoneOffset = new Date().getTimezoneOffset();
+
     // Fetch Summary independently
-    setSummaryLoading(true);
-    getDashboardSummary(undefined, undefined, new Date().getTimezoneOffset())
+    getDashboardSummary(undefined, undefined, timezoneOffset)
       .then((s) => {
         setSummary(s);
         setSummaryLoading(false);
+        updateDashboardCache({ summary: s });
       })
       .catch((err) => {
         console.error("Dashboard summary load error", err);
@@ -153,12 +195,12 @@ export function DashboardClient() {
       });
 
     // Fetch Transactions (expenses & incomes) independently
-    setTransactionsLoading(true);
     Promise.all([getRecentExpenses(5), getRecentIncomes(5)])
       .then(([e, i]) => {
         setExpenses(e);
         setIncomes(i);
         setTransactionsLoading(false);
+        updateDashboardCache({ expenses: e, incomes: i });
       })
       .catch((err) => {
         console.error("Transactions load error", err);
@@ -169,11 +211,11 @@ export function DashboardClient() {
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
-    setBudgetsLoading(true);
     getBudgetsWithSpent(currentMonth, currentYear)
       .then((b) => {
         setBudgets(b);
         setBudgetsLoading(false);
+        updateDashboardCache({ budgets: b });
       })
       .catch((err) => {
         console.error("Budgets load error", err);
@@ -184,6 +226,7 @@ export function DashboardClient() {
     getUserSettings()
       .then((setts) => {
         setSettings(setts);
+        updateDashboardCache({ settings: setts });
       })
       .catch((err) => {
         console.error("Settings load error", err);
@@ -193,14 +236,16 @@ export function DashboardClient() {
     getRecurringExpenses()
       .then((recs) => {
         setRecurringExpenses(recs);
+        updateDashboardCache({ recurringExpenses: recs });
       })
       .catch((err) => {
         console.error("Recurring load error", err);
       });
-  }, []);
+  }, [updateDashboardCache]);
 
   const fetchTrend = useCallback(async () => {
-    setTrendLoading(true);
+    const currentCache = useUIStore.getState().dashboardCache;
+    if (!currentCache.chartData || currentCache.chartData.length === 0) setTrendLoading(true);
     try {
       const now = new Date();
       let start: Date;
@@ -226,12 +271,13 @@ export function DashboardClient() {
         income: data.incomeTrend[idx]?.value ?? 0,
       }));
       setChartData(merged);
+      updateDashboardCache({ chartData: merged });
     } catch (err) {
       console.error("Dashboard trend load error", err);
     } finally {
       setTrendLoading(false);
     }
-  }, [graphPeriod]);
+  }, [graphPeriod, updateDashboardCache]);
 
   useEffect(() => {
     fetchData();
