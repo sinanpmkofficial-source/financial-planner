@@ -26,8 +26,10 @@ export async function getIncomesByDateRange(
   endDate: Date
 ): Promise<IncomeType[]> {
   await dbConnect();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
   const docs = await Income.find({
-    date: { $gte: startDate, $lte: endDate },
+    date: { $gte: start, $lte: end },
   })
     .sort({ date: -1 })
     .lean();

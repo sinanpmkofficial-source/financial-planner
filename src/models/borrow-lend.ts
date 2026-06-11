@@ -38,8 +38,4 @@ const BorrowLendSchema = new Schema<IBorrowLend>(
 
 BorrowLendSchema.index({ status: 1, type: 1 });
 
-if (mongoose.models.BorrowLend) {
-  mongoose.deleteModel("BorrowLend");
-}
-
-export default mongoose.model<IBorrowLend>("BorrowLend", BorrowLendSchema);
+export default mongoose.models.BorrowLend || mongoose.model<IBorrowLend>("BorrowLend", BorrowLendSchema);

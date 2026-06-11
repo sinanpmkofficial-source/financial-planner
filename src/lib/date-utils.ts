@@ -12,7 +12,20 @@ import {
 
 // Shift a UTC Date to a Local Date so its local fields match its UTC representation
 export function utcToLocal(date: Date | string): Date {
-  const d = typeof date === "string" ? parseISO(date) : date;
+  let d: Date;
+  if (typeof date === "string") {
+    d = parseISO(date);
+    if (isNaN(d.getTime())) {
+      d = new Date(date);
+    }
+  } else {
+    d = date;
+  }
+  
+  if (isNaN(d.getTime())) {
+    return new Date();
+  }
+
   return new Date(
     d.getUTCFullYear(),
     d.getUTCMonth(),

@@ -64,8 +64,11 @@ export async function getUnifiedData(
   await dbConnect();
 
   const offset = timezoneOffset ?? 0;
-  const shiftedFrom = new Date(from.getTime() - offset * 60 * 1000);
-  const shiftedTo = new Date(to.getTime() - offset * 60 * 1000);
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+
+  const shiftedFrom = new Date(fromDate.getTime() - offset * 60 * 1000);
+  const shiftedTo = new Date(toDate.getTime() - offset * 60 * 1000);
 
   const localStart = startOfDay(utcToLocal(shiftedFrom));
   const localEnd = endOfDay(utcToLocal(shiftedTo));

@@ -37,11 +37,8 @@ const RecurringExpenseSchema = new Schema<IRecurringExpense>(
 
 RecurringExpenseSchema.index({ nextDueDate: 1, isActive: 1 });
 
-if (mongoose.models.RecurringExpense) {
-  mongoose.deleteModel("RecurringExpense");
-}
-
-export default mongoose.model<IRecurringExpense>(
-  "RecurringExpense",
-  RecurringExpenseSchema
-);
+export default mongoose.models.RecurringExpense ||
+  mongoose.model<IRecurringExpense>(
+    "RecurringExpense",
+    RecurringExpenseSchema
+  );
