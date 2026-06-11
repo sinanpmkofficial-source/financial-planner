@@ -38,6 +38,8 @@ import { getRecurringExpenses, confirmRecurringPayment } from "@/actions/recurri
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -394,7 +396,7 @@ export function DashboardClient() {
           className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
         >
           <div className="flex items-start gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0">
+            <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-500 mt-0.5 shrink-0">
               <AlertCircle className="w-5 h-5 animate-pulse" />
             </div>
             <div>
@@ -421,7 +423,7 @@ export function DashboardClient() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 cursor-pointer font-semibold px-2.5 rounded-lg text-[10px]"
+                  className="h-7 border-amber-500/20 text-amber-500 hover:bg-amber-500/10 cursor-pointer font-semibold px-2.5 rounded-lg text-[10px]"
                   onClick={() => handleConfirmPayment(reminder._id)}
                 >
                   Confirm
@@ -630,40 +632,61 @@ export function DashboardClient() {
                 </div>
               )}
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorInc" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="oklch(0.75 0.15 140)" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="oklch(0.75 0.15 140)" stopOpacity={0.01}/>
-                    </linearGradient>
-                    <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="oklch(0.60 0.18 25)" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="oklch(0.60 0.18 25)" stopOpacity={0.01}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                  <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Area
-                    name="Income"
-                    type="monotone"
-                    dataKey="income"
-                    stroke="oklch(0.65 0.15 140)"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorInc)"
-                  />
-                  <Area
-                    name="Expenses"
-                    type="monotone"
-                    dataKey="expenses"
-                    stroke="oklch(0.60 0.18 25)"
-                    strokeWidth={2}
-                    fillOpacity={1}
-                    fill="url(#colorExp)"
-                  />
-                </AreaChart>
+                {graphPeriod === "weekly" ? (
+                  <BarChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.005 240)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
+                    <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar
+                      name="Income"
+                      dataKey="income"
+                      fill="oklch(0.86 0.23 118)" /* Neon Lime */
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      name="Expenses"
+                      dataKey="expenses"
+                      fill="oklch(0.60 0.22 25)" /* Vibrant Crimson */
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </BarChart>
+                ) : (
+                  <AreaChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorInc" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="oklch(0.86 0.23 118)" stopOpacity={0.15}/>
+                        <stop offset="95%" stopColor="oklch(0.86 0.23 118)" stopOpacity={0.01}/>
+                      </linearGradient>
+                      <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="oklch(0.60 0.22 25)" stopOpacity={0.15}/>
+                        <stop offset="95%" stopColor="oklch(0.60 0.22 25)" stopOpacity={0.01}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.005 240)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
+                    <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area
+                      name="Income"
+                      type="monotone"
+                      dataKey="income"
+                      stroke="oklch(0.86 0.23 118)"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorInc)"
+                    />
+                    <Area
+                      name="Expenses"
+                      type="monotone"
+                      dataKey="expenses"
+                      stroke="oklch(0.60 0.22 25)"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorExp)"
+                    />
+                  </AreaChart>
+                )}
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -871,8 +894,8 @@ export function DashboardClient() {
                       budgetSummary.percentageLeft > 20
                         ? "bg-primary/10 text-primary"
                         : budgetSummary.percentageLeft > 0
-                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                        : "bg-rose-500/10 text-rose-600 dark:text-rose-500"
+                        ? "bg-amber-500/10 text-amber-500"
+                        : "bg-rose-500/10 text-rose-500"
                     )}>
                       <CountUp value={budgetSummary.percentageLeft} />% left
                     </span>
@@ -881,9 +904,9 @@ export function DashboardClient() {
                     value={isMounted ? budgetSummary.percentageSpent : 0} 
                     className={cn(
                       "h-1.5 bg-muted mt-2",
-                      budgetSummary.percentageSpent >= 100 && "[&>div]:bg-rose-500",
-                      budgetSummary.percentageSpent >= 80 && budgetSummary.percentageSpent < 100 && "[&>div]:bg-amber-500",
-                      budgetSummary.percentageSpent < 80 && "[&>div]:bg-primary/70"
+                      budgetSummary.percentageSpent >= 100 && "[&_[data-slot=progress-indicator]]:bg-rose-500",
+                      budgetSummary.percentageSpent >= 80 && budgetSummary.percentageSpent < 100 && "[&_[data-slot=progress-indicator]]:bg-amber-500",
+                      budgetSummary.percentageSpent < 80 && "[&_[data-slot=progress-indicator]]:bg-primary/70"
                     )}
                   />
                 </div>
@@ -920,18 +943,18 @@ export function DashboardClient() {
                             value={isMounted ? percentage : 0}
                             className={cn(
                               "h-1.5 bg-muted",
-                              isDanger && "[&>div]:bg-rose-500",
-                              isWarning && "[&>div]:bg-amber-500",
-                              !isDanger && !isWarning && "[&>div]:bg-primary/70"
+                              isDanger && "[&_[data-slot=progress-indicator]]:bg-rose-500",
+                              isWarning && "[&_[data-slot=progress-indicator]]:bg-amber-500",
+                              !isDanger && !isWarning && "[&_[data-slot=progress-indicator]]:bg-primary/70"
                             )}
                           />
                           <span
                             className={cn(
                               "absolute right-0 top-[-10px] text-[9px] font-bold font-mono",
                               isDanger
-                                ? "text-rose-600 dark:text-rose-400"
+                                ? "text-rose-500"
                                 : isWarning
-                                ? "text-amber-600 dark:text-amber-400"
+                                ? "text-amber-500"
                                 : "text-muted-foreground"
                             )}
                           >

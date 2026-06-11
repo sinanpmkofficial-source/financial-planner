@@ -22,10 +22,10 @@ export function BudgetAlerts({
 
   if (loading) {
     return (
-      <Card className="border border-amber-200 bg-amber-50/30 shadow-xs">
+      <Card className="border border-amber-500/20 bg-amber-500/5 shadow-xs">
         <CardHeader className="pb-3">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 animate-pulse" />
+            <AlertTriangle className="w-4 h-4 text-amber-500 animate-pulse" />
             Budget Alerts
           </CardTitle>
         </CardHeader>
@@ -48,10 +48,10 @@ export function BudgetAlerts({
   if (warningBudgets.length === 0) return null;
 
   return (
-    <Card className="border border-amber-200 bg-amber-50/30 shadow-sm">
+    <Card className="border border-amber-500/20 bg-amber-500/5 shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-600" />
+          <AlertTriangle className="w-4 h-4 text-amber-500" />
           Budget Alerts
         </CardTitle>
       </CardHeader>
@@ -73,7 +73,7 @@ export function BudgetAlerts({
               </div>
               <span
                 className={`text-xs font-semibold ${
-                  b.percentage >= 100 ? "text-rose-600" : "text-amber-600"
+                  b.percentage >= 100 ? "text-rose-500" : "text-amber-500"
                 }`}
               >
                 {b.percentage}%
@@ -82,7 +82,7 @@ export function BudgetAlerts({
             <Progress
               value={Math.min(b.percentage, 100)}
               className={`h-1.5 ${
-                b.percentage >= 100 ? "[&>div]:bg-rose-500" : "[&>div]:bg-amber-500"
+                b.percentage >= 100 ? "[&_[data-slot=progress-indicator]]:bg-rose-500" : "[&_[data-slot=progress-indicator]]:bg-amber-500"
               }`}
             />
             <p className="text-xs text-muted-foreground">

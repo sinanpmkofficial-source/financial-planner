@@ -305,15 +305,15 @@ export function AnalyticsClient() {
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={expenseTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.005 240)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
+                <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
                   name="Expenses"
                   type="monotone"
                   dataKey="value"
-                  stroke="oklch(0.60 0.18 25)"
+                  stroke="oklch(0.60 0.22 25)"
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 4 }}
@@ -337,15 +337,15 @@ export function AnalyticsClient() {
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={incomeTrend}>
-                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.92 0.01 240)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
-                <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.7 0.01 240)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.005 240)" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
+                <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
                 <Tooltip content={<CustomTooltip />} />
                 <Line
                   name="Income"
                   type="monotone"
                   dataKey="value"
-                  stroke="oklch(0.65 0.15 140)"
+                  stroke="oklch(0.86 0.23 118)"
                   strokeWidth={2}
                   dot={false}
                   activeDot={{ r: 4 }}

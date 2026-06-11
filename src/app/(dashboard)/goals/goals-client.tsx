@@ -234,9 +234,8 @@ export function GoalsClient() {
                       value={goal.progressPercentage} 
                       className="h-2" 
                       style={{ 
-                        // style overrides to highlight custom progress colors
-                        background: "oklch(0.92 0.01 240)"
-                      }}
+                        "--primary": goal.color 
+                      } as React.CSSProperties}
                     />
                     
                     <div className="flex justify-between items-center text-[10px] text-muted-foreground">

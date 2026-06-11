@@ -353,7 +353,7 @@ export function FinancialHealthClient() {
                 <span className="text-foreground font-semibold">Needs (Target: 50%)</span>
                 <span className="font-mono text-muted-foreground">{formatCurrency(totalNeeds)} ({needsPct.toFixed(1)}%)</span>
               </div>
-              <Progress value={needsPct} max={100} className={cn("h-2", needsPct > 50 ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500")} />
+              <Progress value={needsPct} max={100} className={cn("h-2", needsPct > 50 ? "[&_[data-slot=progress-indicator]]:bg-rose-500" : "[&_[data-slot=progress-indicator]]:bg-emerald-500")} />
               <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
                 <span>Rent, bills, essentials</span>
                 {totalIncome > 0 && (
@@ -370,7 +370,7 @@ export function FinancialHealthClient() {
                 <span className="text-foreground font-semibold">Wants (Target: 30%)</span>
                 <span className="font-mono text-muted-foreground">{formatCurrency(totalWants + totalUnnecessary)} ({wantsPct.toFixed(1)}%)</span>
               </div>
-              <Progress value={wantsPct} max={100} className={cn("h-2", wantsPct > 30 ? "[&>div]:bg-rose-500" : "[&>div]:bg-emerald-500")} />
+              <Progress value={wantsPct} max={100} className={cn("h-2", wantsPct > 30 ? "[&_[data-slot=progress-indicator]]:bg-rose-500" : "[&_[data-slot=progress-indicator]]:bg-emerald-500")} />
               <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
                 <span>Lifestyle, hobbies, unnecessary items</span>
                 {totalIncome > 0 && (
@@ -387,7 +387,7 @@ export function FinancialHealthClient() {
                 <span className="text-foreground font-semibold">Savings & Investments (Target: 20%)</span>
                 <span className="font-mono text-muted-foreground">{formatCurrency(totalSavings + totalGoals)} ({savingsPct.toFixed(1)}%)</span>
               </div>
-              <Progress value={savingsPct} max={100} className={cn("h-2", savingsPct < 20 ? "[&>div]:bg-amber-500" : "[&>div]:bg-emerald-500")} />
+              <Progress value={savingsPct} max={100} className={cn("h-2", savingsPct < 20 ? "[&_[data-slot=progress-indicator]]:bg-amber-500" : "[&_[data-slot=progress-indicator]]:bg-emerald-500")} />
               <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
                 <span>SIP, savings, manual goal contributions</span>
                 {totalIncome > 0 && (

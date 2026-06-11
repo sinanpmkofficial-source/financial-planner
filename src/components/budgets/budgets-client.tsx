@@ -170,9 +170,9 @@ export function BudgetsClient() {
                   className={cn(
                     "border bg-card transition-all duration-300 h-full",
                     isDanger
-                      ? "border-rose-300/60 dark:border-rose-800/60 bg-rose-50/20 dark:bg-rose-950/10 hover:border-rose-400/80"
+                      ? "border-rose-500/20 bg-rose-500/5 hover:border-rose-500/30"
                       : isWarning
-                      ? "border-amber-300/60 dark:border-amber-800/60 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-400/80"
+                      ? "border-amber-500/20 bg-amber-500/5 hover:border-amber-500/30"
                       : "border-border/50 hover:border-border hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
                   )}
                 >
@@ -201,9 +201,9 @@ export function BudgetsClient() {
                           className={cn(
                             "text-sm font-bold",
                             isDanger
-                              ? "text-rose-600"
+                              ? "text-rose-500"
                               : isWarning
-                              ? "text-amber-600"
+                              ? "text-amber-500"
                               : "text-muted-foreground"
                           )}
                         >
@@ -227,8 +227,8 @@ export function BudgetsClient() {
                       value={Math.min(budget.percentage, 100)}
                       className={cn(
                         "h-2",
-                        isDanger && "[&>div]:bg-rose-500",
-                        isWarning && "[&>div]:bg-amber-500"
+                        isDanger && "[&_[data-slot=progress-indicator]]:bg-rose-500",
+                        isWarning && "[&_[data-slot=progress-indicator]]:bg-amber-500"
                       )}
                     />
 

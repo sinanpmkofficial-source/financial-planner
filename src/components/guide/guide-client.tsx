@@ -432,7 +432,7 @@ export function GuideClient() {
                       <span className="text-foreground">Level 1 (Novice)</span>
                       <span className="text-muted-foreground">0 XP</span>
                     </div>
-                    <Progress value={100} className="h-1 bg-primary [&>div]:bg-primary" />
+                    <Progress value={100} className="h-1 bg-primary [&_[data-slot=progress-indicator]]:bg-primary" />
                   </div>
 
                   <div>
@@ -440,7 +440,7 @@ export function GuideClient() {
                       <span className="text-foreground">Level 2 (Starter)</span>
                       <span className="text-muted-foreground">100 XP</span>
                     </div>
-                    <Progress value={20} className="h-1 bg-muted [&>div]:bg-primary" />
+                    <Progress value={20} className="h-1 bg-muted [&_[data-slot=progress-indicator]]:bg-primary" />
                   </div>
 
                   <div>
@@ -448,7 +448,7 @@ export function GuideClient() {
                       <span className="text-foreground">Level 3 (Planner)</span>
                       <span className="text-muted-foreground">250 XP</span>
                     </div>
-                    <Progress value={0} className="h-1 bg-muted [&>div]:bg-primary" />
+                    <Progress value={0} className="h-1 bg-muted [&_[data-slot=progress-indicator]]:bg-primary" />
                   </div>
 
                   <div>
@@ -456,7 +456,7 @@ export function GuideClient() {
                       <span className="text-foreground">Level 5 (Expert)</span>
                       <span className="text-muted-foreground">1,000 XP</span>
                     </div>
-                    <Progress value={0} className="h-1 bg-muted [&>div]:bg-primary" />
+                    <Progress value={0} className="h-1 bg-muted [&_[data-slot=progress-indicator]]:bg-primary" />
                   </div>
 
                   <div>
@@ -464,7 +464,7 @@ export function GuideClient() {
                       <span className="text-foreground">Level 10 (Wealth Master)</span>
                       <span className="text-muted-foreground">10,000 XP</span>
                     </div>
-                    <Progress value={0} className="h-1 bg-muted [&>div]:bg-primary" />
+                    <Progress value={0} className="h-1 bg-muted [&_[data-slot=progress-indicator]]:bg-primary" />
                   </div>
                 </div>
               </CardContent>
