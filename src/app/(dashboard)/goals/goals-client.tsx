@@ -14,6 +14,25 @@ import { Label } from "@/components/ui/label";
 import { Plus, Coins, Trash2, Calendar, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 14 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 90, damping: 15 }
+  }
+} as const;
+
 
 interface GoalWithProgress {
   _id: string;
@@ -163,11 +182,17 @@ export function GoalsClient() {
           </Button>
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {goals.map((goal) => {
             const isCompleted = goal.progressPercentage >= 100;
             return (
-              <Card key={goal._id} className="relative shadow-sm border-border/50 group transition-all duration-300 hover:border-foreground/25 flex flex-col justify-between overflow-hidden">
+              <motion.div key={goal._id} variants={itemVariants}>
+                <Card className="relative shadow-sm border-border/50 group transition-all duration-300 hover:border-foreground/25 hover:shadow-md flex flex-col justify-between overflow-hidden h-full">
                 {/* Visual Accent Bar */}
                 <div 
                   className="h-1.5 w-full absolute top-0 left-0" 
@@ -240,9 +265,10 @@ export function GoalsClient() {
                   </Button>
                 </CardContent>
               </Card>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* New Goal Modal */}

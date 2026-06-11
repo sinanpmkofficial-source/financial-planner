@@ -1,10 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { getXpProgress, getXpForNextLevel } from "@/lib/xp";
 import type { UserStats } from "@/types";
 import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CountUp } from "@/components/shared/count-up";
 
 interface XpCardProps {
   stats?: UserStats;
@@ -12,41 +14,40 @@ interface XpCardProps {
 }
 
 export function XpCard({ stats, loading = false }: XpCardProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const progress = stats ? getXpProgress(stats.totalXp) : 0;
   const nextLevelXp = stats ? getXpForNextLevel(stats.level) : 100;
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
-        "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
-        "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+        "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+        "shadow-[0_1px_3px_oklch(0_0_0/6%),0_1px_2px_oklch(0_0_0/4%)] hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] hover:border-border",
+        "dark:shadow-[0_1px_3px_oklch(0_0_0/30%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
       )}
     >
       {/* Top Section */}
       <div className="flex items-center justify-between pb-3.5 px-5 pt-5">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
-            03
+          <span className="text-[10px] font-mono text-muted-foreground/60 border border-border px-1.5 py-0.5 rounded-md">
+            XP
           </span>
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Level & XP
           </span>
         </div>
-        <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+        <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
           <Zap className="w-4 h-4" />
         </div>
       </div>
 
-      {/* Ticket Cut / Dashed Line Separator */}
-      <div className="relative flex items-center w-full">
-        {/* Left Notch */}
-        <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-        {/* Dashed Line */}
-        <div className="w-full border-t border-dashed border-foreground/15" />
-        {/* Right Notch */}
-        <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
-      </div>
+      {/* Thin Separator */}
+      <div className="w-full border-t border-border/50 border-dashed" />
 
       {/* Bottom Section */}
       <div className="p-5 flex-1 flex flex-col justify-between gap-4">
@@ -64,13 +65,13 @@ export function XpCard({ stats, loading = false }: XpCardProps) {
           <>
             <div>
               <h4 className="text-xl font-bold text-foreground">
-                Level {stats.level}
+                Level <CountUp value={stats.level} />
               </h4>
             </div>
             <div className="space-y-2">
-              <Progress value={progress} className="h-2" />
+              <Progress value={isMounted ? progress : 0} className="h-2" />
               <p className="text-xs text-muted-foreground font-medium">
-                {stats.totalXp} / {nextLevelXp} XP ({Math.round(progress)}%)
+                <CountUp value={stats.totalXp} /> / <CountUp value={nextLevelXp} /> XP (<CountUp value={progress} />%)
               </p>
             </div>
           </>

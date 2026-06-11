@@ -3,6 +3,32 @@
 import { useEffect, useState, useCallback } from "react";
 import { getFinancialHealthData } from "@/actions/financial-health";
 import { formatCurrency } from "@/lib/format";
+import { CountUp } from "@/components/shared/count-up";
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 90,
+      damping: 14
+    }
+  }
+} as const;
+
 import { PageHeader } from "@/components/layout/header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -30,6 +56,11 @@ export function FinancialHealthClient() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [healthData, setHealthData] = useState<FinancialHealthData | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -220,7 +251,12 @@ export function FinancialHealthClient() {
   }
 
   return (
-    <div className="space-y-6 pb-24 animate-fade-in-up">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6 pb-24"
+    >
       <PageHeader
         title="Financial Health Audit"
         description="Analysis of monthly spending metrics against the 50-30-20 blueprint"
@@ -452,6 +488,6 @@ export function FinancialHealthClient() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </motion.div>
   );
 }

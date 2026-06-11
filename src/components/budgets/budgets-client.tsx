@@ -17,6 +17,25 @@ import { toast } from "sonner";
 import { getUserSettings } from "@/actions/settings";
 import type { BudgetWithSpent } from "@/types";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 90, damping: 15 }
+  }
+} as const;
+
 
 export function BudgetsClient() {
   const { dateRange, setDashboardDirty, budgetsCache, updateBudgetsCache } = useUIStore();
@@ -113,7 +132,7 @@ export function BudgetsClient() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="p-5 rounded-xl border border-border/10 bg-card animate-pulse space-y-3.5 shadow-[2px_2px_0px_rgba(0,0,0,0.05)]">
+            <div key={i} className="p-5 rounded-xl border border-border/20 bg-card animate-pulse space-y-3.5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-full bg-muted" />
                 <div className="space-y-1.5 flex-1">
@@ -135,83 +154,87 @@ export function BudgetsClient() {
           onAction={() => setFormOpen(true)}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="grid gap-4 sm:grid-cols-2"
+        >
           {budgets.map((budget) => {
             const isWarning = budget.percentage >= 80 && budget.percentage < 100;
             const isDanger = budget.percentage >= 100;
 
             return (
-              <Card
-                key={budget._id}
-                className={cn(
-                  "border bg-card transition-all duration-300",
-                  "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-                  "md:shadow-none md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]",
-                  isDanger
-                    ? "border-rose-300/80 dark:border-rose-800/80 bg-rose-50/20 dark:bg-rose-950/10 md:border-rose-200/50 md:dark:border-rose-900/30 md:hover:border-rose-300"
-                    : isWarning
-                    ? "border-amber-300/80 dark:border-amber-800/80 bg-amber-50/20 dark:bg-amber-950/10 md:border-amber-200/50 md:dark:border-amber-900/30 md:hover:border-amber-300"
-                    : "border-foreground/30 md:border-foreground/15 md:hover:border-foreground/30"
-                )}
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-lg">
-                        {catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📌"}
-                      </span>
-                      <div>
-                        <p className="font-medium text-sm">{budget.category}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatCurrency(budget.spent)} /{" "}
-                          {formatCurrency(budget.amount)}
-                        </p>
+              <motion.div key={budget._id} variants={itemVariants}>
+                <Card
+                  className={cn(
+                    "border bg-card transition-all duration-300 h-full",
+                    isDanger
+                      ? "border-rose-300/60 dark:border-rose-800/60 bg-rose-50/20 dark:bg-rose-950/10 hover:border-rose-400/80"
+                      : isWarning
+                      ? "border-amber-300/60 dark:border-amber-800/60 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-400/80"
+                      : "border-border/50 hover:border-border hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
+                  )}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-lg">
+                          {catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📌"}
+                        </span>
+                        <div>
+                          <p className="font-medium text-sm">{budget.category}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatCurrency(budget.spent)} /&nbsp;
+                            {formatCurrency(budget.amount)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <span
+                          className={cn(
+                            "text-sm font-bold",
+                            isDanger
+                              ? "text-rose-600"
+                              : isWarning
+                              ? "text-amber-600"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {budget.percentage}%
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground"
+                          onClick={() => handleEdit(budget)}
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <ConfirmDelete
+                          onConfirm={() => handleDelete(budget._id)}
+                        />
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span
-                        className={cn(
-                          "text-sm font-bold",
-                          isDanger
-                            ? "text-rose-600"
-                            : isWarning
-                            ? "text-amber-600"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {budget.percentage}%
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground"
-                        onClick={() => handleEdit(budget)}
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </Button>
-                      <ConfirmDelete
-                        onConfirm={() => handleDelete(budget._id)}
-                      />
-                    </div>
-                  </div>
 
-                  <Progress
-                    value={Math.min(budget.percentage, 100)}
-                    className={cn(
-                      "h-2",
-                      isDanger && "[&>div]:bg-rose-500",
-                      isWarning && "[&>div]:bg-amber-500"
-                    )}
-                  />
+                    <Progress
+                      value={Math.min(budget.percentage, 100)}
+                      className={cn(
+                        "h-2",
+                        isDanger && "[&>div]:bg-rose-500",
+                        isWarning && "[&>div]:bg-amber-500"
+                      )}
+                    />
 
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {formatCurrency(budget.remaining)} remaining
-                  </p>
-                </CardContent>
-              </Card>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {formatCurrency(budget.remaining)} remaining
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       <BudgetForm

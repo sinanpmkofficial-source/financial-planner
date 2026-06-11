@@ -11,6 +11,8 @@ import { getUnifiedData } from "@/actions/reports";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { XpCard } from "@/components/dashboard/xp-card";
+import { CountUp } from "@/components/shared/count-up";
+import { motion } from "framer-motion";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { QuickActions } from "@/components/dashboard/quick-actions";
@@ -83,6 +85,30 @@ function CustomTooltip({ active, payload, label }: any) {
   return null;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 90,
+      damping: 14
+    }
+  }
+} as const;
+
+
 export function DashboardClient() {
   const { dashboardCache, updateDashboardCache } = useUIStore();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -101,6 +127,12 @@ export function DashboardClient() {
 
   const [graphPeriod, setGraphPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [transactionFormOpen, setTransactionFormOpen] = useState(false);
+
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Load from cache on initial client mount
   useEffect(() => {
@@ -338,7 +370,12 @@ export function DashboardClient() {
   const showGamification = settings?.showGamification !== false;
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="space-y-6"
+    >
       <PageHeader
         title={greeting}
         description={currentDateString}
@@ -355,7 +392,10 @@ export function DashboardClient() {
 
       {/* Due Reminders Banner */}
       {dueReminders.length > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-up">
+        <motion.div
+          variants={itemVariants}
+          className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+        >
           <div className="flex items-start gap-3">
             <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0">
               <AlertCircle className="w-5 h-5 animate-pulse" />
@@ -392,88 +432,115 @@ export function DashboardClient() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       )}
 
       {/* Stats Cards Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Spent Today"
-          value={summaryLoading || !summary ? "..." : formatCurrency(summary.todayExpenses ?? 0)}
-          icon={TrendingDown}
-          variant="danger"
-          index="01"
-          className="animate-fade-in-up opacity-0"
-          trend={
-            summaryLoading || !summary
-              ? "..."
-              : (() => {
-                  const now = new Date();
-                  const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                  const dailyLimit = budgetSummary.totalLimit / totalDays;
-                  if (dailyLimit > 0) {
-                    const diff = (summary.todayExpenses ?? 0) - dailyLimit;
-                    return diff > 0 
-                      ? `${formatCurrency(Math.round(diff))} over daily limit`
-                      : `${formatCurrency(Math.round(Math.abs(diff)))} under daily limit`;
-                  }
-                  return "No budget configured";
-                })()
-          }
-        />
-        <StatCard
-          label="Monthly Spend"
-          value={summaryLoading || !summary ? "..." : formatCurrency(summary.monthlyExpenses ?? 0)}
-          icon={TrendingDown}
-          variant="warning"
-          index="02"
-          className="animate-fade-in-up opacity-0 animation-delay-75"
-          trend={
-            summaryLoading || !summary
-              ? "..."
-              : budgetSummary.totalLimit > 0
-              ? `${Math.round((summary.monthlyExpenses / budgetSummary.totalLimit) * 100)}% of total budget`
-              : "No budget configured"
-          }
-        />
-        <StatCard
-          label="Remaining Budget"
-          value={summaryLoading || !summary ? "..." : formatCurrency(budgetSummary.totalLeft)}
-          icon={Target}
-          variant="success"
-          index="03"
-          className="animate-fade-in-up opacity-0 animation-delay-150"
-          trend={
-            summaryLoading || !summary
-              ? "..."
-              : budgetSummary.totalLimit > 0
-              ? `${budgetSummary.percentageLeft}% remaining`
-              : "No budget configured"
-          }
-        />
-        <StatCard
-          label="Safe to Spend"
-          value={
-            summaryLoading || budgetsLoading || !summary
-              ? "..."
-              : formatCurrency((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal)
-          }
-          icon={PiggyBank}
-          variant="default"
-          index="04"
-          className="animate-fade-in-up opacity-0 animation-delay-225"
-          trend={
-            summaryLoading || budgetsLoading || !summary
-              ? "..."
-              : ((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal) >= 0
-              ? "Unallocated surplus"
-              : "Deficit risk (over budget)"
-          }
-        />
+        <motion.div variants={itemVariants}>
+          <StatCard
+            label="Spent Today"
+            value={
+              summaryLoading || !summary ? (
+                "..."
+              ) : (
+                <CountUp value={summary.todayExpenses ?? 0} formatter={formatCurrency} />
+              )
+            }
+            icon={TrendingDown}
+            variant="danger"
+            index="01"
+            trend={
+              summaryLoading || !summary
+                ? "..."
+                : (() => {
+                    const now = new Date();
+                    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                    const dailyLimit = budgetSummary.totalLimit / totalDays;
+                    if (dailyLimit > 0) {
+                      const diff = (summary.todayExpenses ?? 0) - dailyLimit;
+                      return diff > 0 
+                        ? `${formatCurrency(Math.round(diff))} over daily limit`
+                        : `${formatCurrency(Math.round(Math.abs(diff)))} under daily limit`;
+                    }
+                    return "No budget configured";
+                  })()
+            }
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard
+            label="Monthly Spend"
+            value={
+              summaryLoading || !summary ? (
+                "..."
+              ) : (
+                <CountUp value={summary.monthlyExpenses ?? 0} formatter={formatCurrency} />
+              )
+            }
+            icon={TrendingDown}
+            variant="warning"
+            index="02"
+            trend={
+              summaryLoading || !summary
+                ? "..."
+                : budgetSummary.totalLimit > 0
+                ? `${Math.round((summary.monthlyExpenses / budgetSummary.totalLimit) * 100)}% of total budget`
+                : "No budget configured"
+            }
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard
+            label="Remaining Budget"
+            value={
+              summaryLoading || !summary ? (
+                "..."
+              ) : (
+                <CountUp value={budgetSummary.totalLeft} formatter={formatCurrency} />
+              )
+            }
+            icon={Target}
+            variant="success"
+            index="03"
+            trend={
+              summaryLoading || !summary
+                ? "..."
+                : budgetSummary.totalLimit > 0
+                ? `${budgetSummary.percentageLeft}% remaining`
+                : "No budget configured"
+            }
+          />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <StatCard
+            label="Safe to Spend"
+            value={
+              summaryLoading || budgetsLoading || !summary ? (
+                "..."
+              ) : (
+                <CountUp
+                  value={(summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal}
+                  formatter={formatCurrency}
+                />
+              )
+            }
+            icon={PiggyBank}
+            variant="default"
+            index="04"
+            trend={
+              summaryLoading || budgetsLoading || !summary
+                ? "..."
+                : ((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal) >= 0
+                ? "Unallocated surplus"
+                : "Deficit risk (over budget)"
+            }
+          />
+        </motion.div>
       </div>
 
       {/* Top Section: Cash Flow Chart & Net Wealth Card */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <motion.div variants={itemVariants} className="grid gap-6 lg:grid-cols-3">
         {/* Composed Cash Flow Chart */}
         <Card className="lg:col-span-2 border border-border/50 shadow-xs rounded-2xl overflow-hidden bg-card">
           <CardHeader className="pb-2">
@@ -546,7 +613,7 @@ export function DashboardClient() {
                     {trendLoading ? (
                       <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
                     ) : (
-                      formatCurrency(periodMetrics.totalIncome)
+                      <CountUp value={periodMetrics.totalIncome} formatter={formatCurrency} />
                     )}
                   </p>
                 </div>
@@ -563,7 +630,7 @@ export function DashboardClient() {
                     {trendLoading ? (
                       <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
                     ) : (
-                      formatCurrency(periodMetrics.totalExpenses)
+                      <CountUp value={periodMetrics.totalExpenses} formatter={formatCurrency} />
                     )}
                   </p>
                 </div>
@@ -619,33 +686,26 @@ export function DashboardClient() {
         {/* Consolidated Hero Net Cash Card */}
         <div
           className={cn(
-            "relative overflow-hidden border rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
-            "shadow-[4px_4px_0px_var(--foreground)] dark:shadow-[4px_4px_0px_rgba(255,255,255,0.85)] border-foreground/30",
-            "md:shadow-none md:border-foreground/15 md:hover:border-foreground/30 md:hover:shadow-[4px_4px_0px_var(--foreground)] md:dark:hover:shadow-[4px_4px_0px_rgba(255,255,255,0.85)]"
+            "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
+            "shadow-[0_1px_3px_oklch(0_0_0/6%),0_1px_2px_oklch(0_0_0/4%)] hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] hover:border-border",
+            "dark:shadow-[0_1px_3px_oklch(0_0_0/30%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
           )}
         >
           {/* Top Section */}
           <div className="flex items-center justify-between pb-3.5 px-6 pt-6">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground/80 border border-foreground/10 px-1.5 py-0.5 rounded-md">
+              <span className="text-[10px] font-mono text-muted-foreground/60 border border-border px-1.5 py-0.5 rounded-md">
                 OVERVIEW
               </span>
               <h3 className="text-base font-semibold text-foreground">Financial Summary</h3>
             </div>
-            <div className="p-2 rounded-xl bg-muted/65 border border-foreground/5 text-foreground">
+            <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
               <Wallet className="w-4 h-4" />
             </div>
           </div>
 
-          {/* Ticket Cut / Dashed Line Separator */}
-          <div className="relative flex items-center w-full">
-            {/* Left Notch */}
-            <div className="absolute left-[-8px] w-4 h-4 rounded-full bg-background border-r border-foreground/15 z-10" />
-            {/* Dashed Line */}
-            <div className="w-full border-t border-dashed border-foreground/15" />
-            {/* Right Notch */}
-            <div className="absolute right-[-8px] w-4 h-4 rounded-full bg-background border-l border-foreground/15 z-10" />
-          </div>
+          {/* Thin Separator */}
+          <div className="w-full border-t border-border/50 border-dashed" />
 
           {/* Bottom Section */}
           <div className="p-6 flex-1 flex flex-col justify-between gap-6">
@@ -657,7 +717,7 @@ export function DashboardClient() {
                 {summaryLoading || !summary ? (
                   <span className="inline-block h-9 w-40 bg-muted animate-pulse rounded-md mt-1" />
                 ) : (
-                  formatCurrency(summary.currentBalance)
+                  <CountUp value={summary.currentBalance} formatter={formatCurrency} />
                 )}
               </h3>
             </div>
@@ -675,10 +735,10 @@ export function DashboardClient() {
                 ) : (
                   <>
                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                      +{formatCurrency(summary.todayIncome ?? 0)}
+                      +<CountUp value={summary.todayIncome ?? 0} formatter={formatCurrency} />
                     </p>
                     <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                      -{formatCurrency(summary.todayExpenses ?? 0)}
+                      -<CountUp value={summary.todayExpenses ?? 0} formatter={formatCurrency} />
                     </p>
                   </>
                 )}
@@ -696,10 +756,10 @@ export function DashboardClient() {
                 ) : (
                   <>
                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                      +{formatCurrency(summary.weekIncome ?? 0)}
+                      +<CountUp value={summary.weekIncome ?? 0} formatter={formatCurrency} />
                     </p>
                     <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                      -{formatCurrency(summary.weekExpenses ?? 0)}
+                      -<CountUp value={summary.weekExpenses ?? 0} formatter={formatCurrency} />
                     </p>
                   </>
                 )}
@@ -717,10 +777,10 @@ export function DashboardClient() {
                 ) : (
                   <>
                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                      +{formatCurrency(summary.monthlyIncome ?? 0)}
+                      +<CountUp value={summary.monthlyIncome ?? 0} formatter={formatCurrency} />
                     </p>
                     <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                      -{formatCurrency(summary.monthlyExpenses ?? 0)}
+                      -<CountUp value={summary.monthlyExpenses ?? 0} formatter={formatCurrency} />
                     </p>
                   </>
                 )}
@@ -736,16 +796,19 @@ export function DashboardClient() {
                 {summaryLoading || !summary ? (
                   <span className="inline-block h-3.5 w-16 bg-muted animate-pulse rounded-sm" />
                 ) : (
-                  formatCurrency(summary.savings)
+                  <CountUp value={summary.savings} formatter={formatCurrency} />
                 )}
               </span>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Secondary Row: Credit/Debt, Budget, and Gamification */}
-      <div className={cn("grid gap-6", showGamification ? "md:grid-cols-3" : "md:grid-cols-2")}>
+      <motion.div
+        variants={itemVariants}
+        className={cn("grid gap-6", showGamification ? "md:grid-cols-3" : "md:grid-cols-2")}
+      >
         {/* Budget Status Card */}
         <div
           className={cn(
@@ -819,24 +882,24 @@ export function DashboardClient() {
                   </p>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-2xl font-extrabold text-foreground">
-                      {formatCurrency(budgetSummary.totalLeft)}
+                      <CountUp value={budgetSummary.totalLeft} formatter={formatCurrency} />
                     </span>
                     <span className="text-xs font-semibold text-muted-foreground">
-                      / {formatCurrency(budgetSummary.totalLimit)}
+                      / <CountUp value={budgetSummary.totalLimit} formatter={formatCurrency} />
                     </span>
                     <span className={cn(
                       "text-xs font-bold px-1.5 py-0.5 rounded-md ml-auto",
                       budgetSummary.percentageLeft > 20
                         ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"
                         : budgetSummary.percentageLeft > 0
-                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-500"
+                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                         : "bg-rose-500/10 text-rose-600 dark:text-rose-500"
                     )}>
-                      {budgetSummary.percentageLeft}% left
+                      <CountUp value={budgetSummary.percentageLeft} />% left
                     </span>
                   </div>
                   <Progress 
-                    value={budgetSummary.percentageSpent} 
+                    value={isMounted ? budgetSummary.percentageSpent : 0} 
                     className={cn(
                       "h-1.5 bg-muted mt-2",
                       budgetSummary.percentageSpent >= 100 && "[&>div]:bg-rose-500",
@@ -862,14 +925,14 @@ export function DashboardClient() {
                             <span>{b.category}</span>
                           </span>
                           <span className="text-muted-foreground font-mono text-[11px]">
-                            <span className="font-semibold text-foreground">{formatCurrency(b.spent)}</span>
+                            <span className="font-semibold text-foreground"><CountUp value={b.spent} formatter={formatCurrency} /></span>
                             {" / "}
-                            <span>{formatCurrency(b.amount)}</span>
+                            <span><CountUp value={b.amount} formatter={formatCurrency} /></span>
                           </span>
                         </div>
                         <div className="relative pt-1">
                           <Progress
-                            value={percentage}
+                            value={isMounted ? percentage : 0}
                             className={cn(
                               "h-1.5 bg-muted",
                               isDanger && "[&>div]:bg-rose-500",
@@ -887,7 +950,7 @@ export function DashboardClient() {
                                 : "text-emerald-600 dark:text-emerald-400"
                             )}
                           >
-                            {b.percentage}%
+                            <CountUp value={b.percentage} />%
                           </span>
                         </div>
                       </div>
@@ -960,7 +1023,7 @@ export function DashboardClient() {
               <>
                 <div>
                   <h4 className="text-xl font-bold text-foreground">
-                    Net Owed: {formatCurrency(summary.totalLent - summary.totalBorrowed)}
+                    Net Owed: <CountUp value={summary.totalLent - summary.totalBorrowed} formatter={formatCurrency} />
                   </h4>
                 </div>
                 <div className="space-y-3">
@@ -970,9 +1033,9 @@ export function DashboardClient() {
                         <ArrowDownLeft className="w-3.5 h-3.5 text-foreground" />
                         Borrowed (I owe)
                       </span>
-                      <span className="font-bold text-foreground">{formatCurrency(summary.totalBorrowed)}</span>
+                      <span className="font-bold text-foreground"><CountUp value={summary.totalBorrowed} formatter={formatCurrency} /></span>
                     </div>
-                    <Progress value={summary.totalBorrowed > 0 ? (summary.totalBorrowed / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
+                    <Progress value={isMounted ? (summary.totalBorrowed > 0 ? (summary.totalBorrowed / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0) : 0} className="h-1.5 bg-muted" />
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs text-muted-foreground">
@@ -980,9 +1043,9 @@ export function DashboardClient() {
                         <ArrowUpRight className="w-3.5 h-3.5 text-foreground" />
                         Lent (They owe me)
                       </span>
-                      <span className="font-bold text-foreground">{formatCurrency(summary.totalLent)}</span>
+                      <span className="font-bold text-foreground"><CountUp value={summary.totalLent} formatter={formatCurrency} /></span>
                     </div>
-                    <Progress value={summary.totalLent > 0 ? (summary.totalLent / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0} className="h-1.5 bg-muted" />
+                    <Progress value={isMounted ? (summary.totalLent > 0 ? (summary.totalLent / (summary.totalBorrowed + summary.totalLent || 1)) * 100 : 0) : 0} className="h-1.5 bg-muted" />
                   </div>
                 </div>
               </>
@@ -992,19 +1055,19 @@ export function DashboardClient() {
 
         {/* Level & XP Card */}
         {showGamification && <XpCard stats={summary?.stats} loading={summaryLoading} />}
-      </div>
+      </motion.div>
 
       {/* Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <motion.div variants={itemVariants} className="grid gap-6 lg:grid-cols-2">
         <RecentTransactions expenses={expenses} incomes={incomes} categories={settings?.categories} loading={transactionsLoading} />
         <BudgetAlerts budgets={budgets} loading={budgetsLoading} categories={settings?.categories} />
-      </div>
+      </motion.div>
 
       <TransactionForm
         open={transactionFormOpen}
         onOpenChange={setTransactionFormOpen}
         onSuccess={fetchData}
       />
-    </div>
+    </motion.div>
   );
 }
