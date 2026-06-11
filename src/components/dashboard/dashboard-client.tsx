@@ -869,7 +869,7 @@ export function DashboardClient() {
                     <span className={cn(
                       "text-xs font-bold px-1.5 py-0.5 rounded-md ml-auto",
                       budgetSummary.percentageLeft > 20
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"
+                        ? "bg-primary/10 text-primary"
                         : budgetSummary.percentageLeft > 0
                         ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
                         : "bg-rose-500/10 text-rose-600 dark:text-rose-500"
@@ -883,7 +883,7 @@ export function DashboardClient() {
                       "h-1.5 bg-muted mt-2",
                       budgetSummary.percentageSpent >= 100 && "[&>div]:bg-rose-500",
                       budgetSummary.percentageSpent >= 80 && budgetSummary.percentageSpent < 100 && "[&>div]:bg-amber-500",
-                      budgetSummary.percentageSpent < 80 && "[&>div]:bg-emerald-500"
+                      budgetSummary.percentageSpent < 80 && "[&>div]:bg-primary/70"
                     )}
                   />
                 </div>
@@ -916,7 +916,7 @@ export function DashboardClient() {
                               "h-1.5 bg-muted",
                               isDanger && "[&>div]:bg-rose-500",
                               isWarning && "[&>div]:bg-amber-500",
-                              !isDanger && !isWarning && "[&>div]:bg-emerald-500"
+                              !isDanger && !isWarning && "[&>div]:bg-primary/70"
                             )}
                           />
                           <span
@@ -926,7 +926,7 @@ export function DashboardClient() {
                                 ? "text-rose-600 dark:text-rose-400"
                                 : isWarning
                                 ? "text-amber-600 dark:text-amber-400"
-                                : "text-emerald-600 dark:text-emerald-400"
+                                : "text-muted-foreground"
                             )}
                           >
                             <CountUp value={b.percentage} />%
