@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finance-tracker-v1';
+const CACHE_NAME = 'finance-tracker-v2';
 
 const STATIC_ASSETS = [
   '/',
@@ -43,30 +43,33 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Exclude chrome-extension scheme, API calls, and Next.js internal files (like webpack HMR)
-  if (!url.protocol.startsWith('http') || url.pathname.startsWith('/api') || url.pathname.startsWith('/_next/static/development') || url.pathname.includes('webpack')) {
+  // Exclude chrome-extension scheme, API calls, and Next.js development internal files
+  if (
+    !url.protocol.startsWith('http') ||
+    url.pathname.startsWith('/api') ||
+    url.pathname.startsWith('/_next/static/development') ||
+    url.pathname.includes('webpack')
+  ) {
     return;
   }
 
-  // Network-First strategy for pages and documents to ensure fresh dashboard data
-  if (event.request.mode === 'navigate' || (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'))) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          // Only cache successful same-origin responses
-          if (response && response.status === 200 && response.type === 'basic') {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Fallback to cache if network is unavailable
-          return caches.match(event.request);
-        })
-    );
+  // Bypass service worker for Next.js Server Component (RSC) and prefetch data requests to prevent stale cached data
+  const isNextInternal = 
+    url.pathname.startsWith('/_next/data') ||
+    event.request.headers.has('RSC') ||
+    event.request.headers.has('Next-Router-Prefetch') ||
+    event.request.headers.has('Next-Router-State-Tree') ||
+    event.request.headers.has('Next-Url');
+
+  if (isNextInternal) {
+    return;
+  }
+
+  // Bypass service worker for document navigation (HTML) to avoid serving stale HTML referencing deleted static chunks
+  if (
+    event.request.mode === 'navigate' ||
+    (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'))
+  ) {
     return;
   }
 
@@ -75,26 +78,38 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         // Fetch in background to update cache (stale-while-revalidate style)
-        fetch(event.request).then((response) => {
-          if (response.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, response);
-            });
-          }
-        }).catch(() => {/* Ignore background fetch errors */});
+        fetch(event.request)
+          .then((response) => {
+            if (response.status === 200) {
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, response);
+              });
+            }
+          })
+          .catch(() => {/* Ignore background fetch errors */});
         return cachedResponse;
       }
 
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || response.type !== 'basic') {
+      return fetch(event.request)
+        .then((response) => {
+          if (!response || response.status !== 200) {
+            return response;
+          }
+          
+          // Only cache same-origin basic or CORS response types
+          const isSameOrigin = new URL(event.request.url).origin === self.location.origin;
+          if (isSameOrigin && (response.type === 'basic' || response.type === 'cors')) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
           return response;
-        }
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
+        })
+        .catch((err) => {
+          console.error('[Service Worker] Fetch failed for:', event.request.url, err);
+          throw err;
         });
-        return response;
-      });
     })
   );
 });
