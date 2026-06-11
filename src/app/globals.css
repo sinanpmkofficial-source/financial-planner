@@ -125,9 +125,42 @@
     background-attachment: fixed;
     @apply text-foreground antialiased selection:bg-foreground/10;
   }
-  [data-slot="card"], .bg-card, [data-slot="sheet-content"], [data-slot="popover-content"], .glass-panel {
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
+  [data-slot="card"], .bg-card, .glass-panel {
+    background: linear-gradient(135deg, oklch(1 0 0 / 0.05) 0%, oklch(1 0 0 / 0.01) 100%) !important;
+    backdrop-filter: blur(24px) saturate(190%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
+    box-shadow: 
+      0 30px 60px -15px oklch(0 0 0 / 0.8),
+      inset 0 1.5px 0 oklch(1 0 0 / 0.28),      /* Top specular glass edge */
+      inset 0 -1.5px 0 oklch(0 0 0 / 0.45),      /* Bottom grounding bevel */
+      inset 0 0 0 1px oklch(1 0 0 / 0.05) !important; /* Outer containment ring */
+    border: 1px solid oklch(1 0 0 / 0.04) !important;
+  }
+  
+  /* Status-Colored Glass Sheets */
+  .bg-card.border-rose-500\/20 {
+    background: linear-gradient(135deg, oklch(0.55 0.22 25 / 0.12) 0%, oklch(0.55 0.22 25 / 0.02) 100%) !important;
+    box-shadow: 
+      0 30px 60px -15px oklch(0 0 0 / 0.8),
+      inset 0 1.5px 0 oklch(0.55 0.22 25 / 0.35),
+      inset 0 -1.5px 0 oklch(0 0 0 / 0.45),
+      inset 0 0 0 1px oklch(0.55 0.22 25 / 0.1) !important;
+  }
+  .bg-card.border-amber-500\/20 {
+    background: linear-gradient(135deg, oklch(0.79 0.16 75 / 0.12) 0%, oklch(0.79 0.16 75 / 0.02) 100%) !important;
+    box-shadow: 
+      0 30px 60px -15px oklch(0 0 0 / 0.8),
+      inset 0 1.5px 0 oklch(0.79 0.16 75 / 0.35),
+      inset 0 -1.5px 0 oklch(0 0 0 / 0.45),
+      inset 0 0 0 1px oklch(0.79 0.16 75 / 0.1) !important;
+  }
+
+  [data-slot="sheet-content"], [data-slot="popover-content"], [data-slot="select-content"], [data-slot="dropdown-menu-content"] {
+    background: oklch(0.12 0.005 240 / 0.75) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    border: 1px solid oklch(1 0 0 / 0.08) !important;
+    box-shadow: 0 12px 36px oklch(0 0 0 / 0.7) !important;
   }
   button, [role="button"], .button, [data-slot="button"], [data-slot="sheet-trigger"], [data-slot="alert-dialog-trigger"] {
     border-radius: 9999px !important;
@@ -188,15 +221,17 @@
 }
 
 .hover-scale {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .hover-scale:hover {
-  transform: translateY(-2px);
-  border-color: oklch(0.86 0.23 118 / 0.25) !important;
+  transform: translateY(-4px) scale(1.015);
+  background: linear-gradient(135deg, oklch(1 0 0 / 0.12) 0%, oklch(1 0 0 / 0.03) 100%) !important;
   box-shadow: 
-    0 16px 36px -12px oklch(0 0 0 / 0.8),
-    0 0 0 1px oklch(0.86 0.23 118 / 0.12),
-    0 0 24px 0 oklch(0.86 0.23 118 / 0.04);
+    0 40px 80px -20px oklch(0 0 0 / 0.95),
+    0 0 0 1.5px oklch(0.86 0.23 118 / 0.25), /* Neon Lime accent glow */
+    inset 0 2px 0 oklch(1 0 0 / 0.38),       /* Shuttered highlight */
+    inset 0 -2px 0 oklch(0 0 0 / 0.5),        /* Darker bottom bevel */
+    inset 0 0 0 1px oklch(1 0 0 / 0.08) !important;
 }
 
 @keyframes fadeInUp {
