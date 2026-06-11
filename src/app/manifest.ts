@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Track your expenses, income, budgets, and savings with a clean, minimal personal finance dashboard.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#1d1e22',
-    theme_color: '#1d1e22',
+    background_color: '#000000',
+    theme_color: '#000000',
     icons: [
       {
         src: '/icon-192x192.png',

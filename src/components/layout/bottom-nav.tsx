@@ -37,7 +37,7 @@ export function BottomNav() {
 
   return (
     <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[340px] px-4 animate-fade-in-up">
-      <nav className="flex items-center justify-between bg-card/80 dark:bg-card/90 backdrop-blur-md border border-border/80 p-1.5 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      <nav className="flex items-center justify-between bg-card/45 backdrop-blur-xl border border-white/5 p-1.5 rounded-full shadow-2xl shadow-black/80">
         {primaryItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -74,7 +74,7 @@ export function BottomNav() {
               </button>
             }
           />
-          <SheetContent side="bottom" className="rounded-t-3xl border-t border-border/80 bg-card p-6 gap-6">
+          <SheetContent side="bottom" className="rounded-t-3xl border-t border-white/5 bg-card/60 backdrop-blur-xl p-6 gap-6">
             <SheetHeader className="p-0">
               <SheetTitle className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                 More Options
@@ -101,8 +101,8 @@ export function BottomNav() {
                         className={cn(
                           "flex flex-col items-start p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer",
                           isActive
-                            ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/10"
-                            : "border-border hover:bg-muted/40 text-muted-foreground"
+                            ? "border-primary/20 bg-primary/5 text-foreground"
+                            : "border-white/5 hover:bg-white/5 text-muted-foreground"
                         )}
                       >
                         <item.icon className={cn("w-4.5 h-4.5 mb-1.5", isActive ? "text-primary" : "text-foreground")} />

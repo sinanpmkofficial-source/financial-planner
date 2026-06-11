@@ -52,9 +52,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-border bg-card">
+    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-white/5 bg-card/45 backdrop-blur-xl">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-6 h-16 border-b border-border">
+      <div className="flex items-center gap-2.5 px-6 h-16 border-b border-white/5">
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
           <span className="text-primary-foreground font-bold text-sm">₹</span>
         </div>
@@ -97,7 +97,7 @@ export function Sidebar() {
 
       {/* Month/Year Picker */}
       {pathname !== "/" && pathname !== "/financial-health" && (
-        <div className="px-3 py-4 border-t border-border">
+        <div className="px-3 py-4 border-t border-white/5">
           <DatePeriodFilter />
         </div>
       )}
