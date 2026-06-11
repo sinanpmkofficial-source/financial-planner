@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getUserSettings } from "@/actions/settings";
 import { useUIStore } from "@/stores/ui-store";
+import { Loader2 } from "lucide-react";
 
 interface TransactionFormProps {
   open: boolean;
@@ -273,7 +274,9 @@ export function TransactionForm({
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Select category">
+                      {category && categories.length === 0 ? "" : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
@@ -418,12 +421,14 @@ export function TransactionForm({
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 cursor-pointer" disabled={loading}>
-              {loading
-                ? "Saving..."
-                : isEditing
-                ? "Update"
-                : `Add ${type === "expense" ? "Expense" : "Income"}`}
+            <Button type="submit" className="flex-1 cursor-pointer flex items-center justify-center" disabled={loading}>
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isEditing ? (
+                "Update"
+              ) : (
+                `Add ${type === "expense" ? "Expense" : "Income"}`
+              )}
             </Button>
           </div>
         </form>

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/ui/date-picker";
+import { Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -159,8 +160,12 @@ export function RepaymentDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? "Recording..." : "Save Payment"}
+            <Button type="submit" className="flex-1 flex items-center justify-center" disabled={loading}>
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                "Save Payment"
+              )}
             </Button>
           </div>
         </form>

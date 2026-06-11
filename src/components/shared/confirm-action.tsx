@@ -62,13 +62,12 @@ export function ConfirmAction({
             onClick={handleAction}
             disabled={loading}
             className={cn(
-              "flex items-center gap-1.5 cursor-pointer font-semibold",
+              "flex items-center justify-center cursor-pointer font-semibold",
               confirmVariant === "destructive" && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
               confirmVariant === "success" && "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-700"
             )}
           >
-            {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {confirmText}
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
 import { toast } from "sonner";
-import { Plus, Pencil, Check, Info } from "lucide-react";
+import { Plus, Pencil, Check, Info, Loader2 } from "lucide-react";
 import {
   getUserSettings,
   updateUserSettings,
@@ -179,8 +179,14 @@ function CategoryDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={savingCategory} className="w-full sm:w-auto cursor-pointer">
-              {savingCategory ? "Saving..." : category ? "Update" : "Create"}
+            <Button type="submit" disabled={savingCategory} className="w-full sm:w-auto cursor-pointer flex items-center justify-center">
+              {savingCategory ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : category ? (
+                "Update"
+              ) : (
+                "Create"
+              )}
             </Button>
           </div>
         </form>
@@ -304,8 +310,12 @@ function GeneralPreferencesForm({
             </div>
 
             <div className="pt-2 flex justify-end">
-              <Button type="submit" disabled={savingGeneral}>
-                {savingGeneral ? "Saving Settings..." : "Save Preferences"}
+              <Button type="submit" disabled={savingGeneral} className="flex items-center justify-center">
+                {savingGeneral ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Save Preferences"
+                )}
               </Button>
             </div>
           </CardContent>

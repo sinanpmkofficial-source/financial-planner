@@ -65,10 +65,9 @@ export function ConfirmDelete({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={loading}
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-1.5 cursor-pointer font-semibold"
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center justify-center cursor-pointer font-semibold"
           >
-            {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Delete
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Delete"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

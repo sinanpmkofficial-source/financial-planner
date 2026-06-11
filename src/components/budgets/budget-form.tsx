@@ -10,6 +10,7 @@ import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -149,7 +150,9 @@ export function BudgetForm({
               }
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select category">
+                  {category && categories.length === 0 ? "" : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories
@@ -192,8 +195,14 @@ export function BudgetForm({
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? "Saving..." : isEditing ? "Update" : "Create Budget"}
+            <Button type="submit" className="flex-1 flex items-center justify-center" disabled={loading}>
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : isEditing ? (
+                "Update"
+              ) : (
+                "Create Budget"
+              )}
             </Button>
           </div>
         </form>
