@@ -60,9 +60,15 @@ export function BudgetAlerts({
           <div key={b._id} className="space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="text-sm shrink-0">
-                  {catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌"}
-                </span>
+                {(() => {
+                  const icon = catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌";
+                  const isEmoji = icon.length <= 2;
+                  return (
+                    <span className={isEmoji ? "text-sm shrink-0" : "text-[9px] text-muted-foreground/60 uppercase tracking-wider font-semibold shrink-0"}>
+                      {icon}
+                    </span>
+                  );
+                })()}
                 <span className="text-sm font-medium">{b.category}</span>
               </div>
               <span

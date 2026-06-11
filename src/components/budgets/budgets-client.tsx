@@ -179,9 +179,15 @@ export function BudgetsClient() {
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2.5">
-                        <span className="text-lg">
-                          {catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📌"}
-                        </span>
+                        {(() => {
+                          const icon = catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📌";
+                          const isEmoji = icon.length <= 2;
+                          return (
+                            <span className={isEmoji ? "text-lg" : "text-[10px] text-muted-foreground/60 uppercase tracking-wider font-semibold"}>
+                              {icon}
+                            </span>
+                          );
+                        })()}
                         <div>
                           <p className="font-medium text-sm">{budget.category}</p>
                           <p className="text-xs text-muted-foreground">

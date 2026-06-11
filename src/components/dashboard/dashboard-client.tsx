@@ -898,9 +898,15 @@ export function DashboardClient() {
                       <div key={b._id} className="space-y-1">
                         <div className="flex justify-between items-center text-xs">
                           <span className="flex items-center gap-1.5 font-medium text-foreground">
-                            <span className="text-sm">
-                              {catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌"}
-                            </span>
+                            {(() => {
+                              const icon = catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌";
+                              const isEmoji = icon.length <= 2;
+                              return (
+                                <span className={isEmoji ? "text-sm" : "text-[9px] text-muted-foreground/60 uppercase tracking-wider font-semibold"}>
+                                  {icon}
+                                </span>
+                              );
+                            })()}
                             <span>{b.category}</span>
                           </span>
                           <span className="text-muted-foreground font-mono text-[11px]">

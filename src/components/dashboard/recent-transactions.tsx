@@ -109,7 +109,15 @@ export function RecentTransactions({
               className="flex items-center justify-between px-5 py-3"
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg">{t.icon ?? "💰"}</span>
+                {(() => {
+                  const icon = t.icon ?? "💰";
+                  const isEmoji = icon.length <= 2;
+                  return (
+                    <span className={isEmoji ? "text-lg" : "text-[10px] text-muted-foreground/60 uppercase tracking-wider font-semibold"}>
+                      {icon}
+                    </span>
+                  );
+                })()}
                 <div>
                   <p className="text-sm font-medium">{t.label}</p>
                   <p className="text-xs text-muted-foreground">

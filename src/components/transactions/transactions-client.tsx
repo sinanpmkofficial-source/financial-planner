@@ -317,9 +317,17 @@ export function TransactionsClient() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center border border-border/10">
-                        {icon}
-                      </span>
+                      {(() => {
+                        const isEmoji = icon.length <= 2;
+                        return (
+                          <span className={cn(
+                            "w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center border border-border/10 shrink-0",
+                            isEmoji ? "text-xl" : "text-[8px] text-muted-foreground/60 uppercase tracking-wider font-semibold px-0.5 text-center overflow-hidden whitespace-nowrap"
+                          )}>
+                            {icon}
+                          </span>
+                        );
+                      })()}
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-sm leading-none">{label}</p>
