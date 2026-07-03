@@ -29,7 +29,7 @@ const primaryItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/transactions", label: "Transactions", icon: Receipt },
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
-  { href: "/goals", label: "Goals", icon: Target },
+  { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins },
 ];
 
 export function BottomNav() {
@@ -37,7 +37,7 @@ export function BottomNav() {
 
   return (
     <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[340px] px-4 animate-fade-in-up">
-      <nav className="flex items-center justify-between bg-card/85 backdrop-blur-xl border border-white/5 p-1.5 rounded-full shadow-2xl shadow-black/80">
+      <nav className="flex items-center justify-between bg-card/85 backdrop-blur-xl border border-white/5 p-1.5 rounded-full shadow-lg shadow-black/40">
         {primaryItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -74,7 +74,7 @@ export function BottomNav() {
               </button>
             }
           />
-          <SheetContent side="bottom" className="rounded-t-3xl border-t border-white/5 bg-card/90 backdrop-blur-xl p-6 gap-6">
+          <SheetContent side="bottom" className="rounded-t-3xl border-t border-white/5 bg-card/85 backdrop-blur-xl p-6 gap-6">
             <SheetHeader className="p-0">
               <SheetTitle className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                 More Options
@@ -85,8 +85,8 @@ export function BottomNav() {
             </SheetHeader>
             <div className="grid grid-cols-2 gap-3">
               {[
+                { href: "/goals", label: "Goals", icon: Target, desc: "Savings goals & progress" },
                 { href: "/financial-health", label: "Financial Health", icon: HeartPulse, desc: "Audit score & 50-30-20" },
-                { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins, desc: "Track loans & debts" },
                 { href: "/analytics", label: "Reports & Trends", icon: TrendingUp, desc: "Cash flow analytics" },
                 { href: "/settings", label: "Settings", icon: Settings, desc: "System configurations" },
                 { href: "/guide", label: "Calculation Guide", icon: HelpCircle, desc: "Formulas & math rules" },
@@ -102,7 +102,7 @@ export function BottomNav() {
                           "flex flex-col items-start p-3 rounded-xl border text-left transition-all duration-200 cursor-pointer",
                           isActive
                             ? "border-primary/20 bg-primary/5 text-foreground"
-                            : "border-white/5 hover:bg-white/5 text-muted-foreground"
+                            : "border-border hover:bg-muted/60 text-muted-foreground"
                         )}
                       >
                         <item.icon className={cn("w-4.5 h-4.5 mb-1.5", isActive ? "text-primary" : "text-foreground")} />

@@ -7,7 +7,7 @@ import { transactionSchema, type TransactionFormData } from "@/validations/trans
 import { createExpense, updateExpense } from "@/actions/expense";
 import { type ExpenseFormData } from "@/validations/expense";
 import { createIncome, updateIncome } from "@/actions/income";
-import { createRecurringExpense } from "@/actions/recurring-expense";
+import { createRecurringExpense, updateRecurringExpense, deleteRecurringExpense, getRecurringExpenses } from "@/actions/recurring-expense";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,6 +50,7 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
+  const [recurringExpenses, setRecurringExpenses] = useState<any[]>([]);
   const isEditing = !!transaction;
 
   const getTransactionType = (t?: Expense | Income): "expense" | "income" => {
@@ -95,12 +96,20 @@ export function TransactionForm({
       getUserSettings().then((settings) => {
         setCategories(settings.categories || []);
       });
+      getRecurringExpenses().then((recs) => {
+        setRecurringExpenses(recs || []);
+      });
     }
   }, [open]);
 
   useEffect(() => {
     if (open) {
       const currentType = getTransactionType(transaction);
+      const isRec = !!(transaction && "recurringExpenseId" in transaction && transaction.recurringExpenseId);
+      const matchedRec = isRec
+        ? recurringExpenses.find(r => r._id === (transaction as any).recurringExpenseId)
+        : null;
+
       reset(
         transaction
           ? {
@@ -111,8 +120,8 @@ export function TransactionForm({
               source: "source" in transaction ? transaction.source : "",
               note: transaction.note ?? "",
               date: format(new Date(transaction.date), "yyyy-MM-dd"),
-              isRecurring: false,
-              frequency: "monthly",
+              isRecurring: isRec,
+              frequency: matchedRec ? matchedRec.frequency : "monthly",
             }
           : {
               type: defaultType,
@@ -127,7 +136,7 @@ export function TransactionForm({
             }
       );
     }
-  }, [transaction, open, reset, defaultType]);
+  }, [transaction, open, reset, defaultType, recurringExpenses]);
 
   const onSubmit = async (data: TransactionFormData) => {
     setLoading(true);
@@ -141,29 +150,60 @@ export function TransactionForm({
           note: data.note,
           date: data.date,
         };
+        const recurringExpenseId = transaction && "recurringExpenseId" in transaction ? transaction.recurringExpenseId : undefined;
         result = isEditing
           ? await updateExpense(transaction._id, expensePayload)
           : await createExpense(expensePayload);
 
-        if (result.success && !isEditing && data.isRecurring) {
-          // Calculate next due date
-          const d = new Date(data.date);
-          if (data.frequency === "weekly") {
-            d.setDate(d.getDate() + 7);
-          } else if (data.frequency === "monthly") {
-            d.setMonth(d.getMonth() + 1);
-          } else if (data.frequency === "yearly") {
-            d.setFullYear(d.getFullYear() + 1);
+        if (result.success) {
+          if (data.isRecurring) {
+            const d = new Date(data.date);
+            if (data.frequency === "weekly") {
+              d.setDate(d.getDate() + 7);
+            } else if (data.frequency === "monthly") {
+              d.setMonth(d.getMonth() + 1);
+            } else if (data.frequency === "yearly") {
+              d.setFullYear(d.getFullYear() + 1);
+            }
+
+            if (isEditing && recurringExpenseId) {
+              // Update existing template
+              await updateRecurringExpense(recurringExpenseId, {
+                amount: data.amount,
+                category: data.category || "",
+                tag: (data.tag || "Needs") as any,
+                note: data.note,
+                frequency: data.frequency || "monthly",
+              });
+            } else {
+              // Create new template
+              const recResult = await createRecurringExpense({
+                amount: data.amount,
+                category: data.category || "",
+                tag: (data.tag || "Needs") as any,
+                note: data.note,
+                frequency: data.frequency || "monthly",
+                nextDueDate: d.toISOString(),
+              });
+
+              if (recResult.success && isEditing) {
+                // Link new template to existing transaction
+                await updateExpense(transaction._id, {
+                  ...expensePayload,
+                  recurringExpenseId: recResult.id,
+                });
+              }
+            }
+          } else {
+            // isRecurring toggled to false
+            if (isEditing && recurringExpenseId) {
+              await deleteRecurringExpense(recurringExpenseId);
+              await updateExpense(transaction._id, {
+                ...expensePayload,
+                recurringExpenseId: "", // unsets it
+              });
+            }
           }
-          
-          await createRecurringExpense({
-            amount: data.amount,
-            category: data.category || "",
-            tag: data.tag || "Needs",
-            note: data.note,
-            frequency: data.frequency || "monthly",
-            nextDueDate: d.toISOString(),
-          });
         }
       } else {
         const incomePayload = {
@@ -326,50 +366,48 @@ export function TransactionForm({
               </div>
 
               {/* Make Recurring Toggle */}
-              {!isEditing && (
-                <div className="space-y-2 p-3 bg-muted/30 border border-border/40 rounded-xl">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="make-recurring" className="text-xs font-semibold cursor-pointer">
-                        Make Recurring Expense
-                      </Label>
-                      <p className="text-[9px] text-muted-foreground leading-tight">
-                        Receive a bill reminder on the next due date (no auto-logging)
-                      </p>
-                    </div>
-                    <input
-                      id="make-recurring"
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer accent-primary"
-                      checked={!!isRecurring}
-                      onChange={(e) => setValue("isRecurring", e.target.checked)}
-                    />
+              <div className="space-y-2 p-3 bg-muted/30 border border-border/40 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="make-recurring" className="text-xs font-semibold cursor-pointer">
+                      Make Recurring Expense
+                    </Label>
+                    <p className="text-[9px] text-muted-foreground leading-tight">
+                      Receive a bill reminder on the next due date (no auto-logging)
+                    </p>
                   </div>
-
-                  {isRecurring && (
-                    <div className="space-y-2 pt-2 border-t border-border/40 transition-all">
-                      <Label className="text-[11px] font-semibold text-foreground">Reminder Frequency</Label>
-                      <div className="grid grid-cols-3 gap-1 p-0.5 bg-muted rounded-md border border-border/40">
-                        {["weekly", "monthly", "yearly"].map((f) => (
-                          <button
-                            key={f}
-                            type="button"
-                            onClick={() => setValue("frequency", f as "weekly" | "monthly" | "yearly")}
-                            className={cn(
-                              "py-1 text-[10px] font-semibold rounded-sm transition-all cursor-pointer capitalize",
-                              frequency === f
-                                ? "bg-background text-foreground shadow-xs"
-                                : "text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            {f}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <input
+                    id="make-recurring"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer accent-primary"
+                    checked={!!isRecurring}
+                    onChange={(e) => setValue("isRecurring", e.target.checked)}
+                  />
                 </div>
-              )}
+
+                {isRecurring && (
+                  <div className="space-y-2 pt-2 border-t border-border/40 transition-all">
+                    <Label className="text-[11px] font-semibold text-foreground">Reminder Frequency</Label>
+                    <div className="grid grid-cols-3 gap-1 p-0.5 bg-muted rounded-md border border-border/40">
+                      {["weekly", "monthly", "yearly"].map((f) => (
+                        <button
+                          key={f}
+                          type="button"
+                          onClick={() => setValue("frequency", f as "weekly" | "monthly" | "yearly")}
+                          className={cn(
+                            "py-1 text-[10px] font-semibold rounded-sm transition-all cursor-pointer capitalize",
+                            frequency === f
+                              ? "bg-background text-foreground shadow-xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           ) : (
             <div className="space-y-2">

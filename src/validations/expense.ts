@@ -8,6 +8,7 @@ export const expenseSchema = z.object({
   tag: z.enum(["Needs", "Wants", "Investments", "Unnecessary Spending"]),
   note: z.string().optional(),
   date: z.string({ message: "Date is required" }),
+  recurringExpenseId: z.string().optional(),
 });
 
 export type ExpenseFormData = z.infer<typeof expenseSchema>;

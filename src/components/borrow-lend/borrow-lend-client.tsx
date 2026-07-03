@@ -46,28 +46,27 @@ export function BorrowLendClient() {
 
   // Compute summary metrics on the client side
   const summary = useMemo(() => {
-    let totalBorrowed = 0;
-    let totalLent = 0;
-    let pendingCollections = 0;
-    let pendingPayments = 0;
+    let owedByMe = 0;       // I borrowed — still pending remaining
+    let owedToMe = 0;       // I lent — still pending remaining
+    let overduePayments = 0;
+    let overdueCollections = 0;
+    const today = new Date();
 
     for (const r of records) {
       const paid = r.paidAmount ?? 0;
       const remaining = r.amount - paid;
-      if (r.type === "borrowed") {
-        totalBorrowed += r.amount;
-        if (r.status === "pending") {
-          pendingPayments += remaining;
-        }
-      } else {
-        totalLent += r.amount;
-        if (r.status === "pending") {
-          pendingCollections += remaining;
-        }
+      const isOverdue = r.dueDate && new Date(r.dueDate) < today && r.status === "pending";
+
+      if (r.type === "borrowed" && r.status === "pending") {
+        owedByMe += remaining;
+        if (isOverdue) overduePayments += remaining;
+      } else if (r.type === "lent" && r.status === "pending") {
+        owedToMe += remaining;
+        if (isOverdue) overdueCollections += remaining;
       }
     }
 
-    return { totalBorrowed, totalLent, pendingCollections, pendingPayments };
+    return { owedByMe, owedToMe, overduePayments, overdueCollections };
   }, [records]);
 
   // Hydrate state from local cache on client mount
@@ -303,32 +302,36 @@ export function BorrowLendClient() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Total Borrowed"
-          value={formatCurrency(summary.totalBorrowed)}
+          label="I Owe"
+          value={formatCurrency(summary.owedByMe)}
           icon={ArrowDownLeft}
           variant="danger"
           index="01"
+          trend="pending borrowed remaining"
         />
         <StatCard
-          label="Total Lent"
-          value={formatCurrency(summary.totalLent)}
+          label="Owed to Me"
+          value={formatCurrency(summary.owedToMe)}
           icon={ArrowUpRight}
           variant="success"
           index="02"
+          trend="pending lent remaining"
         />
         <StatCard
-          label="Pending Payments"
-          value={formatCurrency(summary.pendingPayments)}
+          label="Overdue Payments"
+          value={formatCurrency(summary.overduePayments)}
           icon={Clock}
           variant="warning"
           index="03"
+          trend={summary.overduePayments > 0 ? "past due date" : "all on time"}
         />
         <StatCard
-          label="Pending Collections"
-          value={formatCurrency(summary.pendingCollections)}
+          label="Overdue Collections"
+          value={formatCurrency(summary.overdueCollections)}
           icon={Banknote}
           variant="default"
           index="04"
+          trend={summary.overdueCollections > 0 ? "past due date" : "all on time"}
         />
       </div>
 

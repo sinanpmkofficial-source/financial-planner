@@ -114,3 +114,34 @@ export async function deleteRecurringExpense(id: string) {
     };
   }
 }
+
+export async function updateRecurringExpense(
+  id: string,
+  data: {
+    amount: number;
+    category: string;
+    tag: "Needs" | "Wants" | "Investments" | "Unnecessary Spending";
+    note?: string;
+    frequency: "weekly" | "monthly" | "yearly";
+  }
+) {
+  await dbConnect();
+  try {
+    await RecurringExpense.findByIdAndUpdate(id, {
+      amount: data.amount,
+      category: data.category,
+      tag: data.tag,
+      note: data.note || "",
+      frequency: data.frequency,
+    });
+    revalidatePath("/");
+    revalidatePath("/transactions");
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update recurring expense",
+    };
+  }
+}
+

@@ -23,7 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Receipt, Pencil, Wallet, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { Plus, Receipt, Pencil, Wallet, TrendingUp, TrendingDown, ArrowRight, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { Expense, Income } from "@/types";
 import { getUserSettings } from "@/actions/settings";
@@ -43,6 +44,7 @@ export function TransactionsClient() {
   const [editingTransaction, setEditingTransaction] = useState<Expense | Income | undefined>();
   const [filterType, setFilterType] = useState<"all" | "expense" | "income">("all");
   const [filterCategory, setFilterCategory] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   const cacheKey = `${dateRange.from.toISOString()}_${dateRange.to.toISOString()}`;
 
@@ -146,6 +148,41 @@ export function TransactionsClient() {
 
   const filteredTransactions = useMemo(() => {
     return mergedTransactions.filter((t) => {
+      // 1. Search Query filter (matches ANY data of a transaction)
+      if (searchQuery.trim() !== "") {
+        const query = searchQuery.toLowerCase();
+        const amountStr = t.amount.toString();
+        const noteStr = (t.note || "").toLowerCase();
+        const dateStr = formatDate(t.date).toLowerCase();
+        const typeStr = t.type.toLowerCase();
+        
+        let match = false;
+        if (t.type === "expense") {
+          const categoryStr = t.category.toLowerCase();
+          match = (
+            categoryStr.includes(query) ||
+            noteStr.includes(query) ||
+            amountStr.includes(query) ||
+            dateStr.includes(query) ||
+            typeStr.includes(query)
+          );
+        } else {
+          const sourceStr = t.source.toLowerCase();
+          match = (
+            sourceStr.includes(query) ||
+            noteStr.includes(query) ||
+            amountStr.includes(query) ||
+            dateStr.includes(query) ||
+            typeStr.includes(query)
+          );
+        }
+        
+        if (!match) return false;
+        // Bypassing filterType and filterCategory filters if search is applied
+        return true;
+      }
+
+      // 2. Regular filters (only if no search query is active)
       // Filter by type
       if (filterType === "expense" && t.type !== "expense") return false;
       if (filterType === "income" && t.type !== "income") return false;
@@ -157,7 +194,7 @@ export function TransactionsClient() {
       
       return true;
     });
-  }, [mergedTransactions, filterType, filterCategory]);
+  }, [mergedTransactions, searchQuery, filterType, filterCategory]);
 
   // Calculations for cards
   const summaryMetrics = useMemo(() => {
@@ -210,68 +247,82 @@ export function TransactionsClient() {
       </div>
 
       {/* Filters row */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        {/* Type toggle buttons */}
-        <div className="flex p-0.5 bg-muted rounded-lg border border-border/50 self-start sm:self-auto">
-          <button
-            onClick={() => {
-              setFilterType("all");
-              setFilterCategory("all");
-            }}
-            className={cn(
-              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer",
-              filterType === "all"
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilterType("expense")}
-            className={cn(
-              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer",
-              filterType === "expense"
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Expenses
-          </button>
-          <button
-            onClick={() => {
-              setFilterType("income");
-              setFilterCategory("all"); // Category filter is not relevant to Income
-            }}
-            className={cn(
-              "px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer",
-              filterType === "income"
-                ? "bg-background text-foreground shadow-xs"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Income
-          </button>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card/25 backdrop-blur-md p-3 rounded-2xl border border-white/5">
+        {/* Search input */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by category, source, note, amount..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9.5 h-9 w-full bg-background/50 border-white/10"
+          />
         </div>
 
-        {/* Category filter dropdown - only visible for expenses/all */}
-        {filterType !== "income" && (
-          <div className="flex items-center gap-3">
-            <Select value={filterCategory} onValueChange={(val) => val && setFilterCategory(val)}>
-              <SelectTrigger className="w-44 h-9">
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">📁 All Categories</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c.name} value={c.name}>
-                    {c.icon} {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Filter controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Type toggle buttons */}
+          <div className="flex p-0.5 bg-muted rounded-lg border border-border/50">
+            <button
+              onClick={() => {
+                setFilterType("all");
+                setFilterCategory("all");
+              }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer",
+                filterType === "all"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setFilterType("expense")}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer",
+                filterType === "expense"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Expenses
+            </button>
+            <button
+              onClick={() => {
+                setFilterType("income");
+                setFilterCategory("all"); // Category filter is not relevant to Income
+              }}
+              className={cn(
+                "px-3 py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer",
+                filterType === "income"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Income
+            </button>
           </div>
-        )}
+
+          {/* Category filter dropdown - only visible for expenses/all */}
+          {filterType !== "income" && (
+            <div className="flex items-center gap-3">
+              <Select value={filterCategory} onValueChange={(val) => val && setFilterCategory(val)}>
+                <SelectTrigger className="w-44 h-9">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">📁 All Categories</SelectItem>
+                  {categories.map((c) => (
+                    <SelectItem key={c.name} value={c.name}>
+                      {c.icon} {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Transaction List */}

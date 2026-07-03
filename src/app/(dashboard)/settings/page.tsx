@@ -197,23 +197,19 @@ function CategoryDialog({
 
 interface GeneralPreferencesFormProps {
   initialBudgetStartDay: number;
-  initialShowGamification: boolean;
   onSuccess: () => void;
 }
 
 function GeneralPreferencesForm({
   initialBudgetStartDay,
-  initialShowGamification,
   onSuccess,
 }: GeneralPreferencesFormProps) {
   const [budgetStartDay, setBudgetStartDay] = useState<number>(initialBudgetStartDay);
-  const [showGamification, setShowGamification] = useState<boolean>(initialShowGamification);
   const [savingGeneral, setSavingGeneral] = useState(false);
 
   useEffect(() => {
     setBudgetStartDay(initialBudgetStartDay);
-    setShowGamification(initialShowGamification);
-  }, [initialBudgetStartDay, initialShowGamification]);
+  }, [initialBudgetStartDay]);
 
   const handleSaveGeneral = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -225,7 +221,6 @@ function GeneralPreferencesForm({
     try {
       const res = await updateUserSettings({
         budgetStartDay,
-        showGamification,
       });
       if (res.success) {
         toast.success("Settings updated successfully");
@@ -284,30 +279,7 @@ function GeneralPreferencesForm({
               </p>
             </div>
 
-            {/* Gamification Settings */}
-            <div className="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-muted/10">
-              <div className="space-y-0.5">
-                <Label className="text-sm font-semibold">Enable Gamification</Label>
-                <p className="text-xs text-muted-foreground">
-                  Show levels and XP indicators on the dashboard.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowGamification(!showGamification)}
-                className={cn(
-                  "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-                  showGamification ? "bg-primary" : "bg-muted-foreground/30"
-                )}
-              >
-                <span
-                  className={cn(
-                    "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-background shadow-lg ring-0 transition duration-200 ease-in-out",
-                    showGamification ? "translate-x-5" : "translate-x-0"
-                  )}
-                />
-              </button>
-            </div>
+
 
             <div className="pt-2 flex justify-end">
               <Button type="submit" disabled={savingGeneral} className="flex items-center justify-center">
@@ -336,9 +308,7 @@ function GeneralPreferencesForm({
             <p>
               <strong>Dynamic Renaming:</strong> Modifying a category&apos;s name updates all historical transactions automatically. Deleting a category keeps the transactions but reassigns them to <em>Other</em> so you never lose historical expense data.
             </p>
-            <p>
-              <strong>Distraction-Free:</strong> Disabling gamification hides the Level and XP progress cards from the main dashboard, returning the layout to a purely minimal layout.
-            </p>
+
           </CardContent>
         </Card>
       </div>
@@ -496,7 +466,6 @@ export default function SettingsPage() {
         <TabsContent value="general" className="outline-none">
           <GeneralPreferencesForm
             initialBudgetStartDay={settings?.budgetStartDay || 1}
-            initialShowGamification={settings?.showGamification !== false}
             onSuccess={() => loadSettings(false)}
           />
         </TabsContent>

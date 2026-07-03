@@ -10,7 +10,6 @@ import { getUserSettings } from "@/actions/settings";
 import { getUnifiedData } from "@/actions/reports";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { XpCard } from "@/components/dashboard/xp-card";
 import { CountUp } from "@/components/shared/count-up";
 import { motion } from "framer-motion";
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
@@ -32,20 +31,12 @@ import {
   Target,
   ArrowRight,
   AlertCircle,
+  Repeat,
+  CalendarClock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getRecurringExpenses, confirmRecurringPayment } from "@/actions/recurring-expense";
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+
 import { StatCard } from "@/components/shared/stat-card";
 import type { DashboardSummary, Expense, Income, BudgetWithSpent, RecurringExpense } from "@/types";
 
@@ -127,6 +118,7 @@ export function DashboardClient() {
   const [trendLoading, setTrendLoading] = useState(false);
 
   const [graphPeriod, setGraphPeriod] = useState<"weekly" | "monthly">("weekly");
+  const [spendPeriod, setSpendPeriod] = useState<"today" | "week" | "month">("today");
 
   const [transactionFormOpen, setTransactionFormOpen] = useState(false);
 
@@ -366,7 +358,7 @@ export function DashboardClient() {
     }
   };
 
-  const showGamification = settings?.showGamification !== false;
+  const showGamification = false;
 
   return (
     <motion.div
@@ -434,389 +426,109 @@ export function DashboardClient() {
         </motion.div>
       )}
 
-      {/* Stats Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <motion.div variants={itemVariants}>
-          <StatCard
-            label="Spent Today"
-            value={
-              summaryLoading || !summary ? (
-                "..."
-              ) : (
-                <CountUp value={summary.todayExpenses ?? 0} formatter={formatCurrency} />
-              )
-            }
-            icon={TrendingDown}
-            variant="danger"
-            index="01"
-            trend={
-              summaryLoading || !summary
-                ? "..."
-                : (() => {
-                    const now = new Date();
-                    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                    const dailyLimit = budgetSummary.totalLimit / totalDays;
-                    if (dailyLimit > 0) {
-                      const diff = (summary.todayExpenses ?? 0) - dailyLimit;
-                      return diff > 0 
-                        ? `${formatCurrency(Math.round(diff))} over daily limit`
-                        : `${formatCurrency(Math.round(Math.abs(diff)))} under daily limit`;
-                    }
-                    return "No budget configured";
-                  })()
-            }
-          />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <StatCard
-            label="Monthly Spend"
-            value={
-              summaryLoading || !summary ? (
-                "..."
-              ) : (
-                <CountUp value={summary.monthlyExpenses ?? 0} formatter={formatCurrency} />
-              )
-            }
-            icon={TrendingDown}
-            variant="warning"
-            index="02"
-            trend={
-              summaryLoading || !summary
-                ? "..."
-                : budgetSummary.totalLimit > 0
-                ? `${Math.round((summary.monthlyExpenses / budgetSummary.totalLimit) * 100)}% of total budget`
-                : "No budget configured"
-            }
-          />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <StatCard
-            label="Remaining Budget"
-            value={
-              summaryLoading || !summary ? (
-                "..."
-              ) : (
-                <CountUp value={budgetSummary.totalLeft} formatter={formatCurrency} />
-              )
-            }
-            icon={Target}
-            variant="success"
-            index="03"
-            trend={
-              summaryLoading || !summary
-                ? "..."
-                : budgetSummary.totalLimit > 0
-                ? `${budgetSummary.percentageLeft}% remaining`
-                : "No budget configured"
-            }
-          />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <StatCard
-            label="Safe to Spend"
-            value={
-              summaryLoading || budgetsLoading || !summary ? (
-                "..."
+      {/* Compact Metrics Bar */}
+      <motion.div variants={itemVariants}>
+        <div className="flex items-stretch gap-0 border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+          {/* Safe to Spend */}
+          <div className="flex-1 px-4 py-3.5 flex flex-col gap-0.5 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Safe to Spend
+            </p>
+            <p className={cn(
+              "text-xl font-extrabold tracking-tight",
+              summaryLoading || budgetsLoading || !summary
+                ? "text-muted-foreground"
+                : (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
+                ? "text-primary"
+                : "text-rose-500"
+            )}>
+              {summaryLoading || budgetsLoading || !summary ? (
+                <span className="inline-block h-6 w-24 bg-muted animate-pulse rounded-md" />
               ) : (
                 <CountUp
                   value={(summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal}
                   formatter={formatCurrency}
                 />
-              )
-            }
-            icon={PiggyBank}
-            variant="default"
-            index="04"
-            trend={
-              summaryLoading || budgetsLoading || !summary
-                ? "..."
-                : ((summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal) >= 0
-                ? "Unallocated surplus"
-                : "Deficit risk (over budget)"
-            }
-          />
-        </motion.div>
-      </div>
-
-      {/* Top Section: Cash Flow Chart & Net Wealth Card */}
-      <motion.div variants={itemVariants} className="grid gap-6 lg:grid-cols-3">
-        {/* Composed Cash Flow Chart */}
-        <Card className="lg:col-span-2 border border-border/50 shadow-xs rounded-2xl overflow-hidden bg-card">
-          <CardHeader className="pb-2">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="text-base font-semibold text-foreground">Cash Flow</CardTitle>
-                 <CardDescription>
-                  {graphPeriod === "weekly"
-                    ? "This week's daily comparison"
-                    : "This month's daily comparison"}
-                 </CardDescription>
-              </div>
-              <div className="flex items-center gap-3.5">
-                {/* Period Selector Tabs/Buttons */}
-                <div className="flex rounded-lg bg-muted p-0.5 text-xs mr-2 border border-border/40">
-                  <button
-                    onClick={() => setGraphPeriod("weekly")}
-                    className={cn(
-                      "px-3 py-1 rounded-md font-semibold transition-all cursor-pointer",
-                      graphPeriod === "weekly" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Week
-                  </button>
-                  <button
-                    onClick={() => setGraphPeriod("monthly")}
-                    className={cn(
-                      "px-3 py-1 rounded-md font-semibold transition-all cursor-pointer",
-                      graphPeriod === "monthly" ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Month
-                  </button>
-                </div>
-                <div className="flex items-center gap-3 text-xs font-medium shrink-0">
-                  <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <span className="text-muted-foreground">Income</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    <span className="text-muted-foreground">Expenses</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-2">
-            <div className="grid grid-cols-2 gap-4 px-2 pb-4 border-b border-border/40 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-500">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Period Income
-                  </p>
-                  <p className="text-base sm:text-lg font-bold text-foreground">
-                    {trendLoading ? (
-                      <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
-                    ) : (
-                      <CountUp value={periodMetrics.totalIncome} formatter={formatCurrency} />
-                    )}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-500">
-                  <TrendingDown className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    Period Expenses
-                  </p>
-                  <p className="text-base sm:text-lg font-bold text-foreground">
-                    {trendLoading ? (
-                      <span className="inline-block h-5 w-20 bg-muted animate-pulse rounded-sm" />
-                    ) : (
-                      <CountUp value={periodMetrics.totalExpenses} formatter={formatCurrency} />
-                    )}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="h-[260px] w-full relative">
-              {trendLoading && (
-                <div className="absolute inset-0 bg-card/50 flex items-center justify-center z-10 rounded-2xl">
-                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                </div>
               )}
-              <ResponsiveContainer width="100%" height="100%">
-                {graphPeriod === "weekly" ? (
-                  <BarChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.005 240)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
-                    <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar
-                      name="Income"
-                      dataKey="income"
-                      fill="oklch(0.86 0.23 118)" /* Neon Lime */
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Bar
-                      name="Expenses"
-                      dataKey="expenses"
-                      fill="oklch(0.60 0.22 25)" /* Vibrant Crimson */
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                ) : (
-                  <AreaChart data={chartData} margin={{ left: -10, right: 10, top: 10, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorInc" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="oklch(0.86 0.23 118)" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="oklch(0.86 0.23 118)" stopOpacity={0.01}/>
-                      </linearGradient>
-                      <linearGradient id="colorExp" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="oklch(0.60 0.22 25)" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="oklch(0.60 0.22 25)" stopOpacity={0.01}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.26 0.005 240)" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
-                    <YAxis tick={{ fontSize: 10 }} stroke="oklch(0.65 0.005 240)" />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Area
-                      name="Income"
-                      type="monotone"
-                      dataKey="income"
-                      stroke="oklch(0.86 0.23 118)"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorInc)"
-                    />
-                    <Area
-                      name="Expenses"
-                      type="monotone"
-                      dataKey="expenses"
-                      stroke="oklch(0.60 0.22 25)"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorExp)"
-                    />
-                  </AreaChart>
-                )}
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Consolidated Hero Net Cash Card */}
-        <div
-          className={cn(
-            "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300 flex flex-col justify-between",
-            "shadow-[0_1px_3px_oklch(0_0_0/6%),0_1px_2px_oklch(0_0_0/4%)] hover:shadow-[0_4px_12px_oklch(0_0_0/8%)] hover:border-border",
-            "dark:shadow-[0_1px_3px_oklch(0_0_0/30%)] dark:hover:shadow-[0_4px_14px_oklch(0_0_0/40%)]"
-          )}
-        >
-          {/* Top Section */}
-          <div className="flex items-center justify-between pb-3.5 px-6 pt-6">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono text-muted-foreground/60 border border-border px-1.5 py-0.5 rounded-md">
-                OVERVIEW
-              </span>
-              <h3 className="text-base font-semibold text-foreground">Financial Summary</h3>
-            </div>
-            <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
-              <Wallet className="w-4 h-4" />
-            </div>
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {summaryLoading || budgetsLoading || !summary
+                ? ""
+                : (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
+                ? "Unallocated surplus"
+                : "Deficit — over budget"}
+            </p>
           </div>
 
-          {/* Thin Separator */}
-          <div className="w-full border-t border-border/50 border-dashed" />
+          {/* Divider */}
+          <div className="w-px bg-border self-stretch" />
 
-          {/* Bottom Section */}
-          <div className="p-6 flex-1 flex flex-col justify-between gap-6">
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Available Balance
+          {/* Spend with period filter */}
+          <div className="flex-1 px-4 py-3.5 flex flex-col gap-1.5 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Spent
               </p>
-              <h3 className="text-3xl sm:text-4xl font-extrabold tracking-tight mt-1 text-foreground">
-                {summaryLoading || !summary ? (
-                  <span className="inline-block h-9 w-40 bg-muted animate-pulse rounded-md mt-1" />
-                ) : (
-                  <CountUp value={summary.currentBalance} formatter={formatCurrency} />
-                )}
-              </h3>
+              {/* Period select */}
+              <select
+                value={spendPeriod}
+                onChange={(e) => setSpendPeriod(e.target.value as "today" | "week" | "month")}
+                className="text-[10px] font-semibold bg-muted border-0 rounded-md px-1.5 py-0.5 text-muted-foreground cursor-pointer focus:ring-0 outline-none appearance-none pr-4 relative"
+                style={{ backgroundImage: "none" }}
+              >
+                <option value="today">Today</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+              </select>
             </div>
-
-            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-border/60 text-center">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                  Today
-                </span>
-                {summaryLoading || !summary ? (
-                  <div className="space-y-1 py-1">
-                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
-                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                      +<CountUp value={summary.todayIncome ?? 0} formatter={formatCurrency} />
-                    </p>
-                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                      -<CountUp value={summary.todayExpenses ?? 0} formatter={formatCurrency} />
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <div className="space-y-1 border-x border-border/60 px-1">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                  This Week
-                </span>
-                {summaryLoading || !summary ? (
-                  <div className="space-y-1 py-1">
-                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
-                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                      +<CountUp value={summary.weekIncome ?? 0} formatter={formatCurrency} />
-                    </p>
-                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                      -<CountUp value={summary.weekExpenses ?? 0} formatter={formatCurrency} />
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
-                  This Month
-                </span>
-                {summaryLoading || !summary ? (
-                  <div className="space-y-1 py-1">
-                    <div className="h-3 w-12 bg-muted animate-pulse rounded-sm mx-auto" />
-                    <div className="h-2.5 w-10 bg-muted animate-pulse rounded-sm mx-auto" />
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-500">
-                      +<CountUp value={summary.monthlyIncome ?? 0} formatter={formatCurrency} />
-                    </p>
-                    <p className="text-[10px] text-rose-600 dark:text-rose-500">
-                      -<CountUp value={summary.monthlyExpenses ?? 0} formatter={formatCurrency} />
-                    </p>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-xl border border-foreground/15 bg-muted/30 flex items-center justify-between text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5 font-medium">
-                <PiggyBank className="w-3.5 h-3.5 text-foreground" />
-                Saved this Month
-              </span>
-              <span className="font-bold text-foreground">
-                {summaryLoading || !summary ? (
-                  <span className="inline-block h-3.5 w-16 bg-muted animate-pulse rounded-sm" />
-                ) : (
-                  <CountUp value={summary.savings} formatter={formatCurrency} />
-                )}
-              </span>
-            </div>
+            <p className="text-xl font-extrabold tracking-tight text-rose-500">
+              {summaryLoading || !summary ? (
+                <span className="inline-block h-6 w-24 bg-muted animate-pulse rounded-md" />
+              ) : (
+                <CountUp
+                  value={
+                    spendPeriod === "today"
+                      ? (summary.todayExpenses ?? 0)
+                      : spendPeriod === "week"
+                      ? (summary.weekExpenses ?? 0)
+                      : summary.monthlyExpenses
+                  }
+                  formatter={formatCurrency}
+                />
+              )}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {spendPeriod === "today"
+                ? (() => {
+                    if (summaryLoading || !summary) return "";
+                    const now = new Date();
+                    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                    const dailyLimit = budgetSummary.totalLimit / totalDays;
+                    if (dailyLimit > 0) {
+                      const diff = (summary.todayExpenses ?? 0) - dailyLimit;
+                      return diff > 0
+                        ? `${formatCurrency(Math.round(diff))} over daily limit`
+                        : `${formatCurrency(Math.round(Math.abs(diff)))} under daily limit`;
+                    }
+                    return "No budget set";
+                  })()
+                : spendPeriod === "week"
+                ? (summaryLoading || !summary ? "" : `of ${formatCurrency(budgetSummary.totalLimit)} budget`)
+                : (summaryLoading || !summary
+                    ? ""
+                    : budgetSummary.totalLimit > 0
+                    ? `${Math.round((summary.monthlyExpenses / budgetSummary.totalLimit) * 100)}% of budget used`
+                    : "No budget set")}
+            </p>
           </div>
         </div>
       </motion.div>
 
-      {/* Secondary Row: Credit/Debt, Budget, and Gamification */}
+
+      {/* Secondary Row: Credit/Debt and Budget */}
       <motion.div
         variants={itemVariants}
-        className={cn("grid gap-6", showGamification ? "md:grid-cols-3" : "md:grid-cols-2")}
+        className="grid gap-6 md:grid-cols-2"
       >
         {/* Budget Status Card */}
         <div
@@ -1054,8 +766,101 @@ export function DashboardClient() {
           </div>
         </div>
 
-        {/* Level & XP Card */}
-        {showGamification && <XpCard stats={summary?.stats} loading={summaryLoading} />}
+
+      </motion.div>
+
+      {/* Recurring Expenses Card */}
+      <motion.div variants={itemVariants}>
+        <div className={cn(
+          "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300",
+          "shadow-[0_1px_3px_oklch(0_0_0/30%)] hover:shadow-[0_4px_14px_oklch(0_0_0/40%)] hover:border-border"
+        )}>
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 pt-5 pb-3.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground/60 border border-border px-1.5 py-0.5 rounded-md">03</span>
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Recurring Expenses</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {recurringExpenses.filter(r => r.isActive).length > 0 && (
+                <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                  {formatCurrency(recurringExpenses.filter(r => r.isActive).reduce((s, r) => s + r.amount, 0))}/mo
+                </span>
+              )}
+              <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
+                <Repeat className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+          <div className="w-full border-t border-border/50 border-dashed" />
+
+          {/* List */}
+          <div className="p-4">
+            {recurringExpenses.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center gap-1.5">
+                <CalendarClock className="w-8 h-8 text-muted-foreground/30" />
+                <p className="text-xs text-muted-foreground font-medium">No recurring expenses set up.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {recurringExpenses
+                  .filter(r => r.isActive)
+                  .sort((a, b) => new Date(a.nextDueDate).getTime() - new Date(b.nextDueDate).getTime())
+                  .map((rec) => {
+                    const due = new Date(rec.nextDueDate);
+                    const today = new Date();
+                    const diffDays = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+                    const isOverdue = diffDays < 0;
+                    const isDueSoon = !isOverdue && diffDays <= 3;
+                    return (
+                      <div
+                        key={rec._id}
+                        className={cn(
+                          "flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs transition-all",
+                          isOverdue
+                            ? "border-rose-500/20 bg-rose-500/10"
+                            : isDueSoon
+                            ? "border-amber-500/20 bg-amber-500/10"
+                            : "border-white/5 bg-white/5"
+                        )}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full shrink-0",
+                              isOverdue ? "bg-rose-500" : isDueSoon ? "bg-amber-400" : "bg-primary/50"
+                            )}
+                          />
+                          <div className="min-w-0">
+                            <p className="font-semibold text-foreground truncate">{rec.category}</p>
+                            <p className={cn(
+                              "text-[10px] font-medium",
+                              isOverdue ? "text-rose-500" : isDueSoon ? "text-amber-500" : "text-muted-foreground"
+                            )}>
+                              {isOverdue
+                                ? `Overdue by ${Math.abs(diffDays)}d`
+                                : diffDays === 0
+                                ? "Due today"
+                                : `Due in ${diffDays}d`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 ml-2">
+                          <p className="font-bold text-foreground">{formatCurrency(rec.amount)}</p>
+                          <span className={cn(
+                            "text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-full",
+                            "bg-muted text-muted-foreground"
+                          )}>
+                            {rec.frequency}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        </div>
       </motion.div>
 
       {/* Content Grid */}

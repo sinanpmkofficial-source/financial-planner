@@ -66,10 +66,20 @@ export async function updateExpense(
   try {
     const parsed = expenseSchema.parse(data);
     await dbConnect();
-    await Expense.findByIdAndUpdate(id, {
-      ...parsed,
+    
+    const updatePayload: any = {
+      amount: parsed.amount,
+      category: parsed.category,
+      tag: parsed.tag,
+      note: parsed.note,
       date: new Date(parsed.date),
-    });
+    };
+
+    if (parsed.recurringExpenseId !== undefined) {
+      updatePayload.recurringExpenseId = parsed.recurringExpenseId || null;
+    }
+
+    await Expense.findByIdAndUpdate(id, updatePayload);
     revalidatePath("/");
     revalidatePath("/expenses");
     return { success: true };

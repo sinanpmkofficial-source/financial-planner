@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DatePeriodFilter } from "@/components/layout/month-year-picker";
+import { DbSyncIndicator } from "@/components/shared/db-sync-indicator";
 
 const navGroups = [
   {
@@ -54,11 +55,14 @@ export function Sidebar() {
   return (
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-white/5 bg-card/85 backdrop-blur-xl">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-6 h-16 border-b border-white/5">
-        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-          <span className="text-primary-foreground font-bold text-sm">₹</span>
+      <div className="flex items-center justify-between px-6 h-16 border-b border-white/5">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">₹</span>
+          </div>
+          <span className="font-semibold text-lg tracking-tight">Finance</span>
         </div>
-        <span className="font-semibold text-lg tracking-tight">Finance</span>
+        <DbSyncIndicator />
       </div>
 
       {/* Nav */}
