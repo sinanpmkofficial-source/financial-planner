@@ -429,6 +429,26 @@ export function DashboardClient() {
       {/* Compact Metrics Bar */}
       <motion.div variants={itemVariants}>
         <div className="flex items-stretch gap-0 border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+          {/* Available Balance */}
+          <div className="flex-1 px-4 py-3.5 flex flex-col gap-0.5 min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Available Balance
+            </p>
+            <p className="text-xl font-extrabold tracking-tight text-foreground">
+              {summaryLoading || !summary ? (
+                <span className="inline-block h-6 w-24 bg-muted animate-pulse rounded-md" />
+              ) : (
+                <CountUp value={summary.currentBalance} formatter={formatCurrency} />
+              )}
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {summaryLoading || !summary ? "" : "All-time net balance"}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="w-px bg-border self-stretch" />
+
           {/* Safe to Spend */}
           <div className="flex-1 px-4 py-3.5 flex flex-col gap-0.5 min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
