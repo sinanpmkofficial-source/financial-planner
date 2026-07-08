@@ -33,6 +33,11 @@ export function CategoryIcon({ name, className = "w-4 h-4" }: CategoryIconProps)
     "🎵": "Music",
     "🎁": "Gift",
     "☕": "Coffee",
+    "🎯": "Target",
+    "💰": "PiggyBank",
+    "🏍️": "Bike",
+    "💍": "Gem",
+    "🏖️": "Palmtree",
   };
 
   const resolvedName = emojiMap[name] || name;
