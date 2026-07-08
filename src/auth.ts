@@ -11,7 +11,14 @@ const credentialsSchema = z.object({
 });
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  // Persistent login: keep the session alive for a year and refresh its expiry
+  // on activity, so users stay signed in across browser restarts until they
+  // explicitly log out.
+  session: {
+    strategy: "jwt",
+    maxAge: 60 * 60 * 24 * 365, // 1 year
+    updateAge: 60 * 60 * 24, // refresh the token at most once per day
+  },
   pages: {
     signIn: "/sign-in",
   },
