@@ -93,6 +93,10 @@ export function TransactionForm({
   const frequency = watch("frequency");
   const dateValue = watch("date");
 
+  // Shared minimal field-label style: small, muted, uppercase.
+  const fieldLabel =
+    "text-[11px] font-medium uppercase tracking-wide text-muted-foreground";
+
   useEffect(() => {
     if (open) {
       getUserSettings().then((settings) => {
@@ -242,69 +246,64 @@ export function TransactionForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+          <DialogTitle className="text-base font-semibold tracking-tight">
             {isEditing
               ? `Edit ${type === "expense" ? "Expense" : "Income"}`
-              : `Add ${type === "expense" ? "Expense" : "Income"}`}
+              : "New Transaction"}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Segmented type toggle, only enabled when creating a new record */}
-          <div className="space-y-2">
-            <Label>Transaction Type</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={isEditing}
-                onClick={() => setValue("type", "expense", { shouldValidate: true })}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
-                  type === "expense"
-                    ? "border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                    : "border-border text-muted-foreground hover:bg-muted/40",
-                  isEditing && "opacity-60 cursor-not-allowed"
-                )}
-              >
-                <TrendingDown className="w-4 h-4" /> Expense
-              </button>
-              <button
-                type="button"
-                disabled={isEditing}
-                onClick={() => setValue("type", "income", { shouldValidate: true })}
-                className={cn(
-                  "flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
-                  type === "income"
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : "border-border text-muted-foreground hover:bg-muted/40",
-                  isEditing && "opacity-60 cursor-not-allowed"
-                )}
-              >
-                <TrendingUp className="w-4 h-4" /> Income
-              </button>
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 px-6 py-5">
+          {/* Segmented type toggle — inset track, only enabled when creating */}
+          <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-muted/60 border border-border/50">
+            <button
+              type="button"
+              disabled={isEditing}
+              onClick={() => setValue("type", "expense", { shouldValidate: true })}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer",
+                type === "expense"
+                  ? "bg-background shadow-sm text-rose-600 dark:text-rose-400"
+                  : "text-muted-foreground hover:text-foreground",
+                isEditing && "opacity-60 cursor-not-allowed"
+              )}
+            >
+              <TrendingDown className="w-4 h-4" /> Expense
+            </button>
+            <button
+              type="button"
+              disabled={isEditing}
+              onClick={() => setValue("type", "income", { shouldValidate: true })}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer",
+                type === "income"
+                  ? "bg-background shadow-sm text-emerald-600 dark:text-emerald-400"
+                  : "text-muted-foreground hover:text-foreground",
+                isEditing && "opacity-60 cursor-not-allowed"
+              )}
+            >
+              <TrendingUp className="w-4 h-4" /> Income
+            </button>
           </div>
 
-          {/* Amount hero field */}
-          <div className="space-y-2">
-            <Label htmlFor="transaction-amount">Amount</Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl font-semibold text-muted-foreground">
-                ₹
-              </span>
-              <Input
-                id="transaction-amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                className={cn(
-                  "!h-16 !text-2xl !font-bold !pl-9",
-                  type === "expense" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
-                )}
-                {...register("amount", { valueAsNumber: true })}
-              />
-            </div>
+          {/* Amount field */}
+          <div className="space-y-1.5">
+            <Label htmlFor="transaction-amount" className={fieldLabel}>Amount</Label>
+            <Input
+              id="transaction-amount"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              placeholder="0.00"
+              className={cn(
+                "h-11 text-lg font-semibold tabular-nums",
+                type === "expense"
+                  ? "text-rose-600 dark:text-rose-400"
+                  : "text-emerald-600 dark:text-emerald-400"
+              )}
+              {...register("amount", { valueAsNumber: true })}
+            />
             {errors.amount && (
               <p className="text-xs text-destructive">{errors.amount.message}</p>
             )}
@@ -314,8 +313,8 @@ export function TransactionForm({
           {type === "expense" ? (
             <>
               {/* Category */}
-              <div className="space-y-2">
-                <Label>Category</Label>
+              <div className="space-y-1.5">
+                <Label className={fieldLabel}>Category</Label>
                 <Select
                   value={category || ""}
                   onValueChange={(v) =>
@@ -348,8 +347,8 @@ export function TransactionForm({
               </div>
 
               {/* Tagging Grid */}
-              <div className="space-y-2">
-                <Label>Financial Tag</Label>
+              <div className="space-y-1.5">
+                <Label className={fieldLabel}>Financial Tag</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { value: "Needs", label: "Needs", desc: "Bills, groceries, rent", color: "hsl(142, 72%, 45%)" },
@@ -438,8 +437,8 @@ export function TransactionForm({
               </div>
             </>
           ) : (
-            <div className="space-y-2">
-              <Label htmlFor="transaction-source">Source</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="transaction-source" className={fieldLabel}>Source</Label>
               <Input
                 id="transaction-source"
                 placeholder="e.g. Salary, Freelance"
@@ -452,8 +451,8 @@ export function TransactionForm({
           )}
 
           {/* Note field */}
-          <div className="space-y-2">
-            <Label htmlFor="transaction-note">Note</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="transaction-note" className={fieldLabel}>Note</Label>
             <Input
               id="transaction-note"
               placeholder="Optional note"
@@ -462,8 +461,8 @@ export function TransactionForm({
           </div>
 
           {/* Date field */}
-          <div className="space-y-2 flex flex-col">
-            <Label htmlFor="transaction-date">Date</Label>
+          <div className="space-y-1.5 flex flex-col">
+            <Label htmlFor="transaction-date" className={fieldLabel}>Date</Label>
             <DatePicker
               date={dateValue ? new Date(dateValue) : new Date()}
               onSelect={(d) => {
@@ -478,20 +477,20 @@ export function TransactionForm({
           </div>
 
           {/* Footer actions */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-3 mt-1 border-t border-border/60">
             <Button
               type="button"
-              variant="outline"
-              className="flex-1 cursor-pointer"
+              variant="ghost"
+              className="flex-1 cursor-pointer mt-3"
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" className="flex-1 cursor-pointer flex items-center justify-center" disabled={loading}>
+            <Button type="submit" className="flex-1 cursor-pointer flex items-center justify-center mt-3" disabled={loading}>
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : isEditing ? (
-                "Update"
+                "Save changes"
               ) : (
                 `Add ${type === "expense" ? "Expense" : "Income"}`
               )}
