@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaRegister } from "@/components/pwa-register";
 import { ThemeSync } from "@/components/shared/theme-sync";
@@ -38,15 +37,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={`${inter.variable} h-full antialiased`}>
-        <body className="min-h-full flex flex-col font-sans">
-          <ThemeSync />
-          <PwaRegister />
-          {children}
-          <Toaster position="top-right" richColors closeButton />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-sans">
+        <ThemeSync />
+        <PwaRegister />
+        {children}
+        <Toaster position="top-right" richColors closeButton />
+      </body>
+    </html>
   );
 }

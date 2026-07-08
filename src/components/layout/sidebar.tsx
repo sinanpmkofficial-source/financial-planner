@@ -14,9 +14,9 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { UserButton } from "@clerk/nextjs";
 import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 import { DbSyncIndicator } from "@/components/shared/db-sync-indicator";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
 const navGroups = [
   {
@@ -108,11 +108,8 @@ export function Sidebar() {
       )}
 
       {/* Account */}
-      <div className="px-4 py-3 border-t border-border flex items-center gap-3">
-        <UserButton
-          appearance={{ elements: { avatarBox: "w-8 h-8" } }}
-          showName
-        />
+      <div className="px-3 py-3 border-t border-border">
+        <SignOutButton />
       </div>
     </aside>
   );

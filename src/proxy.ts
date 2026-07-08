@@ -1,24 +1,11 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-
-// Next.js 16 renamed the `middleware` file convention to `proxy`.
-// Everything except the auth pages (and the health check) requires a session.
-const isPublicRoute = createRouteMatcher([
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/health(.*)",
-]);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
-  }
-});
+// Next.js 16 renamed the `middleware` file convention to `proxy` (Node runtime).
+// NextAuth's `auth` wrapper runs the `authorized` callback for each request to
+// gate access; unauthenticated users are redirected to the sign-in page.
+export { auth as proxy } from "@/auth";
 
 export const config = {
   matcher: [
-    // Skip Next internals and static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
+    // Run on everything except Next internals, the auth API, and static assets.
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|manifest.webmanifest|icons|.*\\.(?:png|jpg|jpeg|svg|webp|ico|webmanifest)$).*)",
   ],
 };
