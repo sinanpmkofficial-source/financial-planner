@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, PiggyBank, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { getUserSettings } from "@/actions/settings";
+import { runOptimistic } from "@/lib/optimistic";
 import type { BudgetWithSpent } from "@/types";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -93,14 +94,24 @@ export function BudgetsClient() {
   const catIconMap = new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.icon]));
 
   const handleDelete = async (id: string) => {
-    const result = await deleteBudget(id);
-    if (result.success) {
-      toast.success("Budget deleted");
-      setDashboardDirty(true);
-      await fetchData();
-    } else {
-      toast.error(result.error);
-    }
+    const prev = budgets;
+    await runOptimistic({
+      apply: () => {
+        const next = prev.filter((b) => b._id !== id);
+        setBudgets(next);
+        updateBudgetsCache(cacheKey, next);
+      },
+      rollback: () => {
+        setBudgets(prev);
+        updateBudgetsCache(cacheKey, prev);
+      },
+      action: () => deleteBudget(id),
+      onSuccess: () => {
+        toast.success("Budget deleted");
+        setDashboardDirty(true);
+      },
+      onError: (msg) => toast.error(msg),
+    });
   };
 
   const handleEdit = (budget: BudgetWithSpent) => {

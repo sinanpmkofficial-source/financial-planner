@@ -9,6 +9,7 @@ import Budget from "@/models/budget";
 import GoalContribution from "@/models/goal-contribution";
 import { calculateLevel } from "@/lib/xp";
 import { computeLiquidCash } from "@/lib/finance";
+import { getCurrentUserId } from "@/lib/session";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import type { UserStats, DashboardSummary } from "@/types";
 import {
@@ -20,9 +21,10 @@ import {
 
 async function getOrCreateStats() {
   await dbConnect();
-  let stats = await UserStatsModel.findOne();
+  const userId = await getCurrentUserId();
+  let stats = await UserStatsModel.findOne({ userId });
   if (!stats) {
-    stats = await UserStatsModel.create({ totalXp: 0, level: 1 });
+    stats = await UserStatsModel.create({ userId, totalXp: 0, level: 1 });
   }
   return stats;
 }
@@ -46,6 +48,7 @@ export async function getDashboardSummary(
   timezoneOffset?: number
 ): Promise<DashboardSummary> {
   await dbConnect();
+  const userId = await getCurrentUserId();
 
   const clientNow = getClientNow(timezoneOffset);
   const currentMonth = month ?? (clientNow.getMonth() + 1);
@@ -73,50 +76,50 @@ export async function getDashboardSummary(
     stats,
     allContributionsAgg,
   ] = await Promise.all([
-    Income.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
-    Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
-    
-    Income.aggregate([
-      { $match: { date: { $gte: todayStart, $lte: todayEnd } } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]),
-    Expense.aggregate([
-      { $match: { date: { $gte: todayStart, $lte: todayEnd } } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]),
-    
+    Income.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
+    Expense.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
 
     Income.aggregate([
-      { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
+      { $match: { userId, date: { $gte: todayStart, $lte: todayEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
     Expense.aggregate([
-      { $match: { date: { $gte: weekStart, $lte: weekEnd } } },
+      { $match: { userId, date: { $gte: todayStart, $lte: todayEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
-    
+
+
     Income.aggregate([
-      { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
+      { $match: { userId, date: { $gte: weekStart, $lte: weekEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
     Expense.aggregate([
-      { $match: { date: { $gte: monthStart, $lte: monthEnd } } },
+      { $match: { userId, date: { $gte: weekStart, $lte: weekEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
 
     Income.aggregate([
-      { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+      { $match: { userId, date: { $gte: monthStart, $lte: monthEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
     Expense.aggregate([
-      { $match: { date: { $gte: yearStart, $lte: yearEnd } } },
+      { $match: { userId, date: { $gte: monthStart, $lte: monthEnd } } },
       { $group: { _id: null, total: { $sum: "$amount" } } },
     ]),
-    
-    BorrowLend.find({ status: "pending" }).lean(),
-    Budget.find({ month: currentMonth, year: currentYear }).lean(),
+
+    Income.aggregate([
+      { $match: { userId, date: { $gte: yearStart, $lte: yearEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+    Expense.aggregate([
+      { $match: { userId, date: { $gte: yearStart, $lte: yearEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
+
+    BorrowLend.find({ userId, status: "pending" }).lean(),
+    Budget.find({ userId, month: currentMonth, year: currentYear }).lean(),
     getOrCreateStats(),
-    GoalContribution.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+    GoalContribution.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
   ]);
   
   const allIncome = allIncomeAgg[0]?.total ?? 0;

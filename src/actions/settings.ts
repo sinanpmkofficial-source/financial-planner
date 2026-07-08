@@ -4,13 +4,15 @@ import { dbConnect } from "@/lib/db";
 import UserSettings from "@/models/user-settings";
 import Expense from "@/models/expense";
 import Budget from "@/models/budget";
+import { getCurrentUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getUserSettings() {
   await dbConnect();
-  let settings = await UserSettings.findOne().lean();
+  const userId = await getCurrentUserId();
+  let settings = await UserSettings.findOne({ userId }).lean();
   if (!settings) {
-    const newSettings = await UserSettings.create({});
+    const newSettings = await UserSettings.create({ userId });
     settings = newSettings.toObject();
   }
   return JSON.parse(JSON.stringify(settings));
@@ -23,9 +25,10 @@ export async function updateUserSettings(data: {
 }) {
   try {
     await dbConnect();
-    let settings = await UserSettings.findOne();
+    const userId = await getCurrentUserId();
+    let settings = await UserSettings.findOne({ userId });
     if (!settings) {
-      settings = new UserSettings();
+      settings = new UserSettings({ userId });
     }
     if (data.currency !== undefined) settings.currency = data.currency;
     if (data.budgetStartDay !== undefined) settings.budgetStartDay = data.budgetStartDay;
@@ -54,11 +57,12 @@ export async function addCategory(category: {
 }) {
   try {
     await dbConnect();
-    let settings = await UserSettings.findOne();
+    const userId = await getCurrentUserId();
+    let settings = await UserSettings.findOne({ userId });
     if (!settings) {
-      settings = new UserSettings();
+      settings = new UserSettings({ userId });
     }
-    
+
     const exists = settings.categories.some(
       (c: { name: string }) => c.name.toLowerCase() === category.name.toLowerCase()
     );
@@ -87,11 +91,12 @@ export async function updateCategory(
 ) {
   try {
     await dbConnect();
-    const settings = await UserSettings.findOne();
+    const userId = await getCurrentUserId();
+    const settings = await UserSettings.findOne({ userId });
     if (!settings) {
       return { success: false, error: "Settings not found" };
     }
-    
+
     const catIndex = settings.categories.findIndex(
       (c: { name: string }) => c.name.toLowerCase() === oldName.toLowerCase()
     );
@@ -112,8 +117,8 @@ export async function updateCategory(
     await settings.save();
     
     if (oldName.toLowerCase() !== category.name.toLowerCase()) {
-      await Expense.updateMany({ category: oldName }, { category: category.name });
-      await Budget.updateMany({ category: oldName }, { category: category.name });
+      await Expense.updateMany({ userId, category: oldName }, { category: category.name });
+      await Budget.updateMany({ userId, category: oldName }, { category: category.name });
     }
     
     revalidatePath("/");
@@ -138,11 +143,12 @@ export async function deleteCategory(name: string) {
     }
     
     await dbConnect();
-    const settings = await UserSettings.findOne();
+    const userId = await getCurrentUserId();
+    const settings = await UserSettings.findOne({ userId });
     if (!settings) {
       return { success: false, error: "Settings not found" };
     }
-    
+
     const catIndex = settings.categories.findIndex(
       (c: { name: string }) => c.name.toLowerCase() === name.toLowerCase()
     );
@@ -160,8 +166,8 @@ export async function deleteCategory(name: string) {
     settings.categories.splice(catIndex, 1);
     await settings.save();
     
-    await Expense.updateMany({ category: name }, { category: "Other" });
-    await Budget.deleteMany({ category: name });
+    await Expense.updateMany({ userId, category: name }, { category: "Other" });
+    await Budget.deleteMany({ userId, category: name });
     
     revalidatePath("/");
     revalidatePath("/settings");

@@ -46,6 +46,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    // Persist the user id onto the JWT so it's available without a DB lookup.
+    jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    // Expose the user id on the session so server actions can scope by owner.
+    session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    },
     // Runs in the proxy (Node runtime) for every matched request.
     authorized({ auth, request }) {
       const isLoggedIn = !!auth?.user;

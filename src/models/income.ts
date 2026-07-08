@@ -1,6 +1,7 @@
-import mongoose, { Schema, type Document } from "mongoose";
+import mongoose, { Schema, type Document, type Types } from "mongoose";
 
 export interface IIncome extends Document {
+  userId: Types.ObjectId;
   amount: number;
   source: string;
   note?: string;
@@ -11,6 +12,7 @@ export interface IIncome extends Document {
 
 const IncomeSchema = new Schema<IIncome>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     amount: { type: Number, required: true, min: 0 },
     source: { type: String, required: true },
     note: { type: String, default: "" },
@@ -19,7 +21,7 @@ const IncomeSchema = new Schema<IIncome>(
   { timestamps: true }
 );
 
-IncomeSchema.index({ date: -1 });
+IncomeSchema.index({ userId: 1, date: -1 });
 
 if (mongoose.models.Income) {
   mongoose.deleteModel("Income");

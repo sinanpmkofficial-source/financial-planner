@@ -1,3 +1,4 @@
+import { Types } from "mongoose";
 import { dbConnect } from "@/lib/db";
 import Expense from "@/models/expense";
 import Income from "@/models/income";
@@ -45,16 +46,17 @@ const expenseNotes: Record<string, string[]> = {
   Other: ["Miscellaneous"],
 };
 
-export async function seedDatabase() {
+export async function seedDatabase(userIdInput: string | Types.ObjectId) {
   await dbConnect();
+  const userId = new Types.ObjectId(userIdInput);
 
-  // Clear existing data
+  // Clear this user's existing data only
   await Promise.all([
-    Expense.deleteMany({}),
-    Income.deleteMany({}),
-    BorrowLend.deleteMany({}),
-    Budget.deleteMany({}),
-    UserStats.deleteMany({}),
+    Expense.deleteMany({ userId }),
+    Income.deleteMany({ userId }),
+    BorrowLend.deleteMany({ userId }),
+    Budget.deleteMany({ userId }),
+    UserStats.deleteMany({ userId }),
   ]);
 
   const now = new Date();
@@ -71,6 +73,7 @@ export async function seedDatabase() {
         EXPENSE_CATEGORIES[randomBetween(0, EXPENSE_CATEGORIES.length - 1)];
       const notes = expenseNotes[category] ?? [""];
       expenses.push({
+        userId,
         amount: randomBetween(50, 5000),
         category,
         note: notes[randomBetween(0, notes.length - 1)],
@@ -86,6 +89,7 @@ export async function seedDatabase() {
     const monthStart = startOfMonth(subMonths(now, m));
     // Main salary
     incomes.push({
+      userId,
       amount: randomBetween(40000, 80000),
       source: "Salary",
       note: "Monthly salary",
@@ -97,6 +101,7 @@ export async function seedDatabase() {
       const source =
         incomeSources[randomBetween(1, incomeSources.length - 1)];
       incomes.push({
+        userId,
         amount: randomBetween(2000, 20000),
         source,
         note: `${source} payment`,
@@ -115,6 +120,7 @@ export async function seedDatabase() {
     const person = personNames[randomBetween(0, personNames.length - 1)];
     const type = Math.random() > 0.5 ? "borrowed" : "lent";
     borrowLendRecords.push({
+      userId,
       personName: person,
       amount: randomBetween(500, 10000),
       type,
@@ -140,6 +146,7 @@ export async function seedDatabase() {
     Other: 2000,
   };
   const budgets = EXPENSE_CATEGORIES.map((category) => ({
+    userId,
     category,
     amount: budgetAmounts[category] ?? 3000,
     month: currentMonth,
@@ -149,6 +156,7 @@ export async function seedDatabase() {
 
   // User stats
   await UserStats.create({
+    userId,
     totalXp: 175,
     level: 2,
     lastExpenseDate: now,
