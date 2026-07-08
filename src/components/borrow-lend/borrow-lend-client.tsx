@@ -192,8 +192,19 @@ export function BorrowLendClient() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   {/* Details section */}
                   <div className="flex items-start gap-3 flex-1 min-w-0">
-                    <span className="text-xl shrink-0 mt-0.5">
-                      {record.type === "borrowed" ? "🔴" : "🟢"}
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl mt-0.5",
+                        record.type === "borrowed"
+                          ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                      )}
+                    >
+                      {record.type === "borrowed" ? (
+                        <ArrowDownLeft className="w-4 h-4" />
+                      ) : (
+                        <ArrowUpRight className="w-4 h-4" />
+                      )}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">

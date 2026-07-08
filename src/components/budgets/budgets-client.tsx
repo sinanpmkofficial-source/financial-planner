@@ -40,7 +40,7 @@ const itemVariants = {
 
 
 export function BudgetsClient() {
-  const { dateRange, setDashboardDirty, budgetsCache, updateBudgetsCache } = useUIStore();
+  const { setDashboardDirty, budgetsCache, updateBudgetsCache } = useUIStore();
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +49,9 @@ export function BudgetsClient() {
     BudgetWithSpent | undefined
   >();
 
-  const cacheKey = `${dateRange.from.getMonth() + 1}-${dateRange.from.getFullYear()}`;
+  // Budgets always operate on the current month, independent of any global period.
+  const now = new Date();
+  const cacheKey = `${now.getMonth() + 1}-${now.getFullYear()}`;
 
   // Hydrate budgets state from local cache on client mount / period change
   useEffect(() => {
@@ -68,8 +70,9 @@ export function BudgetsClient() {
       setLoading(true);
     }
     try {
-      const month = dateRange.from.getMonth() + 1;
-      const year = dateRange.from.getFullYear();
+      const d = new Date();
+      const month = d.getMonth() + 1;
+      const year = d.getFullYear();
       const data = await getBudgetsWithSpent(month, year);
       setBudgets(data);
       updateBudgetsCache(cacheKey, data);
@@ -79,7 +82,7 @@ export function BudgetsClient() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange, cacheKey, updateBudgetsCache]);
+  }, [cacheKey, updateBudgetsCache]);
 
   useEffect(() => {
     fetchData();
@@ -132,7 +135,6 @@ export function BudgetsClient() {
       <PageHeader
         title="Budgets"
         description={`${formatCurrency(totalSpent)} of ${formatCurrency(totalBudget)} spent`}
-        showMonthPicker
         action={
           <Button onClick={() => setFormOpen(true)} size="sm" className="gap-1.5">
             <Plus className="w-3.5 h-3.5" />
