@@ -259,7 +259,7 @@ export function AnalyticsClient() {
       {loading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-[120px] rounded-2xl bg-muted/60 animate-pulse border border-border/40" />
+            <div key={i} className="h-[92px] sm:h-[120px] rounded-2xl bg-muted/60 animate-pulse border border-border/40" />
           ))}
         </div>
       ) : report ? (
