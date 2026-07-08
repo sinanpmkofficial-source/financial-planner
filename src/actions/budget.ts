@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/db";
 import Budget from "@/models/budget";
 import Expense from "@/models/expense";
 import { budgetSchema, type BudgetFormData } from "@/validations/budget";
+import { getCurrentUserId } from "@/lib/session";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import { revalidatePath } from "next/cache";
 import type { Budget as BudgetType, BudgetWithSpent } from "@/types";
@@ -13,7 +14,8 @@ export async function getBudgets(
   year: number
 ): Promise<BudgetType[]> {
   await dbConnect();
-  const docs = await Budget.find({ month, year }).sort({ category: 1 }).lean();
+  const userId = await getCurrentUserId();
+  const docs = await Budget.find({ userId, month, year }).sort({ category: 1 }).lean();
   return serializeDoc<BudgetType[]>(docs);
 }
 
@@ -22,11 +24,12 @@ export async function getBudgetsWithSpent(
   year: number
 ): Promise<BudgetWithSpent[]> {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const { start, end } = getMonthDateRange(month, year);
 
-  const budgets = await Budget.find({ month, year }).lean();
+  const budgets = await Budget.find({ userId, month, year }).lean();
   const expensesByCategory = await Expense.aggregate([
-    { $match: { date: { $gte: start, $lte: end } } },
+    { $match: { userId, date: { $gte: start, $lte: end } } },
     { $group: { _id: "$category", total: { $sum: "$amount" } } },
   ]);
 
@@ -56,8 +59,10 @@ export async function createBudget(
   try {
     const parsed = budgetSchema.parse(data);
     await dbConnect();
+    const userId = await getCurrentUserId();
 
     const existing = await Budget.findOne({
+      userId,
       category: parsed.category,
       month: parsed.month,
       year: parsed.year,
@@ -70,7 +75,7 @@ export async function createBudget(
       };
     }
 
-    await Budget.create(parsed);
+    await Budget.create({ ...parsed, userId });
     revalidatePath("/");
     revalidatePath("/budgets");
     return { success: true };
@@ -89,7 +94,11 @@ export async function updateBudget(
   try {
     const parsed = budgetSchema.parse(data);
     await dbConnect();
-    await Budget.findByIdAndUpdate(id, parsed);
+    const userId = await getCurrentUserId();
+    const updated = await Budget.findOneAndUpdate({ _id: id, userId }, parsed);
+    if (!updated) {
+      return { success: false, error: "Budget not found" };
+    }
     revalidatePath("/");
     revalidatePath("/budgets");
     return { success: true };
@@ -106,7 +115,11 @@ export async function deleteBudget(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await dbConnect();
-    await Budget.findByIdAndDelete(id);
+    const userId = await getCurrentUserId();
+    const deleted = await Budget.findOneAndDelete({ _id: id, userId });
+    if (!deleted) {
+      return { success: false, error: "Budget not found" };
+    }
     revalidatePath("/");
     revalidatePath("/budgets");
     return { success: true };

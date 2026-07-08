@@ -3,6 +3,7 @@
 import { dbConnect } from "@/lib/db";
 import Income from "@/models/income";
 import { incomeSchema, type IncomeFormData } from "@/validations/income";
+import { getCurrentUserId } from "@/lib/session";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import { awardXp } from "@/actions/stats";
 import { XP_REWARDS } from "@/constants";
@@ -14,8 +15,9 @@ export async function getIncomes(
   year: number
 ): Promise<IncomeType[]> {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const { start, end } = getMonthDateRange(month, year);
-  const docs = await Income.find({ date: { $gte: start, $lte: end } })
+  const docs = await Income.find({ userId, date: { $gte: start, $lte: end } })
     .sort({ date: -1 })
     .lean();
   return serializeDoc<IncomeType[]>(docs);
@@ -26,7 +28,9 @@ export async function getIncomesByDateRange(
   endDate: Date
 ): Promise<IncomeType[]> {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const docs = await Income.find({
+    userId,
     date: { $gte: startDate, $lte: endDate },
   })
     .sort({ date: -1 })
@@ -36,7 +40,8 @@ export async function getIncomesByDateRange(
 
 export async function getRecentIncomes(limit = 5): Promise<IncomeType[]> {
   await dbConnect();
-  const docs = await Income.find().sort({ date: -1 }).limit(limit).lean();
+  const userId = await getCurrentUserId();
+  const docs = await Income.find({ userId }).sort({ date: -1 }).limit(limit).lean();
   return serializeDoc<IncomeType[]>(docs);
 }
 
@@ -46,7 +51,8 @@ export async function createIncome(
   try {
     const parsed = incomeSchema.parse(data);
     await dbConnect();
-    await Income.create({ ...parsed, date: new Date(parsed.date) });
+    const userId = await getCurrentUserId();
+    await Income.create({ ...parsed, userId, date: new Date(parsed.date) });
     await awardXp(XP_REWARDS.LOG_INCOME);
     revalidatePath("/");
     revalidatePath("/income");
@@ -66,10 +72,17 @@ export async function updateIncome(
   try {
     const parsed = incomeSchema.parse(data);
     await dbConnect();
-    await Income.findByIdAndUpdate(id, {
-      ...parsed,
-      date: new Date(parsed.date),
-    });
+    const userId = await getCurrentUserId();
+    const updated = await Income.findOneAndUpdate(
+      { _id: id, userId },
+      {
+        ...parsed,
+        date: new Date(parsed.date),
+      }
+    );
+    if (!updated) {
+      return { success: false, error: "Income not found" };
+    }
     revalidatePath("/");
     revalidatePath("/income");
     return { success: true };
@@ -86,7 +99,11 @@ export async function deleteIncome(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await dbConnect();
-    await Income.findByIdAndDelete(id);
+    const userId = await getCurrentUserId();
+    const deleted = await Income.findOneAndDelete({ _id: id, userId });
+    if (!deleted) {
+      return { success: false, error: "Income not found" };
+    }
     revalidatePath("/");
     revalidatePath("/income");
     return { success: true };
@@ -100,9 +117,10 @@ export async function deleteIncome(
 
 export async function getIncomeTotals(month: number, year: number) {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const { start, end } = getMonthDateRange(month, year);
   const result = await Income.aggregate([
-    { $match: { date: { $gte: start, $lte: end } } },
+    { $match: { userId, date: { $gte: start, $lte: end } } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
   return result[0]?.total ?? 0;

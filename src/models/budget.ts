@@ -1,7 +1,7 @@
-import mongoose, { Schema, type Document } from "mongoose";
-import { EXPENSE_CATEGORIES } from "@/constants";
+import mongoose, { Schema, type Document, type Types } from "mongoose";
 
 export interface IBudget extends Document {
+  userId: Types.ObjectId;
   category: string;
   amount: number;
   month: number;
@@ -12,6 +12,7 @@ export interface IBudget extends Document {
 
 const BudgetSchema = new Schema<IBudget>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     category: {
       type: String,
       required: true,
@@ -23,8 +24,8 @@ const BudgetSchema = new Schema<IBudget>(
   { timestamps: true }
 );
 
-BudgetSchema.index({ month: 1, year: 1 });
-BudgetSchema.index({ category: 1, month: 1, year: 1 }, { unique: true });
+BudgetSchema.index({ userId: 1, month: 1, year: 1 });
+BudgetSchema.index({ userId: 1, category: 1, month: 1, year: 1 }, { unique: true });
 
 if (mongoose.models.Budget) {
   mongoose.deleteModel("Budget");

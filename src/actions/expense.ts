@@ -3,6 +3,7 @@
 import { dbConnect } from "@/lib/db";
 import Expense from "@/models/expense";
 import { expenseSchema, type ExpenseFormData } from "@/validations/expense";
+import { getCurrentUserId } from "@/lib/session";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import { awardXp } from "@/actions/stats";
 import { XP_REWARDS } from "@/constants";
@@ -14,8 +15,9 @@ export async function getExpenses(
   year: number
 ): Promise<ExpenseType[]> {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const { start, end } = getMonthDateRange(month, year);
-  const docs = await Expense.find({ date: { $gte: start, $lte: end } })
+  const docs = await Expense.find({ userId, date: { $gte: start, $lte: end } })
     .sort({ date: -1 })
     .lean();
   return serializeDoc<ExpenseType[]>(docs);
@@ -26,7 +28,9 @@ export async function getExpensesByDateRange(
   endDate: Date
 ): Promise<ExpenseType[]> {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const docs = await Expense.find({
+    userId,
     date: { $gte: startDate, $lte: endDate },
   })
     .sort({ date: -1 })
@@ -36,7 +40,8 @@ export async function getExpensesByDateRange(
 
 export async function getRecentExpenses(limit = 5): Promise<ExpenseType[]> {
   await dbConnect();
-  const docs = await Expense.find().sort({ date: -1 }).limit(limit).lean();
+  const userId = await getCurrentUserId();
+  const docs = await Expense.find({ userId }).sort({ date: -1 }).limit(limit).lean();
   return serializeDoc<ExpenseType[]>(docs);
 }
 
@@ -46,7 +51,8 @@ export async function createExpense(
   try {
     const parsed = expenseSchema.parse(data);
     await dbConnect();
-    await Expense.create({ ...parsed, date: new Date(parsed.date) });
+    const userId = await getCurrentUserId();
+    await Expense.create({ ...parsed, userId, date: new Date(parsed.date) });
     await awardXp(XP_REWARDS.LOG_EXPENSE);
     revalidatePath("/");
     revalidatePath("/expenses");
@@ -66,8 +72,16 @@ export async function updateExpense(
   try {
     const parsed = expenseSchema.parse(data);
     await dbConnect();
-    
-    const updatePayload: any = {
+    const userId = await getCurrentUserId();
+
+    const updatePayload: {
+      amount: number;
+      category: string;
+      tag: ExpenseFormData["tag"];
+      note?: string;
+      date: Date;
+      recurringExpenseId?: string | null;
+    } = {
       amount: parsed.amount,
       category: parsed.category,
       tag: parsed.tag,
@@ -79,7 +93,10 @@ export async function updateExpense(
       updatePayload.recurringExpenseId = parsed.recurringExpenseId || null;
     }
 
-    await Expense.findByIdAndUpdate(id, updatePayload);
+    const updated = await Expense.findOneAndUpdate({ _id: id, userId }, updatePayload);
+    if (!updated) {
+      return { success: false, error: "Expense not found" };
+    }
     revalidatePath("/");
     revalidatePath("/expenses");
     return { success: true };
@@ -96,7 +113,11 @@ export async function deleteExpense(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await dbConnect();
-    await Expense.findByIdAndDelete(id);
+    const userId = await getCurrentUserId();
+    const deleted = await Expense.findOneAndDelete({ _id: id, userId });
+    if (!deleted) {
+      return { success: false, error: "Expense not found" };
+    }
     revalidatePath("/");
     revalidatePath("/expenses");
     return { success: true };
@@ -110,9 +131,10 @@ export async function deleteExpense(
 
 export async function getExpenseTotals(month: number, year: number) {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const { start, end } = getMonthDateRange(month, year);
   const result = await Expense.aggregate([
-    { $match: { date: { $gte: start, $lte: end } } },
+    { $match: { userId, date: { $gte: start, $lte: end } } },
     { $group: { _id: null, total: { $sum: "$amount" } } },
   ]);
   return result[0]?.total ?? 0;
@@ -120,9 +142,10 @@ export async function getExpenseTotals(month: number, year: number) {
 
 export async function getExpensesByCategory(month: number, year: number) {
   await dbConnect();
+  const userId = await getCurrentUserId();
   const { start, end } = getMonthDateRange(month, year);
   const result = await Expense.aggregate([
-    { $match: { date: { $gte: start, $lte: end } } },
+    { $match: { userId, date: { $gte: start, $lte: end } } },
     { $group: { _id: "$category", total: { $sum: "$amount" } } },
     { $sort: { total: -1 } },
   ]);

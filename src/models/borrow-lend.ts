@@ -1,6 +1,7 @@
-import mongoose, { Schema, type Document } from "mongoose";
+import mongoose, { Schema, type Document, type Types } from "mongoose";
 
 export interface IBorrowLend extends Document {
+  userId: Types.ObjectId;
   personName: string;
   amount: number;
   paidAmount: number;
@@ -15,6 +16,7 @@ export interface IBorrowLend extends Document {
 
 const BorrowLendSchema = new Schema<IBorrowLend>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     personName: { type: String, required: true },
     amount: { type: Number, required: true, min: 0 },
     paidAmount: { type: Number, required: true, default: 0, min: 0 },
@@ -36,7 +38,7 @@ const BorrowLendSchema = new Schema<IBorrowLend>(
   { timestamps: true }
 );
 
-BorrowLendSchema.index({ status: 1, type: 1 });
+BorrowLendSchema.index({ userId: 1, status: 1, type: 1 });
 
 if (mongoose.models.BorrowLend) {
   mongoose.deleteModel("BorrowLend");

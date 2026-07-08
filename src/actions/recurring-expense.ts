@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/db";
 import RecurringExpense from "@/models/recurring-expense";
 import Expense from "@/models/expense";
 import { awardXp } from "@/actions/stats";
+import { getCurrentUserId } from "@/lib/session";
 import { XP_REWARDS } from "@/constants";
 import { revalidatePath } from "next/cache";
 import { addDays, addMonths, addYears } from "date-fns";
@@ -11,7 +12,8 @@ import { addDays, addMonths, addYears } from "date-fns";
 export async function getRecurringExpenses() {
   await dbConnect();
   try {
-    const list = await RecurringExpense.find().sort({ nextDueDate: 1 }).lean();
+    const userId = await getCurrentUserId();
+    const list = await RecurringExpense.find({ userId }).sort({ nextDueDate: 1 }).lean();
     return JSON.parse(JSON.stringify(list));
   } catch {
     return [];
@@ -28,7 +30,9 @@ export async function createRecurringExpense(data: {
 }) {
   await dbConnect();
   try {
+    const userId = await getCurrentUserId();
     const newRecord = await RecurringExpense.create({
+      userId,
       amount: data.amount,
       category: data.category,
       tag: data.tag,
@@ -51,13 +55,15 @@ export async function createRecurringExpense(data: {
 export async function confirmRecurringPayment(id: string) {
   await dbConnect();
   try {
-    const template = await RecurringExpense.findById(id);
+    const userId = await getCurrentUserId();
+    const template = await RecurringExpense.findOne({ _id: id, userId });
     if (!template || !template.isActive) {
       return { success: false, error: "Reminder not found or inactive" };
     }
 
     // 1. Log the actual Expense for today
     await Expense.create({
+      userId,
       amount: template.amount,
       category: template.category,
       tag: template.tag,
@@ -102,7 +108,11 @@ export async function confirmRecurringPayment(id: string) {
 export async function deleteRecurringExpense(id: string) {
   await dbConnect();
   try {
-    await RecurringExpense.findByIdAndDelete(id);
+    const userId = await getCurrentUserId();
+    const deleted = await RecurringExpense.findOneAndDelete({ _id: id, userId });
+    if (!deleted) {
+      return { success: false, error: "Recurring expense not found" };
+    }
     revalidatePath("/");
     revalidatePath("/transactions");
     return { success: true };
@@ -126,13 +136,20 @@ export async function updateRecurringExpense(
 ) {
   await dbConnect();
   try {
-    await RecurringExpense.findByIdAndUpdate(id, {
-      amount: data.amount,
-      category: data.category,
-      tag: data.tag,
-      note: data.note || "",
-      frequency: data.frequency,
-    });
+    const userId = await getCurrentUserId();
+    const updated = await RecurringExpense.findOneAndUpdate(
+      { _id: id, userId },
+      {
+        amount: data.amount,
+        category: data.category,
+        tag: data.tag,
+        note: data.note || "",
+        frequency: data.frequency,
+      }
+    );
+    if (!updated) {
+      return { success: false, error: "Recurring expense not found" };
+    }
     revalidatePath("/");
     revalidatePath("/transactions");
     return { success: true };

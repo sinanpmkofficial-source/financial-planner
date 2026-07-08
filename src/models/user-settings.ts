@@ -1,4 +1,4 @@
-import mongoose, { Schema, type Document } from "mongoose";
+import mongoose, { Schema, type Document, type Types } from "mongoose";
 
 export interface ICategory {
   name: string;
@@ -7,6 +7,7 @@ export interface ICategory {
 }
 
 export interface IUserSettings extends Document {
+  userId: Types.ObjectId;
   currency: string;
   budgetStartDay: number;
   showGamification: boolean;
@@ -23,6 +24,13 @@ const CategorySchema = new Schema<ICategory>({
 
 const UserSettingsSchema = new Schema<IUserSettings>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      unique: true,
+      index: true,
+    },
     currency: { type: String, default: "₹" },
     budgetStartDay: { type: Number, default: 1, min: 1, max: 28 },
     showGamification: { type: Boolean, default: true },

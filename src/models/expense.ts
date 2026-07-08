@@ -1,6 +1,7 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IExpense extends Document {
+  userId: mongoose.Types.ObjectId;
   amount: number;
   category: string;
   tag: "Needs" | "Wants" | "Investments" | "Unnecessary Spending";
@@ -13,6 +14,7 @@ export interface IExpense extends Document {
 
 const ExpenseSchema = new Schema<IExpense>(
   {
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     amount: { type: Number, required: true, min: 0 },
     category: {
       type: String,
@@ -34,9 +36,9 @@ const ExpenseSchema = new Schema<IExpense>(
   { timestamps: true }
 );
 
-ExpenseSchema.index({ date: -1 });
-ExpenseSchema.index({ category: 1, date: -1 });
-ExpenseSchema.index({ tag: 1, date: -1 });
+ExpenseSchema.index({ userId: 1, date: -1 });
+ExpenseSchema.index({ userId: 1, category: 1, date: -1 });
+ExpenseSchema.index({ userId: 1, tag: 1, date: -1 });
 
 if (mongoose.models.Expense) {
   mongoose.deleteModel("Expense");

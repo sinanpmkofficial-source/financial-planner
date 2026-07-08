@@ -7,6 +7,7 @@ import GoalContribution from "@/models/goal-contribution";
 import BorrowLend from "@/models/borrow-lend";
 import { endOfMonth, startOfMonth } from "date-fns";
 import { computeLiquidCash } from "@/lib/finance";
+import { getCurrentUserId } from "@/lib/session";
 
 interface IncomeRecord {
   amount: number;
@@ -29,18 +30,21 @@ interface BorrowLendRecord {
 
 export async function getFinancialHealthData(month: number, year: number) {
   await dbConnect();
+  const userId = await getCurrentUserId();
 
   const start = startOfMonth(new Date(year, month - 1));
   const end = endOfMonth(new Date(year, month - 1));
 
   // Fetch all incomes for the month
   const incomes = await Income.find({
+    userId,
     date: { $gte: start, $lte: end },
   }).lean() as unknown as IncomeRecord[];
   const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
 
   // Fetch all expenses for the month
   const expenses = await Expense.find({
+    userId,
     date: { $gte: start, $lte: end },
   }).lean() as unknown as ExpenseRecord[];
 
@@ -70,6 +74,7 @@ export async function getFinancialHealthData(month: number, year: number) {
 
   // Fetch goal contributions for the month
   const contributions = await GoalContribution.find({
+    userId,
     date: { $gte: start, $lte: end },
   }).lean() as unknown as ContributionRecord[];
   const totalGoals = contributions.reduce((sum, item) => sum + item.amount, 0);
@@ -85,9 +90,9 @@ export async function getFinancialHealthData(month: number, year: number) {
 
   // All-time liquid cash, using the shared canonical definition. Goal money is
   // set aside (not liquid), so all-time goal contributions are subtracted too.
-  const allIncomes = await Income.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
-  const allExpenses = await Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
-  const allContributions = await GoalContribution.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
+  const allIncomes = await Income.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
+  const allExpenses = await Expense.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
+  const allContributions = await GoalContribution.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
   const totalLiquidCash = computeLiquidCash({
     totalIncome: allIncomes[0]?.total || 0,
     totalExpenses: allExpenses[0]?.total || 0,
@@ -96,6 +101,7 @@ export async function getFinancialHealthData(month: number, year: number) {
 
   // Fetch all outstanding borrowed debts
   const pendingBorrowed = await BorrowLend.find({
+    userId,
     type: "borrowed",
     status: "pending"
   }).lean() as unknown as BorrowLendRecord[];

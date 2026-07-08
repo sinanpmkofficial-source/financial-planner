@@ -9,18 +9,21 @@ import {
   type BorrowLendFormData,
 } from "@/validations/borrow-lend";
 import { serializeDoc } from "@/lib/format";
+import { getCurrentUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import type { BorrowLend as BorrowLendType } from "@/types";
 
 export async function getBorrowLendRecords(): Promise<BorrowLendType[]> {
   await dbConnect();
-  const docs = await BorrowLend.find().sort({ date: -1 }).lean();
+  const userId = await getCurrentUserId();
+  const docs = await BorrowLend.find({ userId }).sort({ date: -1 }).lean();
   return serializeDoc<BorrowLendType[]>(docs);
 }
 
 export async function getPendingBorrowLend(): Promise<BorrowLendType[]> {
   await dbConnect();
-  const docs = await BorrowLend.find({ status: "pending" })
+  const userId = await getCurrentUserId();
+  const docs = await BorrowLend.find({ userId, status: "pending" })
     .sort({ dueDate: 1 })
     .lean();
   return serializeDoc<BorrowLendType[]>(docs);
@@ -32,8 +35,10 @@ export async function createBorrowLend(
   try {
     const parsed = borrowLendSchema.parse(data);
     await dbConnect();
+    const userId = await getCurrentUserId();
     await BorrowLend.create({
       ...parsed,
+      userId,
       date: new Date(parsed.date),
       dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
     });
@@ -56,11 +61,18 @@ export async function updateBorrowLend(
   try {
     const parsed = borrowLendSchema.parse(data);
     await dbConnect();
-    await BorrowLend.findByIdAndUpdate(id, {
-      ...parsed,
-      date: new Date(parsed.date),
-      dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
-    });
+    const userId = await getCurrentUserId();
+    const updated = await BorrowLend.findOneAndUpdate(
+      { _id: id, userId },
+      {
+        ...parsed,
+        date: new Date(parsed.date),
+        dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
+      }
+    );
+    if (!updated) {
+      return { success: false, error: "Record not found" };
+    }
     revalidatePath("/");
     revalidatePath("/borrow-lend");
     return { success: true };
@@ -78,7 +90,11 @@ export async function deleteBorrowLend(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await dbConnect();
-    await BorrowLend.findByIdAndDelete(id);
+    const userId = await getCurrentUserId();
+    const deleted = await BorrowLend.findOneAndDelete({ _id: id, userId });
+    if (!deleted) {
+      return { success: false, error: "Record not found" };
+    }
     revalidatePath("/");
     revalidatePath("/borrow-lend");
     return { success: true };
@@ -96,16 +112,21 @@ export async function settleBorrowLend(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await dbConnect();
-    const record = await BorrowLend.findById(id);
+    const userId = await getCurrentUserId();
+    const record = await BorrowLend.findOne({ _id: id, userId });
     if (record) {
       const remaining = record.amount - (record.paidAmount ?? 0);
-      await BorrowLend.findByIdAndUpdate(id, {
-        paidAmount: record.amount,
-        status: "settled",
-      });
+      await BorrowLend.findOneAndUpdate(
+        { _id: id, userId },
+        {
+          paidAmount: record.amount,
+          status: "settled",
+        }
+      );
       // By default when clicking settle directly, we can record the full remaining repayment as transaction
       if (record.type === "borrowed") {
         await Expense.create({
+          userId,
           amount: remaining,
           category: "Debt",
           note: `Repayment of borrowed money to ${record.personName} (Full Settlement)`,
@@ -113,6 +134,7 @@ export async function settleBorrowLend(
         });
       } else {
         await Income.create({
+          userId,
           amount: remaining,
           source: `Repayment from ${record.personName}`,
           note: `Collection of lent money (Full Settlement)`,
@@ -140,7 +162,8 @@ export async function recordRepayment(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     await dbConnect();
-    const record = await BorrowLend.findById(id);
+    const userId = await getCurrentUserId();
+    const record = await BorrowLend.findOne({ _id: id, userId });
     if (!record) {
       return { success: false, error: "Record not found" };
     }
@@ -158,14 +181,18 @@ export async function recordRepayment(
     const date = new Date(dateStr);
     const status = newPaidAmount >= record.amount ? "settled" : "pending";
 
-    await BorrowLend.findByIdAndUpdate(id, {
-      paidAmount: newPaidAmount,
-      status,
-    });
+    await BorrowLend.findOneAndUpdate(
+      { _id: id, userId },
+      {
+        paidAmount: newPaidAmount,
+        status,
+      }
+    );
 
     if (createTransaction) {
       if (record.type === "borrowed") {
         await Expense.create({
+          userId,
           amount: repaymentAmount,
           category: "Debt",
           note: `Repayment of borrowed money to ${record.personName}`,
@@ -173,6 +200,7 @@ export async function recordRepayment(
         });
       } else {
         await Income.create({
+          userId,
           amount: repaymentAmount,
           source: `Repayment from ${record.personName}`,
           note: `Collection of lent money`,
@@ -195,7 +223,8 @@ export async function recordRepayment(
 
 export async function getBorrowLendSummary() {
   await dbConnect();
-  const records = await BorrowLend.find().lean();
+  const userId = await getCurrentUserId();
+  const records = await BorrowLend.find({ userId }).lean();
 
   let totalBorrowed = 0;
   let totalLent = 0;

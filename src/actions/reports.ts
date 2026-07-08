@@ -27,6 +27,7 @@ import type {
 } from "@/types";
 import { CATEGORY_COLORS, type ExpenseCategory } from "@/constants";
 import { utcToLocal, localToUtc } from "@/lib/date-utils";
+import { getCurrentUserId } from "@/lib/session";
 
 function formatPeriodLabel(start: Date, end: Date): string {
   if (isSameDay(start, end)) {
@@ -62,6 +63,7 @@ export async function getUnifiedData(
   categoryDistribution: CategoryDistribution[];
 }> {
   await dbConnect();
+  const userId = await getCurrentUserId();
 
   const offset = timezoneOffset ?? 0;
   const shiftedFrom = new Date(from.getTime() - offset * 60 * 1000);
@@ -76,12 +78,12 @@ export async function getUnifiedData(
   const isCategoryFilter = category && category.toLowerCase() !== "all";
 
   // Build match filters
-  const expenseMatch: Record<string, unknown> = { date: { $gte: start, $lte: end } };
+  const expenseMatch: Record<string, unknown> = { userId, date: { $gte: start, $lte: end } };
   if (isCategoryFilter) {
     expenseMatch.category = category;
   }
 
-  const incomeMatch = { date: { $gte: start, $lte: end } };
+  const incomeMatch = { userId, date: { $gte: start, $lte: end } };
 
   // 1. Basic Report Data
   const [incomeAgg, expenseAgg] = await Promise.all([
@@ -189,12 +191,12 @@ export async function getUnifiedData(
 
   // 3. Category Distribution
   const categoryAgg = await Expense.aggregate([
-    { $match: { date: { $gte: start, $lte: end } } },
+    { $match: { userId, date: { $gte: start, $lte: end } } },
     { $group: { _id: "$category", total: { $sum: "$amount" } } },
     { $sort: { total: -1 } },
   ]);
 
-  const settings = await UserSettings.findOne().lean();
+  const settings = await UserSettings.findOne({ userId }).lean();
   const catColorMap: Record<string, string> = {};
   if (settings && settings.categories) {
     settings.categories.forEach((cat: { name: string; color: string }) => {
