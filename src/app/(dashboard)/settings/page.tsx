@@ -25,6 +25,7 @@ interface Category {
   name: string;
   icon: string;
   color: string;
+  bucket?: "Needs" | "Fun" | "Investments" | "Other";
 }
 
 interface UserSettings {
@@ -89,6 +90,7 @@ function CategoryDialog({
   const [catName, setCatName] = useState("");
   const [catIcon, setCatIcon] = useState(DEFAULT_ICON);
   const [catColor, setCatColor] = useState("hsl(200, 15%, 50%)");
+  const [catBucket, setCatBucket] = useState<"Needs" | "Fun" | "Investments" | "Other">("Other");
   const [savingCategory, setSavingCategory] = useState(false);
 
   useEffect(() => {
@@ -97,10 +99,12 @@ function CategoryDialog({
         setCatName(category.name);
         setCatIcon(category.icon);
         setCatColor(category.color);
+        setCatBucket(category.bucket || "Other");
       } else {
         setCatName("");
         setCatIcon(DEFAULT_ICON);
         setCatColor("hsl(200, 15%, 50%)");
+        setCatBucket("Other");
       }
     }
   }, [open, category]);
@@ -119,12 +123,14 @@ function CategoryDialog({
           name: catName.trim(),
           icon: catIcon,
           color: catColor,
+          bucket: catBucket,
         });
       } else {
         res = await addCategory({
           name: catName.trim(),
           icon: catIcon,
           color: catColor,
+          bucket: catBucket,
         });
       }
 
@@ -209,6 +215,21 @@ function CategoryDialog({
                 />
               ))}
             </div>
+          </div>
+
+          {/* Financial bucket mapping */}
+          <div className="space-y-2">
+            <Label>Financial Bucket</Label>
+            <select
+              className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              value={catBucket}
+              onChange={(e) => setCatBucket(e.target.value as any)}
+            >
+              <option value="Needs">Needs (Survival)</option>
+              <option value="Fun">Fun (Lifestyle)</option>
+              <option value="Investments">Investments</option>
+              <option value="Other">Other / Uncategorized</option>
+            </select>
           </div>
 
           {/* Live preview */}

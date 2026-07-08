@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finance-tracker-v2';
+const CACHE_NAME = 'nova-finance-v2';
 
 const STATIC_ASSETS = [
   '/',

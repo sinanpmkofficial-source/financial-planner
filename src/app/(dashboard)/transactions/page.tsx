@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { TransactionsClient } from "@/components/transactions/transactions-client";
 
 export const metadata = {
-  title: "Transactions - Finance Tracker",
+  title: "Transactions - Nova Finance",
   description: "View and manage all your income and expenses in one consolidated timeline.",
 };
 

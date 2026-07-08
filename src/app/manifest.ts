@@ -3,9 +3,9 @@ import type { MetadataRoute } from 'next'
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'Finance Tracker',
-    short_name: 'Finance',
-    description: 'Track your expenses, income, budgets, and savings with a clean, minimal personal finance dashboard.',
+    name: 'Nova Finance',
+    short_name: 'Nova',
+    description: 'Track your expenses, income, budgets, and savings with Nova Finance, a clean and minimal personal finance dashboard.',
     start_url: '/',
     scope: '/',
     display: 'standalone',

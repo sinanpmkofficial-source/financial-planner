@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -57,10 +58,10 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between px-6 h-16 border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">₹</span>
+          <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg overflow-hidden shrink-0">
+            <Image src="/logo.svg" alt="Logo" width={32} height={32} />
           </div>
-          <span className="font-semibold text-lg tracking-tight">Finance</span>
+          <span className="font-semibold text-lg tracking-tight">Nova</span>
         </div>
         <DbSyncIndicator />
       </div>
