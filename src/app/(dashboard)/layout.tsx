@@ -1,11 +1,22 @@
+import { auth } from "@/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { LoginRequiredDialog } from "@/components/auth/login-required-dialog";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth();
+
+  // Block every dashboard route behind a login prompt when there's no session.
+  // We render the dialog instead of the children so no protected data is
+  // fetched or shown to unauthenticated visitors.
+  if (!session?.user) {
+    return <LoginRequiredDialog />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Sidebar />
