@@ -93,10 +93,37 @@ interface UIState {
   updateGoalsCache: (data: any[]) => void;
   updateBorrowLendCache: (data: any[]) => void;
   updateSettingsCache: (data: any) => void;
+  clearUserCaches: () => void;
 }
 
 const defaultPreset: PeriodPreset = "This Month";
 const initialRange = getDateRangeForPreset(defaultPreset);
+
+// Empty state for every per-user data cache. Reused by the initial state and by
+// clearUserCaches() on logout so a shared browser never shows the previous
+// user's data. UI preferences (sidebar/preset/dateRange) are intentionally left
+// out — they're not user-private.
+const emptyDashboardCache: UIState["dashboardCache"] = {
+  summary: null,
+  expenses: [],
+  incomes: [],
+  budgets: [],
+  chartData: [],
+  categorySpend: [],
+  settings: null,
+  recurringExpenses: [],
+};
+
+const emptyUserCaches = {
+  isDashboardDirty: true,
+  dashboardCache: emptyDashboardCache,
+  expensesCache: {},
+  incomesCache: {},
+  budgetsCache: {},
+  goalsCache: [],
+  borrowLendCache: [],
+  settingsCache: null,
+} satisfies Partial<UIState>;
 
 const isDateString = (value: unknown): value is string =>
   typeof value === "string" &&
@@ -119,27 +146,9 @@ export const useUIStore = create<UIState>()(
         to: initialRange.to,
       },
       dateRange: initialRange,
-      
-      // Cache Initial State
-      isDashboardDirty: true,
-      dashboardCache: {
-        summary: null,
-        expenses: [],
-        incomes: [],
-        budgets: [],
-        chartData: [],
-        categorySpend: [],
-        settings: null,
-        recurringExpenses: [],
-      },
 
-      // Screen Cache Initial State
-      expensesCache: {},
-      incomesCache: {},
-      budgetsCache: {},
-      goalsCache: [],
-      borrowLendCache: [],
-      settingsCache: null,
+      // Cache Initial State (dashboard + screen caches)
+      ...emptyUserCaches,
 
       toggleSidebar: () => set((s) => ({ sidebarOpen: !s.sidebarOpen })),
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
@@ -175,6 +184,9 @@ export const useUIStore = create<UIState>()(
       updateGoalsCache: (data) => set({ goalsCache: data }),
       updateBorrowLendCache: (data) => set({ borrowLendCache: data }),
       updateSettingsCache: (data) => set({ settingsCache: data }),
+      // Wipe all per-user data caches (called on logout) so the next user on a
+      // shared browser can't see the previous user's cached finances.
+      clearUserCaches: () => set({ ...emptyUserCaches }),
     }),
     {
       name: "finance-tracker-ui-store",

@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { Expense, Income } from "@/types";
 import { getUserSettings } from "@/actions/settings";
+import { runOptimistic } from "@/lib/optimistic";
 
 type UnifiedTransaction = 
   | (Expense & { type: "expense" })
@@ -110,14 +111,35 @@ export function TransactionsClient() {
   }, [categories]);
 
   const handleDelete = async (id: string, type: "expense" | "income") => {
-    const result = type === "expense" ? await deleteExpense(id) : await deleteIncome(id);
-    if (result.success) {
-      toast.success(`${type === "expense" ? "Expense" : "Income"} deleted`);
-      setDashboardDirty(true);
-      await fetchData();
-    } else {
-      toast.error(result.error);
-    }
+    // Snapshot for rollback, then optimistically remove from state + cache.
+    const prevExpenses = expenses;
+    const prevIncomes = incomes;
+
+    await runOptimistic({
+      apply: () => {
+        if (type === "expense") {
+          const next = prevExpenses.filter((e) => e._id !== id);
+          setExpenses(next);
+          updateExpensesCache(cacheKey, next);
+        } else {
+          const next = prevIncomes.filter((i) => i._id !== id);
+          setIncomes(next);
+          updateIncomesCache(cacheKey, next);
+        }
+      },
+      rollback: () => {
+        setExpenses(prevExpenses);
+        setIncomes(prevIncomes);
+        updateExpensesCache(cacheKey, prevExpenses);
+        updateIncomesCache(cacheKey, prevIncomes);
+      },
+      action: () => (type === "expense" ? deleteExpense(id) : deleteIncome(id)),
+      onSuccess: () => {
+        toast.success(`${type === "expense" ? "Expense" : "Income"} deleted`);
+        setDashboardDirty(true);
+      },
+      onError: (msg) => toast.error(msg),
+    });
   };
 
   const handleEdit = (transaction: Expense | Income) => {

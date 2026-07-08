@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import type { BorrowLend } from "@/types";
 import { useUIStore } from "@/stores/ui-store";
+import { runOptimistic } from "@/lib/optimistic";
 
 export function BorrowLendClient() {
   const { setDashboardDirty, borrowLendCache, updateBorrowLendCache } = useUIStore();
@@ -99,23 +100,48 @@ export function BorrowLendClient() {
   }, [fetchData]);
 
   const handleDelete = async (id: string) => {
-    const result = await deleteBorrowLend(id);
-    if (result.success) {
-      toast.success("Record deleted");
-      await fetchData();
-    } else {
-      toast.error(result.error);
-    }
+    const prev = records;
+    await runOptimistic({
+      apply: () => {
+        const next = prev.filter((r) => r._id !== id);
+        setRecords(next);
+        updateBorrowLendCache(next);
+      },
+      rollback: () => {
+        setRecords(prev);
+        updateBorrowLendCache(prev);
+      },
+      action: () => deleteBorrowLend(id),
+      onSuccess: () => toast.success("Record deleted"),
+      onError: (msg) => toast.error(msg),
+    });
   };
 
   const handleSettle = async (id: string) => {
-    const result = await settleBorrowLend(id);
-    if (result.success) {
-      toast.success("Marked as settled");
-      await fetchData();
-    } else {
-      toast.error(result.error);
-    }
+    const prev = records;
+    await runOptimistic({
+      apply: () => {
+        const next: BorrowLend[] = prev.map((r) =>
+          r._id === id
+            ? { ...r, paidAmount: r.amount, status: "settled" as const }
+            : r
+        );
+        setRecords(next);
+        updateBorrowLendCache(next);
+      },
+      rollback: () => {
+        setRecords(prev);
+        updateBorrowLendCache(prev);
+      },
+      action: () => settleBorrowLend(id),
+      onSuccess: () => {
+        toast.success("Marked as settled");
+        // Settling writes a matching income/expense, so the dashboard changes.
+        setDashboardDirty(true);
+        fetchData();
+      },
+      onError: (msg) => toast.error(msg),
+    });
   };
 
   const handleEdit = (record: BorrowLend) => {
