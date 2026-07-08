@@ -475,9 +475,9 @@ export function DashboardClient() {
 
       {/* Compact Metrics Bar */}
       <motion.div variants={itemVariants}>
-        <div className="grid grid-cols-2 border border-border rounded-2xl overflow-hidden bg-card shadow-sm divide-x divide-y divide-border">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Available Balance */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0 border border-border rounded-2xl bg-card shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Available Balance
             </p>
@@ -494,7 +494,7 @@ export function DashboardClient() {
           </div>
 
           {/* Safe to Spend */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0 border border-border rounded-2xl bg-card shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Safe to Spend
             </p>
@@ -525,7 +525,7 @@ export function DashboardClient() {
           </div>
 
           {/* Spent this week */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0 border border-border rounded-2xl bg-card shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Spent This Week
             </p>
@@ -544,7 +544,7 @@ export function DashboardClient() {
           </div>
 
           {/* Income this month */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0 border border-border rounded-2xl bg-card shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Income This Month
             </p>
