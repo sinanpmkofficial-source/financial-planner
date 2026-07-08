@@ -475,94 +475,93 @@ export function DashboardClient() {
 
       {/* Compact Metrics Bar */}
       <motion.div variants={itemVariants}>
-        <div className="grid grid-cols-2 border border-border rounded-2xl overflow-hidden bg-card shadow-sm divide-x divide-y divide-border">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {/* Available Balance */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Available Balance
-            </p>
-            <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
-              {summaryLoading || !summary ? (
+          <StatCard
+            label="Available Balance"
+            index="01"
+            icon={Wallet}
+            trend={summaryLoading || !summary ? undefined : "All-time net balance"}
+            value={
+              summaryLoading || !summary ? (
                 <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
               ) : (
                 <CountUp value={summary.currentBalance} formatter={formatCurrency} />
-              )}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {summaryLoading || !summary ? "" : "All-time net balance"}
-            </p>
-          </div>
+              )
+            }
+          />
 
           {/* Safe to Spend */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Safe to Spend
-            </p>
-            <p className={cn(
-              "text-xl sm:text-2xl font-extrabold tracking-tight",
+          <StatCard
+            label="Safe to Spend"
+            index="02"
+            icon={PiggyBank}
+            trend={
               summaryLoading || budgetsLoading || !summary
-                ? "text-muted-foreground"
-                : (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
-                ? "text-primary"
-                : "text-rose-500"
-            )}>
-              {summaryLoading || budgetsLoading || !summary ? (
-                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
-              ) : (
-                <CountUp
-                  value={(summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal}
-                  formatter={formatCurrency}
-                />
-              )}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {summaryLoading || budgetsLoading || !summary
-                ? ""
+                ? undefined
                 : (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
                 ? "Unallocated surplus"
-                : "Deficit — over budget"}
-            </p>
-          </div>
+                : "Deficit — over budget"
+            }
+            value={
+              summaryLoading || budgetsLoading || !summary ? (
+                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
+              ) : (
+                <span
+                  className={cn(
+                    (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
+                      ? "text-primary"
+                      : "text-rose-500"
+                  )}
+                >
+                  <CountUp
+                    value={(summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal}
+                    formatter={formatCurrency}
+                  />
+                </span>
+              )
+            }
+          />
 
           {/* Spent this week */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Spent This Week
-            </p>
-            <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-rose-500">
-              {summaryLoading || !summary ? (
+          <StatCard
+            label="Spent This Week"
+            index="03"
+            icon={TrendingDown}
+            trend={summaryLoading || !summary ? undefined : `${formatCurrency(summary.todayExpenses ?? 0)} spent today`}
+            value={
+              summaryLoading || !summary ? (
                 <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
               ) : (
-                <CountUp value={summary.weekExpenses ?? 0} formatter={formatCurrency} />
-              )}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {summaryLoading || !summary
-                ? ""
-                : `${formatCurrency(summary.todayExpenses ?? 0)} spent today`}
-            </p>
-          </div>
+                <span className="text-rose-500">
+                  <CountUp value={summary.weekExpenses ?? 0} formatter={formatCurrency} />
+                </span>
+              )
+            }
+          />
 
           {/* Income this month */}
-          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Income This Month
-            </p>
-            <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-500">
-              {summaryLoading || !summary ? (
-                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
-              ) : (
-                <CountUp value={summary.monthlyIncome ?? 0} formatter={formatCurrency} />
-              )}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {summaryLoading || !summary
-                ? ""
+          <StatCard
+            label="Income This Month"
+            index="04"
+            icon={TrendingUp}
+            trend={
+              summaryLoading || !summary
+                ? undefined
                 : (summary.monthlyIncome ?? 0) > 0
                 ? `${Math.round(((summary.savings ?? 0) / summary.monthlyIncome) * 100)}% saved this month`
-                : "No income logged yet"}
-            </p>
-          </div>
+                : "No income logged yet"
+            }
+            value={
+              summaryLoading || !summary ? (
+                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
+              ) : (
+                <span className="text-emerald-600 dark:text-emerald-500">
+                  <CountUp value={summary.monthlyIncome ?? 0} formatter={formatCurrency} />
+                </span>
+              )
+            }
+          />
         </div>
       </motion.div>
 

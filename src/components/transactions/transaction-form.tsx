@@ -242,15 +242,17 @@ export function TransactionForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md max-h-[88vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <DialogHeader className="px-5 sm:px-6 pt-5 pb-3.5 border-b border-border/60 shrink-0">
           <DialogTitle>
             {isEditing
               ? `Edit ${type === "expense" ? "Expense" : "Income"}`
               : `Add ${type === "expense" ? "Expense" : "Income"}`}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1">
+          {/* Scrollable body — only this region scrolls; header & footer stay fixed */}
+          <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 space-y-4">
           {/* Segmented type toggle, only enabled when creating a new record */}
           <div className="space-y-2">
             <Label>Transaction Type</Label>
@@ -260,7 +262,7 @@ export function TransactionForm({
                 disabled={isEditing}
                 onClick={() => setValue("type", "expense", { shouldValidate: true })}
                 className={cn(
-                  "flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
+                  "flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
                   type === "expense"
                     ? "border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400"
                     : "border-border text-muted-foreground hover:bg-muted/40",
@@ -274,7 +276,7 @@ export function TransactionForm({
                 disabled={isEditing}
                 onClick={() => setValue("type", "income", { shouldValidate: true })}
                 className={cn(
-                  "flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
+                  "flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
                   type === "income"
                     ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                     : "border-border text-muted-foreground hover:bg-muted/40",
@@ -299,7 +301,7 @@ export function TransactionForm({
                 step="0.01"
                 placeholder="0.00"
                 className={cn(
-                  "!h-16 !text-2xl !font-bold !pl-9",
+                  "!h-14 sm:!h-16 !text-xl sm:!text-2xl !font-bold !pl-9",
                   type === "expense" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
                 )}
                 {...register("amount", { valueAsNumber: true })}
@@ -377,7 +379,7 @@ export function TransactionForm({
                         />
                         <span className="min-w-0">
                           <span className={cn("font-semibold text-xs block", selected ? "text-foreground" : "text-foreground/90")}>{t.label}</span>
-                          <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight block">{t.desc}</span>
+                          <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight hidden sm:block">{t.desc}</span>
                         </span>
                       </button>
                     );
@@ -477,8 +479,10 @@ export function TransactionForm({
             )}
           </div>
 
-          {/* Footer actions */}
-          <div className="flex gap-2 pt-2">
+          </div>
+
+          {/* Footer actions — pinned below the scroll region */}
+          <div className="shrink-0 flex gap-2 px-5 sm:px-6 py-4 border-t border-border/60">
             <Button
               type="button"
               variant="outline"

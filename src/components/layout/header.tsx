@@ -28,11 +28,7 @@ export function PageHeader({
         )}
       </div>
       <div className="flex items-center gap-3 shrink-0">
-        {showMonthPicker && (
-          <div className="lg:hidden">
-            <DatePeriodFilter />
-          </div>
-        )}
+        {showMonthPicker && <DatePeriodFilter />}
         {action}
       </div>
     </div>

@@ -14,7 +14,6 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 import { DbSyncIndicator } from "@/components/shared/db-sync-indicator";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 
@@ -99,13 +98,6 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-
-      {/* Month/Year Picker */}
-      {pathname !== "/" && (
-        <div className="px-3 py-4 border-t border-border">
-          <DatePeriodFilter />
-        </div>
-      )}
 
       {/* Account */}
       <div className="px-3 py-3 border-t border-border">
