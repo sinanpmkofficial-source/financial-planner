@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { PwaRegister } from "@/components/pwa-register";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { ThemeSync } from "@/components/shared/theme-sync";
 import "./globals.css";
 
@@ -41,6 +42,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans">
         <ThemeSync />
         <PwaRegister />
+        <PwaInstallPrompt />
         {children}
         <Toaster position="top-right" richColors closeButton />
       </body>
