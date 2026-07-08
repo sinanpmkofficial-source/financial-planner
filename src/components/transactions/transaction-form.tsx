@@ -295,22 +295,17 @@ export function TransactionForm({
           {/* Amount hero field */}
           <div className="space-y-2">
             <Label htmlFor="transaction-amount">Amount</Label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl font-semibold text-muted-foreground">
-                ₹
-              </span>
-              <Input
-                id="transaction-amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                className={cn(
-                  "!h-14 sm:!h-16 !text-xl sm:!text-2xl !font-bold !pl-9",
-                  type === "expense" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
-                )}
-                {...register("amount", { valueAsNumber: true })}
-              />
-            </div>
+            <Input
+              id="transaction-amount"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              className={cn(
+                "!h-14 sm:!h-16 !text-xl sm:!text-2xl !font-bold",
+                type === "expense" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+              )}
+              {...register("amount", { valueAsNumber: true })}
+            />
             {errors.amount && (
               <p className="text-xs text-destructive">{errors.amount.message}</p>
             )}
