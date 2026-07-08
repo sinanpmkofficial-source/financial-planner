@@ -150,8 +150,14 @@
     box-shadow: 0 12px 36px oklch(0 0 0 / 0.6) !important;
   }
   button, [role="button"], .button, [data-slot="button"], [data-slot="sheet-trigger"], [data-slot="alert-dialog-trigger"] {
-    border-radius: 9999px !important;
+    border-radius: 0.625rem !important;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  /* Icon-only buttons stay circular for a clean, standard look */
+  [data-slot="button"].rounded-full,
+  button.rounded-full,
+  [role="button"].rounded-full {
+    border-radius: 9999px !important;
   }
   /* Primary Button — solid monochrome */
   [data-slot="button"][data-variant="default"] {
@@ -168,9 +174,9 @@
     transform: translateY(0.5px) scale(0.98);
   }
   input, select, textarea, [data-slot="select-trigger"], [data-slot="input"], [data-slot="popover-trigger"] {
-    border-radius: 9999px !important;
-    padding-left: 1.25rem !important;
-    padding-right: 1.25rem !important;
+    border-radius: 0.625rem !important;
+    padding-left: 0.875rem !important;
+    padding-right: 0.875rem !important;
     background: var(--background) !important;
     border: 1px solid var(--border) !important;
     transition: all 0.2s ease;
