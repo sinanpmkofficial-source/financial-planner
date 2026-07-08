@@ -8,6 +8,7 @@ import BorrowLend from "@/models/borrow-lend";
 import Budget from "@/models/budget";
 import GoalContribution from "@/models/goal-contribution";
 import { calculateLevel } from "@/lib/xp";
+import { computeLiquidCash } from "@/lib/finance";
 import { getMonthDateRange, serializeDoc } from "@/lib/format";
 import type { UserStats, DashboardSummary } from "@/types";
 import {
@@ -121,7 +122,11 @@ export async function getDashboardSummary(
   const allIncome = allIncomeAgg[0]?.total ?? 0;
   const allExpense = allExpenseAgg[0]?.total ?? 0;
   const allContributions = allContributionsAgg[0]?.total ?? 0;
-  const currentBalance = allIncome - allExpense - allContributions;
+  const currentBalance = computeLiquidCash({
+    totalIncome: allIncome,
+    totalExpenses: allExpense,
+    totalGoalContributions: allContributions,
+  });
   
   const monthlyIncome = monthIncomeAgg[0]?.total ?? 0;
   const monthlyExpenses = monthExpenseAgg[0]?.total ?? 0;

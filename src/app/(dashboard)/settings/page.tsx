@@ -19,6 +19,7 @@ import {
   deleteCategory,
 } from "@/actions/settings";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/shared/category-icon";
 
 interface Category {
   name: string;
@@ -32,10 +33,18 @@ interface UserSettings {
   categories: Category[];
 }
 
-const EMOJI_PRESETS = [
-  "🍔", "🚗", "🏠", "🛍️", "⚡", "🏥", "🎓", "🎮", "✈️", "🎬", 
-  "🍷", "🏋️", "🐱", "🎨", "🧱", "💻", "🎵", "🎁", "💊", "☕"
+// Lucide icon names offered when creating/editing a category.
+const ICON_PRESETS = [
+  "Utensils", "Car", "Home", "ShoppingBag", "Zap", "HeartPulse",
+  "GraduationCap", "Gamepad2", "Plane", "Film", "Wine", "Dumbbell",
+  "Coffee", "Gift", "Laptop", "Music", "Pill", "Bus",
+  "Fuel", "Shirt", "Smartphone", "Wifi", "CreditCard", "PiggyBank",
+  "Wallet", "Receipt", "Briefcase", "Book", "Dog", "Cat",
+  "Baby", "Wrench", "Scissors", "Camera", "Bike", "Package",
+  "Tag", "FolderOpen",
 ];
+
+const DEFAULT_ICON = "Tag";
 
 const COLOR_PRESETS = [
   { name: "Emerald", value: "hsl(142, 72%, 29%)" },
@@ -78,7 +87,7 @@ function CategoryDialog({
   onSuccess,
 }: CategoryDialogProps) {
   const [catName, setCatName] = useState("");
-  const [catIcon, setCatIcon] = useState("📁");
+  const [catIcon, setCatIcon] = useState(DEFAULT_ICON);
   const [catColor, setCatColor] = useState("hsl(200, 15%, 50%)");
   const [savingCategory, setSavingCategory] = useState(false);
 
@@ -90,7 +99,7 @@ function CategoryDialog({
         setCatColor(category.color);
       } else {
         setCatName("");
-        setCatIcon("📁");
+        setCatIcon(DEFAULT_ICON);
         setCatColor("hsl(200, 15%, 50%)");
       }
     }
@@ -157,17 +166,62 @@ function CategoryDialog({
             )}
           </div>
 
-          {/* Icon (Emoji) */}
+          {/* Icon picker */}
           <div className="space-y-2">
-            <Label htmlFor="cat-icon">Emoji Icon</Label>
-            <Input
-              id="cat-icon"
-              className="w-16 text-center text-lg h-9 !px-1 !rounded-md"
-              value={catIcon}
-              onChange={(e) => setCatIcon(e.target.value)}
-              maxLength={2}
-              placeholder="📁"
-            />
+            <Label>Icon</Label>
+            <div className="grid grid-cols-8 gap-1.5 p-2 bg-muted/30 border border-border/40 rounded-xl max-h-44 overflow-y-auto scrollbar-none">
+              {ICON_PRESETS.map((ic) => (
+                <button
+                  key={ic}
+                  type="button"
+                  onClick={() => setCatIcon(ic)}
+                  aria-label={ic}
+                  className={cn(
+                    "aspect-square flex items-center justify-center rounded-lg transition-all cursor-pointer",
+                    catIcon === ic
+                      ? "bg-primary text-primary-foreground scale-105 shadow-xs"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <CategoryIcon name={ic} className="w-4 h-4" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Colour picker */}
+          <div className="space-y-2">
+            <Label>Accent Colour</Label>
+            <div className="flex flex-wrap gap-2 p-2 bg-muted/30 border border-border/40 rounded-xl">
+              {COLOR_PRESETS.map((col) => (
+                <button
+                  key={col.value}
+                  type="button"
+                  onClick={() => setCatColor(col.value)}
+                  aria-label={col.name}
+                  style={{ backgroundColor: col.value }}
+                  className={cn(
+                    "w-7 h-7 rounded-full transition-all cursor-pointer shrink-0",
+                    catColor === col.value
+                      ? "ring-2 ring-primary ring-offset-2 ring-offset-background scale-110"
+                      : "hover:scale-105"
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Live preview */}
+          <div className="flex items-center gap-2.5 pt-1">
+            <span
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `color-mix(in oklab, ${catColor} 18%, transparent)`, color: catColor }}
+            >
+              <CategoryIcon name={catIcon} className="w-4 h-4" />
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              {catName.trim() || "Category preview"}
+            </span>
           </div>
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-4">
@@ -431,8 +485,11 @@ export default function SettingsPage() {
                     className="flex items-center justify-between p-3.5 rounded-xl border border-border/60 bg-muted/20"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl shadow-xs border border-border bg-muted/20">
-                        {cat.icon}
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center shadow-xs border border-border"
+                        style={{ backgroundColor: `color-mix(in oklab, ${cat.color} 15%, transparent)`, color: cat.color }}
+                      >
+                        <CategoryIcon name={cat.icon} className="w-5 h-5" />
                       </div>
                       <div>
                         <p className="font-medium text-sm text-foreground">{cat.name}</p>

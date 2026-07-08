@@ -29,9 +29,11 @@ import { toast } from "sonner";
 import type { Expense, Income } from "@/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/shared/category-icon";
+import { toPaise, toRupees } from "@/lib/money";
 import { getUserSettings } from "@/actions/settings";
 import { useUIStore } from "@/stores/ui-store";
-import { Loader2 } from "lucide-react";
+import { Loader2, TrendingDown, TrendingUp, Repeat } from "lucide-react";
 
 interface TransactionFormProps {
   open: boolean;
@@ -49,7 +51,7 @@ export function TransactionForm({
   onSuccess,
 }: TransactionFormProps) {
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
+  const [categories, setCategories] = useState<{ name: string; icon: string; color: string }[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<any[]>([]);
   const isEditing = !!transaction;
 
@@ -69,7 +71,7 @@ export function TransactionForm({
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       type: getTransactionType(transaction),
-      amount: transaction?.amount ?? undefined,
+      amount: transaction?.amount != null ? toRupees(transaction.amount) : undefined,
       category: transaction && "category" in transaction ? transaction.category : undefined,
       tag: transaction && "tag" in transaction ? transaction.tag : "Needs",
       source: transaction && "source" in transaction ? transaction.source : "",
@@ -114,7 +116,7 @@ export function TransactionForm({
         transaction
           ? {
               type: currentType,
-              amount: transaction.amount,
+              amount: toRupees(transaction.amount),
               category: "category" in transaction ? transaction.category : undefined,
               tag: "tag" in transaction ? (transaction as Expense).tag : "Needs",
               source: "source" in transaction ? transaction.source : "",
@@ -144,7 +146,7 @@ export function TransactionForm({
       let result;
       if (data.type === "expense") {
         const expensePayload: ExpenseFormData = {
-          amount: data.amount,
+          amount: toPaise(data.amount),
           category: data.category || "",
           tag: (data.tag || "Needs") as "Needs" | "Wants" | "Investments" | "Unnecessary Spending",
           note: data.note,
@@ -169,7 +171,7 @@ export function TransactionForm({
             if (isEditing && recurringExpenseId) {
               // Update existing template
               await updateRecurringExpense(recurringExpenseId, {
-                amount: data.amount,
+                amount: toPaise(data.amount),
                 category: data.category || "",
                 tag: (data.tag || "Needs") as any,
                 note: data.note,
@@ -178,7 +180,7 @@ export function TransactionForm({
             } else {
               // Create new template
               const recResult = await createRecurringExpense({
-                amount: data.amount,
+                amount: toPaise(data.amount),
                 category: data.category || "",
                 tag: (data.tag || "Needs") as any,
                 note: data.note,
@@ -207,7 +209,7 @@ export function TransactionForm({
         }
       } else {
         const incomePayload = {
-          amount: data.amount,
+          amount: toPaise(data.amount),
           source: data.source || "",
           note: data.note,
           date: data.date,
@@ -252,48 +254,57 @@ export function TransactionForm({
           {/* Segmented type toggle, only enabled when creating a new record */}
           <div className="space-y-2">
             <Label>Transaction Type</Label>
-            <div className="grid grid-cols-2 gap-1 p-1 bg-muted rounded-lg border border-border/50">
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 disabled={isEditing}
                 onClick={() => setValue("type", "expense", { shouldValidate: true })}
                 className={cn(
-                  "py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                  "flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
                   type === "expense"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                    : "border-border text-muted-foreground hover:bg-muted/40",
                   isEditing && "opacity-60 cursor-not-allowed"
                 )}
               >
-                💸 Expense
+                <TrendingDown className="w-4 h-4" /> Expense
               </button>
               <button
                 type="button"
                 disabled={isEditing}
                 onClick={() => setValue("type", "income", { shouldValidate: true })}
                 className={cn(
-                  "py-1.5 text-xs font-semibold rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5",
+                  "flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-semibold transition-all cursor-pointer",
                   type === "income"
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    : "border-border text-muted-foreground hover:bg-muted/40",
                   isEditing && "opacity-60 cursor-not-allowed"
                 )}
               >
-                💰 Income
+                <TrendingUp className="w-4 h-4" /> Income
               </button>
             </div>
           </div>
 
-          {/* Amount field */}
+          {/* Amount hero field */}
           <div className="space-y-2">
-            <Label htmlFor="transaction-amount">Amount (₹)</Label>
-            <Input
-              id="transaction-amount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              {...register("amount", { valueAsNumber: true })}
-            />
+            <Label htmlFor="transaction-amount">Amount</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl font-semibold text-muted-foreground">
+                ₹
+              </span>
+              <Input
+                id="transaction-amount"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                className={cn(
+                  "!h-16 !text-2xl !font-bold !pl-9",
+                  type === "expense" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                )}
+                {...register("amount", { valueAsNumber: true })}
+              />
+            </div>
             {errors.amount && (
               <p className="text-xs text-destructive">{errors.amount.message}</p>
             )}
@@ -321,7 +332,9 @@ export function TransactionForm({
                   <SelectContent>
                     {categories.map((c) => (
                       <SelectItem key={c.name} value={c.name}>
-                        <span className="mr-2">{c.icon}</span>
+                        <span className="mr-2 inline-flex" style={{ color: c.color }}>
+                          <CategoryIcon name={c.icon} className="w-4 h-4" />
+                        </span>
                         <span>{c.name}</span>
                       </SelectItem>
                     ))}
@@ -336,29 +349,39 @@ export function TransactionForm({
 
               {/* Tagging Grid */}
               <div className="space-y-2">
-                <Label>Financial Tag (50-30-20 Rule)</Label>
+                <Label>Financial Tag</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { value: "Needs", label: "Needs (50%)", desc: "Bills, groceries, rent" },
-                    { value: "Wants", label: "Wants (30%)", desc: "Eating out, fun, shopping" },
-                    { value: "Investments", label: "Investments (20%)", desc: "SIP, stocks, savings" },
-                    { value: "Unnecessary Spending", label: "Wasted Money (0%)", desc: "Impulse, unused subs" },
-                  ].map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setValue("tag", t.value as "Needs" | "Wants" | "Investments" | "Unnecessary Spending", { shouldValidate: true })}
-                      className={cn(
-                        "flex flex-col items-start p-2 rounded-lg border text-left transition-all cursor-pointer",
-                        tag === t.value
-                          ? "border-primary bg-primary/5 text-foreground ring-1 ring-primary/10"
-                          : "border-border hover:bg-muted/40 text-muted-foreground"
-                      )}
-                    >
-                      <span className="font-semibold text-xs text-foreground block">{t.label}</span>
-                      <span className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{t.desc}</span>
-                    </button>
-                  ))}
+                    { value: "Needs", label: "Needs", desc: "Bills, groceries, rent", color: "hsl(142, 72%, 45%)" },
+                    { value: "Wants", label: "Wants", desc: "Eating out, fun, shopping", color: "hsl(43, 90%, 50%)" },
+                    { value: "Investments", label: "Investments", desc: "SIP, stocks, savings", color: "hsl(217, 91%, 60%)" },
+                    { value: "Unnecessary Spending", label: "Wasted Money", desc: "Impulse, unused subs", color: "hsl(0, 75%, 58%)" },
+                  ].map((t) => {
+                    const selected = tag === t.value;
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setValue("tag", t.value as "Needs" | "Wants" | "Investments" | "Unnecessary Spending", { shouldValidate: true })}
+                        className={cn(
+                          "flex items-start gap-2 p-2.5 rounded-xl border text-left transition-all cursor-pointer",
+                          selected
+                            ? "bg-muted/50 ring-1"
+                            : "border-border hover:bg-muted/40"
+                        )}
+                        style={selected ? { borderColor: t.color, boxShadow: `0 0 0 1px ${t.color}` } : undefined}
+                      >
+                        <span
+                          className="mt-1 w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: t.color, opacity: selected ? 1 : 0.5 }}
+                        />
+                        <span className="min-w-0">
+                          <span className={cn("font-semibold text-xs block", selected ? "text-foreground" : "text-foreground/90")}>{t.label}</span>
+                          <span className="text-[10px] text-muted-foreground mt-0.5 leading-tight block">{t.desc}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
                 {errors.tag && (
                   <p className="text-xs text-destructive">{errors.tag.message}</p>
@@ -367,14 +390,19 @@ export function TransactionForm({
 
               {/* Make Recurring Toggle */}
               <div className="space-y-2 p-3 bg-muted/30 border border-border/40 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="make-recurring" className="text-xs font-semibold cursor-pointer">
-                      Make Recurring Expense
-                    </Label>
-                    <p className="text-[9px] text-muted-foreground leading-tight">
-                      Receive a bill reminder on the next due date (no auto-logging)
-                    </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <span className="p-1.5 rounded-lg bg-muted text-muted-foreground shrink-0">
+                      <Repeat className="w-3.5 h-3.5" />
+                    </span>
+                    <div className="space-y-0.5 min-w-0">
+                      <Label htmlFor="make-recurring" className="text-xs font-semibold cursor-pointer">
+                        Make Recurring Expense
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground leading-tight">
+                        Get a bill reminder on the next due date (no auto-logging)
+                      </p>
+                    </div>
                   </div>
                   <input
                     id="make-recurring"

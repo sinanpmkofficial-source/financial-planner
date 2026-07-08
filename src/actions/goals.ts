@@ -52,13 +52,34 @@ export async function createGoal(data: { name: string; targetAmount: number; ico
       icon: data.icon || "🎯",
       color: data.color || "hsl(217, 91%, 60%)",
     });
-    revalidatePath("/financial-health");
     revalidatePath("/goals");
     return { success: true };
   } catch (error: unknown) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Failed to create goal" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create goal"
+    };
+  }
+}
+
+export async function updateGoal(
+  goalId: string,
+  data: { name: string; targetAmount: number; icon?: string; color?: string }
+) {
+  await dbConnect();
+  try {
+    await Goal.findByIdAndUpdate(goalId, {
+      name: data.name,
+      targetAmount: data.targetAmount,
+      ...(data.icon ? { icon: data.icon } : {}),
+      ...(data.color ? { color: data.color } : {}),
+    });
+    revalidatePath("/goals");
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update goal",
     };
   }
 }
@@ -71,7 +92,6 @@ export async function addGoalContribution(goalId: string, amount: number, date: 
       amount,
       date: new Date(date),
     });
-    revalidatePath("/financial-health");
     revalidatePath("/goals");
     return { success: true };
   } catch (error: unknown) {
@@ -87,7 +107,6 @@ export async function deleteGoal(goalId: string) {
   try {
     await GoalContribution.deleteMany({ goalId });
     await Goal.findByIdAndDelete(goalId);
-    revalidatePath("/financial-health");
     revalidatePath("/goals");
     return { success: true };
   } catch (error: unknown) {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getFinancialHealthData } from "@/actions/financial-health";
+import { computeFinancialHealth } from "@/lib/finance";
 import { formatCurrency } from "@/lib/format";
 import { CountUp } from "@/components/shared/count-up";
 import { motion } from "framer-motion";
@@ -131,70 +132,32 @@ export function FinancialHealthClient() {
     totalBorrowedPending
   } = healthData;
 
-  // 50-30-20 Calculations
-  const needsPct = totalIncome > 0 ? (totalNeeds / totalIncome) * 100 : 0;
-  const wantsPct = totalIncome > 0 ? ((totalWants + totalUnnecessary) / totalIncome) * 100 : 0;
-  const savingsPct = totalIncome > 0 ? ((totalSavings + totalGoals) / totalIncome) * 100 : 0;
+  // All 50/30/20 shares, stability rules and the 0-100 score come from the
+  // shared, unit-tested pure function so the UI can never drift from the tests.
+  const {
+    needsPct,
+    wantsPct,
+    savingsPct,
+    targetNeeds,
+    targetWants,
+    targetSavings,
+    rentRulePassed,
+    emergencyTarget,
+    emergencyRulePassed,
+    emergencyMonthsCovered,
+    dtiRatio,
+    dtiRulePassed,
+    finalScore,
+    verdict,
+    tone,
+  } = computeFinancialHealth(healthData);
 
-  const targetNeeds = totalIncome * 0.50;
-  const targetWants = totalIncome * 0.30;
-  const targetSavings = totalIncome * 0.20;
-
-  // Stability Indicators
-  const rentRulePassed = totalIncome > 0 && rentExpense <= (totalIncome * 0.30);
-  
-  const emergencyTarget = totalNeeds * 6;
-  const emergencyRulePassed = totalLiquidCash >= emergencyTarget;
-  const emergencyMonthsCovered = totalNeeds > 0 ? totalLiquidCash / totalNeeds : 0;
-
-  const dtiRatio = totalIncome > 0 ? (totalBorrowedPending / totalIncome) * 100 : 0;
-  const dtiRulePassed = dtiRatio <= 36;
-
-  // Calculate detailed financial health score (0 - 100)
-  // 1. Savings Rate (30 pts max)
-  let savingsScore = 0;
-  if (totalIncome > 0) {
-    savingsScore = Math.min(30, (savingsPct / 20) * 30);
-  }
-  // 2. Needs Adherence (30 pts max)
-  let needsScore = 0;
-  if (totalIncome > 0) {
-    if (needsPct <= 50) {
-      needsScore = 30;
-    } else {
-      needsScore = Math.max(0, 30 - ((needsPct - 50) / 50) * 30);
-    }
-  }
-  // 3. Debt-to-Income (20 pts max)
-  let dtiScore = 20;
-  if (totalIncome > 0 && totalBorrowedPending > 0) {
-    if (dtiRatio <= 36) {
-      dtiScore = 20;
-    } else {
-      dtiScore = Math.max(0, 20 - ((dtiRatio - 36) / 64) * 20);
-    }
-  }
-  // 4. Emergency Fund cover (20 pts max)
-  const emergencyScore = Math.min(20, (emergencyMonthsCovered / 6) * 20);
-
-  const finalScore = Math.round(savingsScore + needsScore + dtiScore + emergencyScore);
-
-  // Score description
-  let verdict = "Needs Attention";
-  let verdictColor = "text-rose-500 bg-rose-500/10 border-rose-500/20";
-  
-  if (totalIncome > 0) {
-    if (finalScore >= 80) {
-      verdict = "Excellent";
-      verdictColor = "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
-    } else if (finalScore >= 50) {
-      verdict = "Good";
-      verdictColor = "text-amber-500 bg-amber-500/10 border-amber-500/20";
-    }
-  } else {
-    verdict = "No Income Data";
-    verdictColor = "text-muted-foreground bg-muted border-border/50";
-  }
+  const verdictColor = {
+    excellent: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
+    good: "text-amber-500 bg-amber-500/10 border-amber-500/20",
+    attention: "text-rose-500 bg-rose-500/10 border-rose-500/20",
+    none: "text-muted-foreground bg-muted border-border/50",
+  }[tone];
 
   // Dynamic recommendations/tips
   const tips = [];

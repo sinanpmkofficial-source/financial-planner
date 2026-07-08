@@ -65,6 +65,7 @@ interface UIState {
     incomes: any[];
     budgets: any[];
     chartData: any[];
+    categorySpend: any[];
     settings: any | null;
     recurringExpenses: any[];
     lastFetched?: number;
@@ -127,6 +128,7 @@ export const useUIStore = create<UIState>()(
         incomes: [],
         budgets: [],
         chartData: [],
+        categorySpend: [],
         settings: null,
         recurringExpenses: [],
       },

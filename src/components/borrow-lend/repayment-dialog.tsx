@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import type { BorrowLend } from "@/types";
 import { format } from "date-fns";
 import { recordRepayment } from "@/actions/borrow-lend";
+import { toPaise, toRupees } from "@/lib/money";
+import { formatCurrency } from "@/lib/format";
 
 interface RepaymentDialogProps {
   open: boolean;
@@ -39,7 +41,7 @@ export function RepaymentDialog({
 
   useEffect(() => {
     if (open && record) {
-      setAmount(remaining.toString());
+      setAmount(String(toRupees(remaining)));
       setDate(format(new Date(), "yyyy-MM-dd"));
       setCreateTransaction(true);
     }
@@ -56,8 +58,9 @@ export function RepaymentDialog({
       return;
     }
 
-    if (repaymentAmount > remaining) {
-      toast.error(`Amount exceeds the remaining balance of ₹${remaining}`);
+    const repaymentPaise = toPaise(repaymentAmount);
+    if (repaymentPaise > remaining) {
+      toast.error(`Amount exceeds the remaining balance of ${formatCurrency(remaining)}`);
       return;
     }
 
@@ -65,7 +68,7 @@ export function RepaymentDialog({
     try {
       const result = await recordRepayment(
         record._id,
-        repaymentAmount,
+        repaymentPaise,
         date,
         createTransaction
       );
@@ -98,15 +101,15 @@ export function RepaymentDialog({
           <div className="text-sm text-muted-foreground bg-muted/40 p-3.5 rounded-xl border border-foreground/5 space-y-1">
             <p className="flex justify-between">
               <span>Original Amount:</span>
-              <span className="font-semibold text-foreground">₹{record.amount}</span>
+              <span className="font-semibold text-foreground">{formatCurrency(record.amount)}</span>
             </p>
             <p className="flex justify-between">
               <span>Already Repaid:</span>
-              <span className="font-semibold text-foreground">₹{record.paidAmount ?? 0}</span>
+              <span className="font-semibold text-foreground">{formatCurrency(record.paidAmount ?? 0)}</span>
             </p>
             <p className="flex justify-between border-t border-border/60 pt-1.5 mt-1.5 font-medium text-foreground">
               <span>Remaining Balance:</span>
-              <span className="font-bold">₹{remaining}</span>
+              <span className="font-bold">{formatCurrency(remaining)}</span>
             </p>
           </div>
 
@@ -118,7 +121,7 @@ export function RepaymentDialog({
               id="repay-amount"
               type="number"
               step="0.01"
-              max={remaining}
+              max={toRupees(remaining)}
               min="0.01"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}

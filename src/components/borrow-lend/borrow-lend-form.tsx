@@ -8,6 +8,7 @@ import {
   type BorrowLendFormData,
 } from "@/validations/borrow-lend";
 import { createBorrowLend, updateBorrowLend } from "@/actions/borrow-lend";
+import { toPaise, toRupees } from "@/lib/money";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,7 +61,7 @@ export function BorrowLendForm({
     defaultValues: record
       ? {
           personName: record.personName,
-          amount: record.amount,
+          amount: toRupees(record.amount),
           type: record.type,
           date: format(new Date(record.date), "yyyy-MM-dd"),
           dueDate: record.dueDate
@@ -84,7 +85,7 @@ export function BorrowLendForm({
         record
           ? {
               personName: record.personName,
-              amount: record.amount,
+              amount: toRupees(record.amount),
               type: record.type,
               date: format(new Date(record.date), "yyyy-MM-dd"),
               dueDate: record.dueDate
@@ -111,9 +112,10 @@ export function BorrowLendForm({
   const onSubmit = async (data: BorrowLendFormData) => {
     setLoading(true);
     try {
+      const payload = { ...data, amount: toPaise(data.amount) };
       const result = isEditing
-        ? await updateBorrowLend(record._id, data)
-        : await createBorrowLend(data);
+        ? await updateBorrowLend(record._id, payload)
+        : await createBorrowLend(payload);
 
       if (result.success) {
         toast.success(isEditing ? "Record updated" : "Record added");

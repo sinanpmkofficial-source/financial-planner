@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { useUIStore } from "@/stores/ui-store";
 import { getDashboardSummary } from "@/actions/stats";
-import { getRecentExpenses } from "@/actions/expense";
+import { getRecentExpenses, getExpensesByCategory } from "@/actions/expense";
 import { getRecentIncomes } from "@/actions/income";
 import { getBudgetsWithSpent } from "@/actions/budget";
 import { getUserSettings } from "@/actions/settings";
@@ -12,6 +12,11 @@ import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { CountUp } from "@/components/shared/count-up";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
+const CategoryBreakdown = dynamic(
+  () => import("@/components/shared/category-breakdown").then((m) => m.CategoryBreakdown),
+  { ssr: false, loading: () => <div className="h-44 w-full bg-muted/20 animate-pulse rounded-xl" /> }
+);
 import { RecentTransactions } from "@/components/dashboard/recent-transactions";
 import { BudgetAlerts } from "@/components/dashboard/budget-alerts";
 import { QuickActions } from "@/components/dashboard/quick-actions";
@@ -20,7 +25,8 @@ import { TransactionForm } from "@/components/transactions/transaction-form";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
+import { CATEGORY_ICONS, CATEGORY_COLORS, type ExpenseCategory } from "@/constants";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import {
   Wallet,
   TrendingUp,
@@ -33,6 +39,7 @@ import {
   AlertCircle,
   Repeat,
   CalendarClock,
+  PieChart as PieChartIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getRecurringExpenses, confirmRecurringPayment } from "@/actions/recurring-expense";
@@ -110,6 +117,8 @@ export function DashboardClient() {
   const [settings, setSettings] = useState<DashboardUserSettings | null>(null);
   const [chartData, setChartData] = useState<DashboardChartData[]>([]);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+  const [categorySpend, setCategorySpend] = useState<{ category: string; amount: number }[]>([]);
+  const [categorySpendLoading, setCategorySpendLoading] = useState(true);
 
   // Decoupled loading states
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -118,7 +127,6 @@ export function DashboardClient() {
   const [trendLoading, setTrendLoading] = useState(false);
 
   const [graphPeriod, setGraphPeriod] = useState<"weekly" | "monthly">("weekly");
-  const [spendPeriod, setSpendPeriod] = useState<"today" | "week" | "month">("today");
 
   const [transactionFormOpen, setTransactionFormOpen] = useState(false);
 
@@ -156,6 +164,10 @@ export function DashboardClient() {
       }
       if (dashboardCache.chartData && dashboardCache.chartData.length > 0) {
         setChartData(dashboardCache.chartData);
+      }
+      if (dashboardCache.categorySpend && dashboardCache.categorySpend.length > 0) {
+        setCategorySpend(dashboardCache.categorySpend);
+        setCategorySpendLoading(false);
       }
     }
   }, []);
@@ -198,6 +210,28 @@ export function DashboardClient() {
     const categories = settings?.categories || [];
     return new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.icon]));
   }, [settings]);
+
+  // Fallback palette for categories that have no configured colour
+  const FALLBACK_PALETTE = [
+    "hsl(217, 91%, 60%)", "hsl(142, 72%, 45%)", "hsl(25, 95%, 53%)",
+    "hsl(325, 80%, 55%)", "hsl(43, 90%, 50%)", "hsl(271, 80%, 60%)",
+    "hsl(190, 80%, 45%)", "hsl(0, 75%, 58%)",
+  ];
+
+  const categoryChartData = useMemo(() => {
+    const colorMap = new Map<string, string>(
+      (settings?.categories || []).map((c) => [c.name.toLowerCase(), c.color])
+    );
+    return categorySpend.map((c, i) => ({
+      category: c.category,
+      amount: c.amount,
+      color:
+        colorMap.get(c.category.toLowerCase()) ??
+        CATEGORY_COLORS[c.category as ExpenseCategory] ??
+        FALLBACK_PALETTE[i % FALLBACK_PALETTE.length],
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categorySpend, settings]);
 
   const fetchData = useCallback(async () => {
     // Only show loading spinner if we don't have cached data
@@ -246,6 +280,19 @@ export function DashboardClient() {
       .catch((err) => {
         console.error("Budgets load error", err);
         setBudgetsLoading(false);
+      });
+
+    // Fetch category-wise spend for the current month
+    if (!currentCache.categorySpend || currentCache.categorySpend.length === 0) setCategorySpendLoading(true);
+    getExpensesByCategory(currentMonth, currentYear)
+      .then((cs) => {
+        setCategorySpend(cs);
+        setCategorySpendLoading(false);
+        updateDashboardCache({ categorySpend: cs });
+      })
+      .catch((err) => {
+        console.error("Category spend load error", err);
+        setCategorySpendLoading(false);
       });
 
     // Fetch User Settings independently
@@ -428,34 +475,31 @@ export function DashboardClient() {
 
       {/* Compact Metrics Bar */}
       <motion.div variants={itemVariants}>
-        <div className="flex items-stretch gap-0 border border-border rounded-2xl overflow-hidden bg-card shadow-sm">
+        <div className="grid grid-cols-2 border border-border rounded-2xl overflow-hidden bg-card shadow-sm divide-x divide-y divide-border">
           {/* Available Balance */}
-          <div className="flex-1 px-4 py-3.5 flex flex-col gap-0.5 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Available Balance
             </p>
-            <p className="text-xl font-extrabold tracking-tight text-foreground">
+            <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
               {summaryLoading || !summary ? (
-                <span className="inline-block h-6 w-24 bg-muted animate-pulse rounded-md" />
+                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
               ) : (
                 <CountUp value={summary.currentBalance} formatter={formatCurrency} />
               )}
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               {summaryLoading || !summary ? "" : "All-time net balance"}
             </p>
           </div>
 
-          {/* Divider */}
-          <div className="w-px bg-border self-stretch" />
-
           {/* Safe to Spend */}
-          <div className="flex-1 px-4 py-3.5 flex flex-col gap-0.5 min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Safe to Spend
             </p>
             <p className={cn(
-              "text-xl font-extrabold tracking-tight",
+              "text-xl sm:text-2xl font-extrabold tracking-tight",
               summaryLoading || budgetsLoading || !summary
                 ? "text-muted-foreground"
                 : (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
@@ -463,7 +507,7 @@ export function DashboardClient() {
                 : "text-rose-500"
             )}>
               {summaryLoading || budgetsLoading || !summary ? (
-                <span className="inline-block h-6 w-24 bg-muted animate-pulse rounded-md" />
+                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
               ) : (
                 <CountUp
                   value={(summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal}
@@ -471,7 +515,7 @@ export function DashboardClient() {
                 />
               )}
             </p>
-            <p className="text-[10px] text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               {summaryLoading || budgetsLoading || !summary
                 ? ""
                 : (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
@@ -480,65 +524,43 @@ export function DashboardClient() {
             </p>
           </div>
 
-          {/* Divider */}
-          <div className="w-px bg-border self-stretch" />
-
-          {/* Spend with period filter */}
-          <div className="flex-1 px-4 py-3.5 flex flex-col gap-1.5 min-w-0">
-            <div className="flex items-center justify-between gap-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Spent
-              </p>
-              {/* Period select */}
-              <select
-                value={spendPeriod}
-                onChange={(e) => setSpendPeriod(e.target.value as "today" | "week" | "month")}
-                className="text-[10px] font-semibold bg-muted border-0 rounded-md px-1.5 py-0.5 text-muted-foreground cursor-pointer focus:ring-0 outline-none appearance-none pr-4 relative"
-                style={{ backgroundImage: "none" }}
-              >
-                <option value="today">Today</option>
-                <option value="week">Week</option>
-                <option value="month">Month</option>
-              </select>
-            </div>
-            <p className="text-xl font-extrabold tracking-tight text-rose-500">
+          {/* Spent this week */}
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Spent This Week
+            </p>
+            <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-rose-500">
               {summaryLoading || !summary ? (
-                <span className="inline-block h-6 w-24 bg-muted animate-pulse rounded-md" />
+                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
               ) : (
-                <CountUp
-                  value={
-                    spendPeriod === "today"
-                      ? (summary.todayExpenses ?? 0)
-                      : spendPeriod === "week"
-                      ? (summary.weekExpenses ?? 0)
-                      : summary.monthlyExpenses
-                  }
-                  formatter={formatCurrency}
-                />
+                <CountUp value={summary.weekExpenses ?? 0} formatter={formatCurrency} />
               )}
             </p>
-            <p className="text-[10px] text-muted-foreground">
-              {spendPeriod === "today"
-                ? (() => {
-                    if (summaryLoading || !summary) return "";
-                    const now = new Date();
-                    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                    const dailyLimit = budgetSummary.totalLimit / totalDays;
-                    if (dailyLimit > 0) {
-                      const diff = (summary.todayExpenses ?? 0) - dailyLimit;
-                      return diff > 0
-                        ? `${formatCurrency(Math.round(diff))} over daily limit`
-                        : `${formatCurrency(Math.round(Math.abs(diff)))} under daily limit`;
-                    }
-                    return "No budget set";
-                  })()
-                : spendPeriod === "week"
-                ? (summaryLoading || !summary ? "" : `of ${formatCurrency(budgetSummary.totalLimit)} budget`)
-                : (summaryLoading || !summary
-                    ? ""
-                    : budgetSummary.totalLimit > 0
-                    ? `${Math.round((summary.monthlyExpenses / budgetSummary.totalLimit) * 100)}% of budget used`
-                    : "No budget set")}
+            <p className="text-[11px] text-muted-foreground">
+              {summaryLoading || !summary
+                ? ""
+                : `${formatCurrency(summary.todayExpenses ?? 0)} spent today`}
+            </p>
+          </div>
+
+          {/* Income this month */}
+          <div className="px-5 py-4 flex flex-col gap-1 min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Income This Month
+            </p>
+            <p className="text-xl sm:text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-500">
+              {summaryLoading || !summary ? (
+                <span className="inline-block h-7 w-28 bg-muted animate-pulse rounded-md" />
+              ) : (
+                <CountUp value={summary.monthlyIncome ?? 0} formatter={formatCurrency} />
+              )}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {summaryLoading || !summary
+                ? ""
+                : (summary.monthlyIncome ?? 0) > 0
+                ? `${Math.round(((summary.savings ?? 0) / summary.monthlyIncome) * 100)}% saved this month`
+                : "No income logged yet"}
             </p>
           </div>
         </div>
@@ -653,15 +675,10 @@ export function DashboardClient() {
                       <div key={b._id} className="space-y-1">
                         <div className="flex justify-between items-center text-xs">
                           <span className="flex items-center gap-1.5 font-medium text-foreground">
-                            {(() => {
-                              const icon = catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "📌";
-                              const isEmoji = icon.length <= 2;
-                              return (
-                                <span className={isEmoji ? "text-sm" : "text-[9px] text-muted-foreground/60 uppercase tracking-wider font-semibold"}>
-                                  {icon}
-                                </span>
-                              );
-                            })()}
+                            <CategoryIcon
+                              name={catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "Tag"}
+                              className="w-4 h-4 text-muted-foreground"
+                            />
                             <span>{b.category}</span>
                           </span>
                           <span className="text-muted-foreground font-mono text-[11px]">
@@ -841,7 +858,7 @@ export function DashboardClient() {
                             ? "border-rose-500/20 bg-rose-500/10"
                             : isDueSoon
                             ? "border-amber-500/20 bg-amber-500/10"
-                            : "border-white/5 bg-white/5"
+                            : "border-border bg-muted/40"
                         )}
                       >
                         <div className="flex items-center gap-2 min-w-0">
@@ -878,6 +895,37 @@ export function DashboardClient() {
                     );
                   })}
               </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Spending by Category (doughnut) */}
+      <motion.div variants={itemVariants}>
+        <div className={cn(
+          "relative overflow-hidden border border-border/60 rounded-2xl bg-card transition-all duration-300",
+          "shadow-[0_1px_3px_oklch(0_0_0/30%)] hover:shadow-[0_4px_14px_oklch(0_0_0/40%)] hover:border-border"
+        )}>
+          <div className="flex items-center justify-between px-5 pt-5 pb-3.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono text-muted-foreground/60 border border-border px-1.5 py-0.5 rounded-md">04</span>
+              <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Spending by Category</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                This month
+              </span>
+              <div className="p-2 rounded-xl bg-muted/50 text-muted-foreground">
+                <PieChartIcon className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+          <div className="w-full border-t border-border/50 border-dashed" />
+          <div className="p-5">
+            {categorySpendLoading ? (
+              <div className="h-44 w-full bg-muted/20 animate-pulse rounded-xl" />
+            ) : (
+              <CategoryBreakdown data={categoryChartData} />
             )}
           </div>
         </div>

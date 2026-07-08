@@ -8,10 +8,10 @@ import {
   PiggyBank,
   Target,
   MoreHorizontal,
-  HeartPulse,
   HandCoins,
   TrendingUp,
   Settings,
+  HeartPulse,
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export function BottomNav() {
 
   return (
     <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-[340px] px-4 animate-fade-in-up">
-      <nav className="flex items-center justify-between bg-card/85 backdrop-blur-xl border border-white/5 p-1.5 rounded-full shadow-lg shadow-black/40">
+      <nav className="flex items-center justify-between bg-card/85 backdrop-blur-xl border border-border p-1.5 rounded-full shadow-lg shadow-black/40">
         {primaryItems.map((item) => {
           const isActive =
             item.href === "/"
@@ -74,7 +74,7 @@ export function BottomNav() {
               </button>
             }
           />
-          <SheetContent side="bottom" className="rounded-t-3xl border-t border-white/5 bg-card/85 backdrop-blur-xl p-6 gap-6">
+          <SheetContent side="bottom" className="rounded-t-3xl border-t border-border bg-card/85 backdrop-blur-xl p-6 gap-6">
             <SheetHeader className="p-0">
               <SheetTitle className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
                 More Options
@@ -86,10 +86,11 @@ export function BottomNav() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { href: "/goals", label: "Goals", icon: Target, desc: "Savings goals & progress" },
-                { href: "/financial-health", label: "Financial Health", icon: HeartPulse, desc: "Audit score & 50-30-20" },
+                { href: "/financial-health", label: "Financial Health", icon: HeartPulse, desc: "Score & 50-30-20 audit" },
                 { href: "/analytics", label: "Reports & Trends", icon: TrendingUp, desc: "Cash flow analytics" },
+                { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins, desc: "Debts & repayments" },
                 { href: "/settings", label: "Settings", icon: Settings, desc: "System configurations" },
-                { href: "/guide", label: "Calculation Guide", icon: HelpCircle, desc: "Formulas & math rules" },
+                { href: "/guide", label: "Methodology Guide", icon: HelpCircle, desc: "Formulas & math rules" },
               ].map((item) => {
                 const isActive = pathname.startsWith(item.href);
                 return (

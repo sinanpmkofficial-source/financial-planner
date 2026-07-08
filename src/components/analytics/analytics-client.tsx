@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
 import { StatCard } from "@/components/shared/stat-card";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import {
   Select,
   SelectContent,
@@ -125,7 +126,7 @@ export function AnalyticsClient() {
     to: endOfMonth(new Date()),
   });
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
+  const [categories, setCategories] = useState<{ name: string; icon: string; color: string }[]>([]);
 
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -229,10 +230,13 @@ export function AnalyticsClient() {
               <SelectValue placeholder="All Categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">📁 All Categories</SelectItem>
+              <SelectItem value="all">All Categories</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c.name} value={c.name}>
-                  {c.icon} {c.name}
+                  <span className="mr-2 inline-flex" style={{ color: c.color }}>
+                    <CategoryIcon name={c.icon} className="w-4 h-4" />
+                  </span>
+                  {c.name}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -6,6 +6,7 @@ import Income from "@/models/income";
 import GoalContribution from "@/models/goal-contribution";
 import BorrowLend from "@/models/borrow-lend";
 import { endOfMonth, startOfMonth } from "date-fns";
+import { computeLiquidCash } from "@/lib/finance";
 
 interface IncomeRecord {
   amount: number;
@@ -82,10 +83,16 @@ export async function getFinancialHealthData(month: number, year: number) {
   // Savings is Investments + Goal Contributions + remaining cash flow
   const totalSavings = totalInvestments + unspentCash;
 
-  // Approximate total net balance across all time as Liquid Cash
+  // All-time liquid cash, using the shared canonical definition. Goal money is
+  // set aside (not liquid), so all-time goal contributions are subtracted too.
   const allIncomes = await Income.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
   const allExpenses = await Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
-  const totalLiquidCash = (allIncomes[0]?.total || 0) - (allExpenses[0]?.total || 0);
+  const allContributions = await GoalContribution.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]) as { total: number }[];
+  const totalLiquidCash = computeLiquidCash({
+    totalIncome: allIncomes[0]?.total || 0,
+    totalExpenses: allExpenses[0]?.total || 0,
+    totalGoalContributions: allContributions[0]?.total || 0,
+  });
 
   // Fetch all outstanding borrowed debts
   const pendingBorrowed = await BorrowLend.find({

@@ -4,7 +4,8 @@ import { useEffect } from "react";
 
 export function ThemeSync() {
   useEffect(() => {
-    document.documentElement.classList.add("dark");
+    // Default to the white-dominant monochrome (light) theme.
+    document.documentElement.classList.remove("dark");
   }, []);
 
   return null;

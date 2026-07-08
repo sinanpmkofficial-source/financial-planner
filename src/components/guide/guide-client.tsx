@@ -68,10 +68,12 @@ export function GuideClient() {
                 <div>
                   <h4 className="font-bold text-foreground mb-1 text-sm">Available Balance</h4>
                   <p className="mb-2">
-                    Your current net wealth representing all historical recorded income minus all historical recorded expenses.
+                    Your current spendable cash: all recorded income, minus all recorded
+                    expenses, minus every amount you have set aside into savings goals
+                    (goal contributions are treated as money moved out of your balance).
                   </p>
                   <pre className="bg-muted p-2 rounded-xl text-[10px] font-mono text-foreground border border-border/40">
-                    Available Balance = Total Income - Total Expenses
+                    Available Balance = Total Income - Total Expenses - Goal Contributions
                   </pre>
                 </div>
                 <div>

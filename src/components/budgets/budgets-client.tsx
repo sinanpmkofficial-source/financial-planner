@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getBudgetsWithSpent, deleteBudget } from "@/actions/budget";
 import { formatCurrency } from "@/lib/format";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import { PageHeader } from "@/components/layout/header";
 import { BudgetForm } from "@/components/budgets/budget-form";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
@@ -179,15 +180,10 @@ export function BudgetsClient() {
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2.5">
-                        {(() => {
-                          const icon = catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "📌";
-                          const isEmoji = icon.length <= 2;
-                          return (
-                            <span className={isEmoji ? "text-lg" : "text-[10px] text-muted-foreground/60 uppercase tracking-wider font-semibold"}>
-                              {icon}
-                            </span>
-                          );
-                        })()}
+                        <CategoryIcon
+                          name={catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "Tag"}
+                          className="w-5 h-5 text-muted-foreground"
+                        />
                         <div>
                           <p className="font-medium text-sm">{budget.category}</p>
                           <p className="text-xs text-muted-foreground">

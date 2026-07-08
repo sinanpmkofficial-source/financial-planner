@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import {
   Select,
   SelectContent,
@@ -38,7 +39,7 @@ export function TransactionsClient() {
   const searchParams = useSearchParams();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [incomes, setIncomes] = useState<Income[]>([]);
-  const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
+  const [categories, setCategories] = useState<{ name: string; icon: string; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Expense | Income | undefined>();
@@ -247,7 +248,7 @@ export function TransactionsClient() {
       </div>
 
       {/* Filters row */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card/25 backdrop-blur-md p-3 rounded-2xl border border-white/5">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card/25 backdrop-blur-md p-3 rounded-2xl border border-border">
         {/* Search input */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -255,7 +256,7 @@ export function TransactionsClient() {
             placeholder="Search by category, source, note, amount..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9.5 h-9 w-full bg-background/50 border-white/10"
+            className="pl-9.5 h-9 w-full bg-background/50 border-border"
           />
         </div>
 
@@ -312,10 +313,13 @@ export function TransactionsClient() {
                   <SelectValue placeholder="All categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">📁 All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((c) => (
                     <SelectItem key={c.name} value={c.name}>
-                      {c.icon} {c.name}
+                      <span className="mr-2 inline-flex" style={{ color: c.color }}>
+                        <CategoryIcon name={c.icon} className="w-4 h-4" />
+                      </span>
+                      {c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -354,8 +358,8 @@ export function TransactionsClient() {
           {filteredTransactions.map((transaction) => {
             const isExp = transaction.type === "expense";
             const icon = isExp
-              ? catIconMap.get(transaction.category.toLowerCase()) ?? CATEGORY_ICONS[transaction.category as ExpenseCategory] ?? "📌"
-              : "💰";
+              ? catIconMap.get(transaction.category.toLowerCase()) ?? CATEGORY_ICONS[transaction.category as ExpenseCategory] ?? "Tag"
+              : "Wallet";
             const label = isExp ? transaction.category : transaction.source;
 
             return (
@@ -368,17 +372,12 @@ export function TransactionsClient() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {(() => {
-                        const isEmoji = icon.length <= 2;
-                        return (
-                          <span className={cn(
-                            "w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center border border-border/10 shrink-0",
-                            isEmoji ? "text-xl" : "text-[8px] text-muted-foreground/60 uppercase tracking-wider font-semibold px-0.5 text-center overflow-hidden whitespace-nowrap"
-                          )}>
-                            {icon}
-                          </span>
-                        );
-                      })()}
+                      <span className={cn(
+                        "w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center border border-border/10 shrink-0",
+                        isExp ? "text-muted-foreground" : "text-emerald-500"
+                      )}>
+                        <CategoryIcon name={icon} className="w-4 h-4" />
+                      </span>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-semibold text-sm leading-none">{label}</p>

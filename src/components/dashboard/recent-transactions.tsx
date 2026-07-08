@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDateShort } from "@/lib/format";
 import { CATEGORY_ICONS, type ExpenseCategory } from "@/constants";
+import { CategoryIcon } from "@/components/shared/category-icon";
 import type { Expense, Income } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -109,15 +110,9 @@ export function RecentTransactions({
               className="flex items-center justify-between px-5 py-3"
             >
               <div className="flex items-center gap-3">
-                {(() => {
-                  const icon = t.icon ?? "💰";
-                  const isEmoji = icon.length <= 2;
-                  return (
-                    <span className={isEmoji ? "text-lg" : "text-[10px] text-muted-foreground/60 uppercase tracking-wider font-semibold"}>
-                      {icon}
-                    </span>
-                  );
-                })()}
+                <span className={t.type === "income" ? "text-emerald-500" : "text-muted-foreground"}>
+                  <CategoryIcon name={t.icon ?? "Wallet"} className="w-4 h-4" />
+                </span>
                 <div>
                   <p className="text-sm font-medium">{t.label}</p>
                   <p className="text-xs text-muted-foreground">

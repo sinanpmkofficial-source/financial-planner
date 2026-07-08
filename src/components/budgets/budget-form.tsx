@@ -6,6 +6,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { budgetSchema, type BudgetFormData } from "@/validations/budget";
 import { createBudget, updateBudget } from "@/actions/budget";
 import { EXPENSE_CATEGORIES } from "@/constants";
+import { CategoryIcon } from "@/components/shared/category-icon";
+import { toPaise, toRupees } from "@/lib/money";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,7 +47,7 @@ export function BudgetForm({
   existingCategories = [],
 }: BudgetFormProps) {
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
+  const [categories, setCategories] = useState<{ name: string; icon: string; color: string }[]>([]);
   const { dateRange, setDashboardDirty } = useUIStore();
   const selectedMonth = dateRange.from.getMonth() + 1;
   const selectedYear = dateRange.from.getFullYear();
@@ -63,7 +65,7 @@ export function BudgetForm({
     defaultValues: budget
       ? {
           category: budget.category,
-          amount: budget.amount,
+          amount: toRupees(budget.amount),
           month: budget.month,
           year: budget.year,
         }
@@ -91,7 +93,7 @@ export function BudgetForm({
         budget
           ? {
               category: budget.category,
-              amount: budget.amount,
+              amount: toRupees(budget.amount),
               month: budget.month,
               year: budget.year,
             }
@@ -112,9 +114,10 @@ export function BudgetForm({
   const onSubmit = async (data: BudgetFormData) => {
     setLoading(true);
     try {
+      const payload = { ...data, amount: toPaise(data.amount) };
       const result = isEditing
-        ? await updateBudget(budget._id, data)
-        : await createBudget({ ...data, month: selectedMonth, year: selectedYear });
+        ? await updateBudget(budget._id, payload)
+        : await createBudget({ ...payload, month: selectedMonth, year: selectedYear });
 
       if (result.success) {
         toast.success(isEditing ? "Budget updated" : "Budget created");
@@ -159,7 +162,9 @@ export function BudgetForm({
                   .filter((c) => availableCategories.includes(c.name))
                   .map((c) => (
                     <SelectItem key={c.name} value={c.name}>
-                      <span className="mr-2">{c.icon}</span>
+                      <span className="mr-2 inline-flex" style={{ color: c.color }}>
+                        <CategoryIcon name={c.icon} className="w-4 h-4" />
+                      </span>
                       <span>{c.name}</span>
                     </SelectItem>
                   ))}

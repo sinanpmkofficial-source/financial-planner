@@ -14,6 +14,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { UserButton } from "@clerk/nextjs";
 import { DatePeriodFilter } from "@/components/layout/month-year-picker";
 import { DbSyncIndicator } from "@/components/shared/db-sync-indicator";
 
@@ -33,7 +34,7 @@ const navGroups = [
     ],
   },
   {
-    title: "Analytics & Health",
+    title: "Insights",
     items: [
       { href: "/financial-health", label: "Financial Health", icon: HeartPulse },
       { href: "/analytics", label: "Reports", icon: TrendingUp },
@@ -53,9 +54,9 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-white/5 bg-card/85 backdrop-blur-xl">
+    <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 border-r border-border bg-card/85 backdrop-blur-xl">
       {/* Logo */}
-      <div className="flex items-center justify-between px-6 h-16 border-b border-white/5">
+      <div className="flex items-center justify-between px-6 h-16 border-b border-border">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <span className="text-primary-foreground font-bold text-sm">₹</span>
@@ -100,11 +101,19 @@ export function Sidebar() {
       </nav>
 
       {/* Month/Year Picker */}
-      {pathname !== "/" && pathname !== "/financial-health" && (
-        <div className="px-3 py-4 border-t border-white/5">
+      {pathname !== "/" && (
+        <div className="px-3 py-4 border-t border-border">
           <DatePeriodFilter />
         </div>
       )}
+
+      {/* Account */}
+      <div className="px-4 py-3 border-t border-border flex items-center gap-3">
+        <UserButton
+          appearance={{ elements: { avatarBox: "w-8 h-8" } }}
+          showName
+        />
+      </div>
     </aside>
   );
 }

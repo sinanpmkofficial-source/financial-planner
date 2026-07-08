@@ -2,8 +2,9 @@
 
 import { useUIStore } from "@/stores/ui-store";
 import { useEffect, useState, useCallback } from "react";
-import { getGoalsWithProgress, createGoal, addGoalContribution, deleteGoal } from "@/actions/goals";
+import { getGoalsWithProgress, createGoal, updateGoal, addGoalContribution, deleteGoal } from "@/actions/goals";
 import { formatCurrency } from "@/lib/format";
+import { toPaise, toRupees } from "@/lib/money";
 import { PageHeader } from "@/components/layout/header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,7 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Coins, Trash2, Calendar, CheckCircle2 } from "lucide-react";
+import { Plus, Coins, Trash2, Calendar, CheckCircle2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -54,6 +55,7 @@ export function GoalsClient() {
   const [newGoalOpen, setNewGoalOpen] = useState(false);
   const [fundGoalOpen, setFundGoalOpen] = useState(false);
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
+  const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
 
   // Form states
   const [goalName, setGoalName] = useState("");
@@ -91,23 +93,46 @@ export function GoalsClient() {
     fetchData();
   }, [fetchData]);
 
-  const handleCreateGoal = async (e: React.FormEvent) => {
+  const resetGoalForm = () => {
+    setGoalName("");
+    setGoalTarget("");
+    setGoalIcon("🎯");
+    setGoalColor("hsl(217, 91%, 60%)");
+    setEditingGoalId(null);
+  };
+
+  const handleOpenCreate = () => {
+    resetGoalForm();
+    setNewGoalOpen(true);
+  };
+
+  const handleOpenEdit = (goal: GoalWithProgress) => {
+    setEditingGoalId(goal._id);
+    setGoalName(goal.name);
+    setGoalTarget(String(toRupees(goal.targetAmount)));
+    setGoalIcon(goal.icon || "🎯");
+    setGoalColor(goal.color || "hsl(217, 91%, 60%)");
+    setNewGoalOpen(true);
+  };
+
+  const handleSaveGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!goalName || !goalTarget) return;
-    
-    const res = await createGoal({ 
-      name: goalName, 
-      targetAmount: Number(goalTarget),
+
+    const payload = {
+      name: goalName,
+      targetAmount: toPaise(Number(goalTarget)),
       icon: goalIcon,
-      color: goalColor
-    });
+      color: goalColor,
+    };
+    const res = editingGoalId
+      ? await updateGoal(editingGoalId, payload)
+      : await createGoal(payload);
+
     if (res.success) {
-      toast.success("Goal created successfully!");
+      toast.success(editingGoalId ? "Goal updated successfully!" : "Goal created successfully!");
       setNewGoalOpen(false);
-      setGoalName("");
-      setGoalTarget("");
-      setGoalIcon("🎯");
-      setGoalColor("hsl(217, 91%, 60%)");
+      resetGoalForm();
       fetchData();
     } else {
       toast.error(res.error);
@@ -118,7 +143,7 @@ export function GoalsClient() {
     e.preventDefault();
     if (!selectedGoalId || !fundAmount) return;
 
-    const res = await addGoalContribution(selectedGoalId, Number(fundAmount), new Date().toISOString());
+    const res = await addGoalContribution(selectedGoalId, toPaise(Number(fundAmount)), new Date().toISOString());
     if (res.success) {
       toast.success("Funds added to goal!");
       setDashboardDirty(true);
@@ -156,7 +181,7 @@ export function GoalsClient() {
         title="Savings Goals"
         description="Plan for the future by allocating funds towards specific milestones"
         action={
-          <Button size="sm" className="gap-1.5 cursor-pointer" onClick={() => setNewGoalOpen(true)}>
+          <Button size="sm" className="gap-1.5 cursor-pointer" onClick={handleOpenCreate}>
             <Plus className="w-4 h-4" /> Create New Goal
           </Button>
         }
@@ -177,7 +202,7 @@ export function GoalsClient() {
           <p className="text-sm text-muted-foreground max-w-sm mt-1">
             Setting targets like an emergency fund or saving for a holiday helps you stay disciplined.
           </p>
-          <Button className="mt-4 gap-1.5" size="sm" onClick={() => setNewGoalOpen(true)}>
+          <Button className="mt-4 gap-1.5" size="sm" onClick={handleOpenCreate}>
             <Plus className="w-4 h-4" /> Create Your First Goal
           </Button>
         </div>
@@ -199,14 +224,26 @@ export function GoalsClient() {
                   style={{ backgroundColor: goal.color || "hsl(217, 91%, 60%)" }}
                 />
                 
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute top-3 right-3 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-rose-500 cursor-pointer"
-                  onClick={() => handleDeleteGoal(goal._id)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer"
+                    onClick={() => handleOpenEdit(goal)}
+                    aria-label="Edit goal"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-rose-500 cursor-pointer"
+                    onClick={() => handleDeleteGoal(goal._id)}
+                    aria-label="Delete goal"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
 
                 <CardContent className="p-5 pt-6 flex-1 flex flex-col justify-between gap-6">
                   {/* Goal Header */}
@@ -271,12 +308,12 @@ export function GoalsClient() {
       )}
 
       {/* New Goal Modal */}
-      <Dialog open={newGoalOpen} onOpenChange={setNewGoalOpen}>
+      <Dialog open={newGoalOpen} onOpenChange={(o) => { setNewGoalOpen(o); if (!o) resetGoalForm(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Create Financial Goal</DialogTitle>
+            <DialogTitle>{editingGoalId ? "Edit Goal" : "Create Financial Goal"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreateGoal} className="space-y-4 pt-2">
+          <form onSubmit={handleSaveGoal} className="space-y-4 pt-2">
             <div className="space-y-2">
               <Label>Goal Name</Label>
               <Input required placeholder="e.g., Emergency Fund, New Bike, Laptop" value={goalName} onChange={e => setGoalName(e.target.value)} />
@@ -326,7 +363,7 @@ export function GoalsClient() {
               </div>
             </div>
 
-            <Button type="submit" className="w-full cursor-pointer font-bold">Save Goal</Button>
+            <Button type="submit" className="w-full cursor-pointer font-bold">{editingGoalId ? "Update Goal" : "Create Goal"}</Button>
           </form>
         </DialogContent>
       </Dialog>

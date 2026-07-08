@@ -2,8 +2,16 @@ import { CURRENCY_SYMBOL } from "@/constants";
 import { format, parseISO } from "date-fns";
 import { utcToLocal } from "./date-utils";
 
-export function formatCurrency(amount: number): string {
-  return `${CURRENCY_SYMBOL}${amount.toLocaleString("en-IN")}`;
+/**
+ * Format an amount held in integer paise (minor units) as a rupee string.
+ * Whole amounts render without decimals; fractional amounts show up to 2.
+ */
+export function formatCurrency(paise: number): string {
+  const rupees = (Number.isFinite(paise) ? paise : 0) / 100;
+  return `${CURRENCY_SYMBOL}${rupees.toLocaleString("en-IN", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function formatDate(date: string | Date): string {

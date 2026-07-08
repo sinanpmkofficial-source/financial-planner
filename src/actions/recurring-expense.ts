@@ -89,7 +89,6 @@ export async function confirmRecurringPayment(id: string) {
 
     revalidatePath("/");
     revalidatePath("/transactions");
-    revalidatePath("/financial-health");
     
     return { success: true };
   } catch (error: unknown) {
