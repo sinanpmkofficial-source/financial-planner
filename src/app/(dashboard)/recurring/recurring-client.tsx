@@ -78,18 +78,23 @@ const itemVariants = {
 
 function dueMeta(nextDueDate: string) {
   const due = new Date(nextDueDate);
+  due.setHours(0, 0, 0, 0);
   const today = new Date();
-  const diffDays = Math.ceil(
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round(
     (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
   );
   const isOverdue = diffDays < 0;
   const isDueSoon = !isOverdue && diffDays <= 3;
+  // Due today or overdue → a payment is owed. A future due date means the
+  // current cycle has already been logged (paid ahead).
+  const dueNow = diffDays <= 0;
   const label = isOverdue
     ? `Overdue by ${Math.abs(diffDays)}d`
     : diffDays === 0
     ? "Due today"
     : `Due in ${diffDays}d`;
-  return { isOverdue, isDueSoon, label };
+  return { isOverdue, isDueSoon, dueNow, label };
 }
 
 export function RecurringClient() {
@@ -319,7 +324,7 @@ export function RecurringClient() {
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {items.map((item) => {
-            const { isOverdue, isDueSoon, label } = dueMeta(item.nextDueDate);
+            const { isOverdue, isDueSoon, dueNow, label } = dueMeta(item.nextDueDate);
             const catIcon =
               categories.find(
                 (c) => c.name.toLowerCase() === item.category.toLowerCase()
@@ -405,10 +410,11 @@ export function RecurringClient() {
                     <Button
                       size="sm"
                       className="flex-1 gap-1.5 cursor-pointer font-semibold"
-                      disabled={!item.isActive}
+                      disabled={!item.isActive || !dueNow}
                       onClick={() => handleConfirm(item._id)}
+                      title={!dueNow ? "Already paid for this cycle" : undefined}
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Log Payment
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {dueNow ? "Log Payment" : "Paid"}
                     </Button>
                     <Button
                       size="sm"

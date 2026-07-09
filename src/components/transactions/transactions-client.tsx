@@ -24,12 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Receipt, Pencil, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { Plus, Receipt, Pencil, TrendingUp, TrendingDown, ArrowRight, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { Expense, Income } from "@/types";
 import { getUserSettings } from "@/actions/settings";
 import { runOptimistic } from "@/lib/optimistic";
+import { toRupees } from "@/lib/money";
+import { format } from "date-fns";
 
 type UnifiedTransaction = 
   | (Expense & { type: "expense" })
@@ -231,21 +233,54 @@ export function TransactionsClient() {
     return { totalIncome, totalExpense, netSavings };
   }, [expenses, incomes]);
 
+  const handleExportCsv = () => {
+    if (filteredTransactions.length === 0) {
+      toast.info("No transactions to export for the current view");
+      return;
+    }
+    const headers = ["Date", "Time", "Type", "Category / Source", "Tag", "Amount (INR)", "Note"];
+    const escape = (value: string | number) => {
+      const s = String(value ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = filteredTransactions.map((t) => {
+      const d = new Date(t.date);
+      const cells = [
+        format(d, "yyyy-MM-dd"),
+        format(d, "HH:mm"),
+        t.type,
+        t.type === "expense" ? t.category : t.source,
+        t.type === "expense" ? t.tag : "",
+        toRupees(t.amount),
+        t.note ?? "",
+      ];
+      return cells.map(escape).join(",");
+    });
+    // Prepend a BOM so Excel reads UTF-8 (₹, accented notes) correctly.
+    const csv = "﻿" + [headers.join(","), ...lines].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `transactions_${format(dateRange.from, "yyyy-MM-dd")}_to_${format(dateRange.to, "yyyy-MM-dd")}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filteredTransactions.length} transactions`);
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Transactions"
         description={`${filteredTransactions.length} entries in selected period`}
         showMonthPicker
-        titleAction={
-          <Button
-            onClick={() => setFormOpen(true)}
-            size="icon"
-            className="h-7 w-7 rounded-full cursor-pointer"
-            aria-label="Add transaction"
-            title="Add transaction"
-          >
-            <Plus className="w-4 h-4" />
+        action={
+          <Button onClick={() => setFormOpen(true)} size="sm" className="gap-1.5 cursor-pointer">
+            <Plus className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Add Transaction</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         }
       />
@@ -356,6 +391,18 @@ export function TransactionsClient() {
               </Select>
             </div>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1.5 cursor-pointer"
+            onClick={handleExportCsv}
+            disabled={loading}
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
+          </Button>
         </div>
       </div>
 

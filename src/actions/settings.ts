@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/db";
 import UserSettings from "@/models/user-settings";
 import Expense from "@/models/expense";
 import Budget from "@/models/budget";
+import RecurringExpense from "@/models/recurring-expense";
 import { getCurrentUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
@@ -117,12 +118,16 @@ export async function updateCategory(
     if (oldName.toLowerCase() !== category.name.toLowerCase()) {
       await Expense.updateMany({ userId, category: oldName }, { category: category.name });
       await Budget.updateMany({ userId, category: oldName }, { category: category.name });
+      // Recurring bills must follow the rename too, otherwise they stop matching
+      // their budget and get wrongly counted as unbudgeted in Safe-to-Spend.
+      await RecurringExpense.updateMany({ userId, category: oldName }, { category: category.name });
     }
-    
+
     revalidatePath("/");
     revalidatePath("/settings");
     revalidatePath("/expenses");
     revalidatePath("/budgets");
+    revalidatePath("/recurring");
     revalidatePath("/reports");
     revalidatePath("/analytics");
     return { success: true };
@@ -166,11 +171,14 @@ export async function deleteCategory(name: string) {
     
     await Expense.updateMany({ userId, category: name }, { category: "Other" });
     await Budget.deleteMany({ userId, category: name });
-    
+    // Keep recurring bills consistent with expenses — reassign them to "Other".
+    await RecurringExpense.updateMany({ userId, category: name }, { category: "Other" });
+
     revalidatePath("/");
     revalidatePath("/settings");
     revalidatePath("/expenses");
     revalidatePath("/budgets");
+    revalidatePath("/recurring");
     revalidatePath("/reports");
     revalidatePath("/analytics");
     return { success: true };
