@@ -6,6 +6,7 @@ export interface IGoal extends Document {
   targetAmount: number;
   icon: string;
   color: string;
+  targetDate?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,9 +18,13 @@ const GoalSchema = new Schema<IGoal>(
     targetAmount: { type: Number, required: true, min: 0 },
     icon: { type: String, default: "Target" },
     color: { type: String, default: "hsl(217, 91%, 60%)" },
+    targetDate: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
-export default mongoose.models.Goal ||
-  mongoose.model<IGoal>("Goal", GoalSchema);
+if (mongoose.models.Goal) {
+  mongoose.deleteModel("Goal");
+}
+
+export default mongoose.model<IGoal>("Goal", GoalSchema);

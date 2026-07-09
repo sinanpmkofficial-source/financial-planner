@@ -5,18 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { 
-  BookOpen, 
-  LayoutDashboard, 
-  HeartPulse, 
-  Target, 
-  PiggyBank, 
-  Sparkles, 
-  Calculator, 
-  Activity, 
-  Info, 
+import {
+  LayoutDashboard,
+  HeartPulse,
+  Target,
+  PiggyBank,
+  Sparkles,
+  Calculator,
+  Activity,
+  Info,
   AlertCircle,
-  HelpCircle,
   TrendingUp,
   Wallet,
   Coins

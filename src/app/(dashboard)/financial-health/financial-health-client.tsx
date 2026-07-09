@@ -3,18 +3,31 @@
 import { useEffect, useState, useCallback } from "react";
 import { getFinancialHealthData } from "@/actions/financial-health";
 import { computeFinancialHealth } from "@/lib/finance";
+import { CategoryBreakdown } from "@/components/shared/category-breakdown";
 import { formatCurrency } from "@/lib/format";
-import { CountUp } from "@/components/shared/count-up";
 import { motion } from "framer-motion";
+import { PageHeader } from "@/components/layout/header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  CheckCircle2,
+  AlertTriangle,
+  Lightbulb,
+  TrendingDown,
+  TrendingUp,
+  Sparkles,
+  PiggyBank,
+  ShieldCheck,
+  AlertCircle,
+} from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MONTHS } from "@/constants";
 
 const containerVariants = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05
-    }
-  }
+  show: { opacity: 1, transition: { staggerChildren: 0.05 } },
 };
 
 const itemVariants = {
@@ -22,22 +35,9 @@ const itemVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: {
-      type: "spring" as const,
-      stiffness: 90,
-      damping: 14
-    }
-  }
+    transition: { type: "spring" as const, stiffness: 90, damping: 14 },
+  },
 } as const;
-
-import { PageHeader } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, XCircle, AlertCircle, Sparkles, TrendingUp, TrendingDown, PiggyBank, ShieldCheck } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MONTHS } from "@/constants";
 
 interface FinancialHealthData {
   totalIncome: number;
@@ -52,16 +52,19 @@ interface FinancialHealthData {
   totalBorrowedPending: number;
 }
 
+const toneClasses = {
+  rose: "text-rose-500 bg-rose-500/5 border-rose-500/15",
+  amber: "text-amber-500 bg-amber-500/5 border-amber-500/15",
+  blue: "text-blue-500 bg-blue-500/5 border-blue-500/15",
+} as const;
+
+type Tone = keyof typeof toneClasses;
+
 export function FinancialHealthClient() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(true);
   const [healthData, setHealthData] = useState<FinancialHealthData | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -79,42 +82,35 @@ export function FinancialHealthClient() {
     fetchData();
   }, [fetchData]);
 
+  const monthPicker = (
+    <div className="flex items-center gap-2">
+      <Select value={String(selectedMonth)} onValueChange={(val) => val && setSelectedMonth(Number(val))}>
+        <SelectTrigger className="h-9 w-[110px] text-xs bg-background rounded-xl border-border/50">
+          <SelectValue placeholder="Month" />
+        </SelectTrigger>
+        <SelectContent className="rounded-xl">
+          {MONTHS.map((m, idx) => (
+            <SelectItem key={m} value={String(idx + 1)}>{m}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={String(selectedYear)} onValueChange={(val) => val && setSelectedYear(Number(val))}>
+        <SelectTrigger className="h-9 w-[80px] text-xs bg-background rounded-xl border-border/50">
+          <SelectValue placeholder="Year" />
+        </SelectTrigger>
+        <SelectContent className="rounded-xl">
+          {[2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
+            <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   if (loading || !healthData) {
     return (
       <div className="space-y-6">
-        <PageHeader 
-          title="Financial Health" 
-          description="Analyzing your finances..." 
-          showMonthPicker={false}
-          action={
-            <div className="flex items-center gap-2">
-              <Select value={String(selectedMonth)} onValueChange={(val) => setSelectedMonth(Number(val))}>
-                <SelectTrigger className="h-9 w-[110px] text-xs bg-background rounded-xl border-border/50" disabled>
-                  <SelectValue placeholder="Month" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {MONTHS.map((m, idx) => (
-                    <SelectItem key={m} value={String(idx + 1)}>
-                      {m}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(Number(val))}>
-                <SelectTrigger className="h-9 w-[80px] text-xs bg-background rounded-xl border-border/50" disabled>
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {[2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          }
-        />
+        <PageHeader title="Financial Health" description="Analyzing your finances..." action={monthPicker} />
         <div className="h-64 bg-muted/20 animate-pulse rounded-2xl border border-border/10" />
       </div>
     );
@@ -124,16 +120,20 @@ export function FinancialHealthClient() {
     totalIncome,
     totalNeeds,
     totalWants,
+    totalInvestments,
     totalUnnecessary,
     totalGoals,
     totalSavings,
-    rentExpense,
-    totalLiquidCash,
-    totalBorrowedPending
   } = healthData;
+  const emptyGuard = totalIncome <= 0;
 
-  // All 50/30/20 shares, stability rules and the 0-100 score come from the
-  // shared, unit-tested pure function so the UI can never drift from the tests.
+  const purposeData = [
+    { category: "Needs", amount: totalNeeds, color: "hsl(217, 91%, 60%)" },
+    { category: "Wants", amount: totalWants, color: "hsl(43, 90%, 50%)" },
+    { category: "Investments", amount: totalInvestments, color: "hsl(142, 72%, 45%)" },
+    { category: "Wasted", amount: totalUnnecessary, color: "hsl(0, 75%, 58%)" },
+  ];
+
   const {
     needsPct,
     wantsPct,
@@ -141,316 +141,248 @@ export function FinancialHealthClient() {
     targetNeeds,
     targetWants,
     targetSavings,
-    rentRulePassed,
     emergencyTarget,
-    emergencyRulePassed,
     emergencyMonthsCovered,
     dtiRatio,
-    dtiRulePassed,
     finalScore,
     verdict,
     tone,
   } = computeFinancialHealth(healthData);
 
-  const verdictColor = {
+  const wantsActual = totalWants + totalUnnecessary;
+  const savingsActual = totalSavings + totalGoals;
+
+  const scoreColor = {
+    excellent: "text-emerald-500",
+    good: "text-amber-500",
+    attention: "text-rose-500",
+    none: "text-muted-foreground",
+  }[tone];
+  const scoreStroke = {
+    excellent: "stroke-emerald-500",
+    good: "stroke-amber-500",
+    attention: "stroke-rose-500",
+    none: "stroke-muted-foreground",
+  }[tone];
+  const verdictBadge = {
     excellent: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20",
     good: "text-amber-500 bg-amber-500/10 border-amber-500/20",
     attention: "text-rose-500 bg-rose-500/10 border-rose-500/20",
     none: "text-muted-foreground bg-muted border-border/50",
   }[tone];
 
-  // Dynamic recommendations/tips
-  const tips = [];
+  // The three 50/30/20 buckets, each with its deviation and a plain "how to reach" line.
+  const buckets = [
+    {
+      label: "Needs",
+      target: 50,
+      pct: needsPct,
+      amount: totalNeeds,
+      bad: needsPct > 50,
+      reach: needsPct > 50
+        ? `Trim ${formatCurrency(totalNeeds - targetNeeds)} from essentials to reach 50%`
+        : `On track — ${formatCurrency(targetNeeds - totalNeeds)} of room left`,
+    },
+    {
+      label: "Wants",
+      target: 30,
+      pct: wantsPct,
+      amount: wantsActual,
+      bad: wantsPct > 30,
+      reach: wantsPct > 30
+        ? `Cut ${formatCurrency(wantsActual - targetWants)} of lifestyle spending to reach 30%`
+        : `Within budget — ${formatCurrency(targetWants - wantsActual)} to spare`,
+    },
+    {
+      label: "Savings & Investments",
+      target: 20,
+      pct: savingsPct,
+      amount: savingsActual,
+      bad: savingsPct < 20,
+      reach: savingsPct < 20
+        ? `Set aside ${formatCurrency(targetSavings - savingsActual)} more to reach 20%`
+        : `Great — ${formatCurrency(savingsActual - targetSavings)} above target`,
+    },
+  ];
+
+  // One paired source of truth so "what went wrong" and "what to do" stay in sync.
+  const issues: { wrong: string; action: string; icon: typeof AlertCircle; tone: Tone }[] = [];
   if (totalIncome > 0) {
-    if (needsPct > 50) {
-      tips.push({
-        title: "Reduce Fixed Expenses",
-        desc: `Your essential needs take up ${needsPct.toFixed(1)}% of income (target: 50%). Review subscription renewals, look for competitive utility rates, or cut rent burdens if possible.`,
-        icon: TrendingDown,
-        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
-      });
-    }
-    if (wantsPct > 30) {
-      tips.push({
-        title: "Curb Lifestyle Creep",
-        desc: `Lifestyle desires take up ${wantsPct.toFixed(1)}% of your income (target: 30%). Try utilizing a 24-hour waiting period before checking out non-essential shopping carts.`,
-        icon: Sparkles,
-        color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
-      });
-    }
-    if (totalUnnecessary > 0) {
-      const savingsImpact = ((totalUnnecessary / totalIncome) * 100).toFixed(1);
-      tips.push({
-        title: "Plug Unnecessary Leaks",
-        desc: `You logged ${formatCurrency(totalUnnecessary)} under 'Unnecessary Spending' this month. Pausing these leaks would boost your savings rate by ${savingsImpact}%!`,
-        icon: AlertCircle,
-        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
-      });
-    }
-    if (savingsPct < 20) {
-      tips.push({
-        title: "Automate Savings First",
-        desc: `Your savings rate is ${savingsPct.toFixed(1)}% (target: 20%). Automate a percentage of your salary to route directly to investments at the start of each month.`,
-        icon: PiggyBank,
-        color: "text-blue-500 bg-blue-500/5 border-blue-500/10"
-      });
-    }
-    if (totalBorrowedPending > 0 && dtiRatio > 36) {
-      tips.push({
-        title: "Tackle Debt Exposure",
-        desc: `Your debt-to-income ratio is ${dtiRatio.toFixed(1)}% (target: <36%). Try the debt avalanche method (paying off high-interest debt first) and freeze new borrows.`,
-        icon: TrendingUp,
-        color: "text-rose-500 bg-rose-500/5 border-rose-500/10"
-      });
-    }
-    if (emergencyMonthsCovered < 6) {
-      tips.push({
-        title: "Secure Emergency Buffer",
-        desc: `Your liquid cash covers ${emergencyMonthsCovered.toFixed(1)} months of needs. Prioritize building a cash buffer of ${formatCurrency(emergencyTarget)} in a high-yield account.`,
-        icon: ShieldCheck,
-        color: "text-amber-500 bg-amber-500/5 border-amber-500/10"
-      });
-    }
+    if (needsPct > 50) issues.push({
+      icon: TrendingDown, tone: "rose",
+      wrong: `Needs are ${needsPct.toFixed(0)}% of income — ${formatCurrency(totalNeeds - targetNeeds)} over the 50% cap.`,
+      action: `Trim ${formatCurrency(totalNeeds - targetNeeds)} from essentials — revisit rent, bills and subscriptions.`,
+    });
+    if (wantsPct > 30) issues.push({
+      icon: Sparkles, tone: "amber",
+      wrong: `Wants are ${wantsPct.toFixed(0)}% of income — ${formatCurrency(wantsActual - targetWants)} over the 30% cap.`,
+      action: `Cut ${formatCurrency(wantsActual - targetWants)} of lifestyle spends; try a 24-hour wait before non-essentials.`,
+    });
+    if (totalUnnecessary > 0) issues.push({
+      icon: AlertCircle, tone: "rose",
+      wrong: `You logged ${formatCurrency(totalUnnecessary)} as wasted / unnecessary spending.`,
+      action: `Pause these leaks — it lifts your savings rate by ${((totalUnnecessary / totalIncome) * 100).toFixed(1)}%.`,
+    });
+    if (savingsPct < 20) issues.push({
+      icon: PiggyBank, tone: "blue",
+      wrong: `Savings rate is ${savingsPct.toFixed(0)}% — below the 20% target.`,
+      action: `Auto-transfer ${formatCurrency(targetSavings - savingsActual)} to savings at the start of the month.`,
+    });
+    if (healthData.totalBorrowedPending > 0 && dtiRatio > 36) issues.push({
+      icon: TrendingUp, tone: "rose",
+      wrong: `Debt-to-income is ${dtiRatio.toFixed(0)}% — above the 36% ceiling.`,
+      action: `Clear high-interest debt first and freeze new borrowing.`,
+    });
+    if (emergencyMonthsCovered < 6) issues.push({
+      icon: ShieldCheck, tone: "amber",
+      wrong: `Emergency buffer covers only ${emergencyMonthsCovered.toFixed(1)} months (aim for 6).`,
+      action: `Build toward ${formatCurrency(emergencyTarget)} of liquid cash in a high-yield account.`,
+    });
   }
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="show"
-      className="space-y-6 pb-24"
-    >
+    <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6 pb-24">
       <PageHeader
-        title="Financial Health Audit"
-        description="Analysis of monthly spending metrics against the 50-30-20 blueprint"
-        showMonthPicker={false}
-        action={
-          <div className="flex items-center gap-2">
-            <Select value={String(selectedMonth)} onValueChange={(val) => setSelectedMonth(Number(val))}>
-              <SelectTrigger className="h-9 w-[110px] text-xs bg-background rounded-xl border-border/50">
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {MONTHS.map((m, idx) => (
-                  <SelectItem key={m} value={String(idx + 1)}>
-                    {m}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={String(selectedYear)} onValueChange={(val) => setSelectedYear(Number(val))}>
-              <SelectTrigger className="h-9 w-[80px] text-xs bg-background rounded-xl border-border/50">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {[2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        }
+        title="Financial Health"
+        description="Your month at a glance, scored against the 50-30-20 rule"
+        action={monthPicker}
       />
 
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Visual Health Score Gauge */}
-        <Card className="flex flex-col items-center justify-center p-6 text-center border-border/50 shadow-sm">
-          <CardHeader className="pb-2 text-center w-full">
-            <CardTitle className="text-base font-semibold">Health Score</CardTitle>
-            <CardDescription>Overall index of your wealth stability</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col items-center justify-center pt-2 w-full">
-            {totalIncome > 0 ? (
+      {emptyGuard ? (
+        <motion.div variants={itemVariants}>
+          <Card className="border-dashed border-border/60">
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center gap-2">
+              <Lightbulb className="w-8 h-8 text-muted-foreground/40" />
+              <p className="font-semibold text-foreground">No income logged for this month</p>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Add your income for {MONTHS[selectedMonth - 1]} {selectedYear} to generate your health score and breakdown.
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      ) : (
+        <>
+          {/* Score + 50-30-20 breakdown */}
+          <motion.div variants={itemVariants} className="grid gap-6 md:grid-cols-3">
+            {/* Score */}
+            <Card className="flex flex-col items-center justify-center p-6 text-center border-border/50 shadow-sm">
               <div className="relative flex items-center justify-center w-40 h-40">
-                {/* SVG Circular progress */}
                 <svg className="w-full h-full transform -rotate-90">
+                  <circle cx="80" cy="80" r="68" className="stroke-muted" strokeWidth="10" fill="transparent" />
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="68"
-                    className="stroke-muted"
-                    strokeWidth="10"
-                    fill="transparent"
-                  />
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r="68"
-                    className="stroke-primary transition-all duration-500"
-                    strokeWidth="10"
-                    fill="transparent"
+                    cx="80" cy="80" r="68"
+                    className={cn("transition-all duration-700", scoreStroke)}
+                    strokeWidth="10" fill="transparent"
                     strokeDasharray={427}
                     strokeDashoffset={427 - (427 * finalScore) / 100}
                     strokeLinecap="round"
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center justify-center">
-                  <span className="text-4xl font-extrabold text-foreground">{finalScore}</span>
+                  <span className={cn("text-5xl font-extrabold", scoreColor)}>{finalScore}</span>
                   <span className="text-[10px] uppercase font-bold text-muted-foreground mt-0.5">/ 100</span>
                 </div>
               </div>
-            ) : (
-              <div className="w-40 h-40 rounded-full border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground text-xs p-4">
-                💡 Add income records for this month to generate your health score.
+              <div className={cn("px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider mt-5", verdictBadge)}>
+                {verdict}
               </div>
-            )}
-            
-            <div className={cn("px-4 py-1.5 rounded-full border text-xs font-bold uppercase tracking-wider mt-6", verdictColor)}>
-              {verdict}
-            </div>
-          </CardContent>
-        </Card>
+            </Card>
 
-        {/* 50-30-20 Rules Breakdown */}
-        <Card className="md:col-span-2 border-border/50 shadow-sm flex flex-col justify-between">
-          <CardHeader className="pb-3 border-b border-border/30">
-            <CardTitle className="text-base font-semibold">50-30-20 Budget Analysis</CardTitle>
-            <CardDescription>Evaluating categorized expenses against targets</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5 pt-5 flex-1 flex flex-col justify-around">
-            {/* Needs */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-foreground font-semibold">Needs (Target: 50%)</span>
-                <span className="font-mono text-muted-foreground">{formatCurrency(totalNeeds)} ({needsPct.toFixed(1)}%)</span>
-              </div>
-              <Progress value={needsPct} max={100} className={cn("h-2", needsPct > 50 ? "[&_[data-slot=progress-indicator]]:bg-rose-500" : "[&_[data-slot=progress-indicator]]:bg-emerald-500")} />
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-                <span>Rent, bills, essentials</span>
-                {totalIncome > 0 && (
-                  <span className={cn("font-medium", needsPct > 50 ? "text-rose-500" : "text-emerald-500")}>
-                    {needsPct > 50 ? `Over by ${formatCurrency(totalNeeds - targetNeeds)}` : `Room for ${formatCurrency(targetNeeds - totalNeeds)}`}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Wants */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-foreground font-semibold">Wants (Target: 30%)</span>
-                <span className="font-mono text-muted-foreground">{formatCurrency(totalWants + totalUnnecessary)} ({wantsPct.toFixed(1)}%)</span>
-              </div>
-              <Progress value={wantsPct} max={100} className={cn("h-2", wantsPct > 30 ? "[&_[data-slot=progress-indicator]]:bg-rose-500" : "[&_[data-slot=progress-indicator]]:bg-emerald-500")} />
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-                <span>Lifestyle, hobbies, unnecessary items</span>
-                {totalIncome > 0 && (
-                  <span className={cn("font-medium", wantsPct > 30 ? "text-rose-500" : "text-emerald-500")}>
-                    {wantsPct > 30 ? `Over by ${formatCurrency((totalWants + totalUnnecessary) - targetWants)}` : `Room for ${formatCurrency(targetWants - (totalWants + totalUnnecessary))}`}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Savings */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-medium">
-                <span className="text-foreground font-semibold">Savings & Investments (Target: 20%)</span>
-                <span className="font-mono text-muted-foreground">{formatCurrency(totalSavings + totalGoals)} ({savingsPct.toFixed(1)}%)</span>
-              </div>
-              <Progress value={savingsPct} max={100} className={cn("h-2", savingsPct < 20 ? "[&_[data-slot=progress-indicator]]:bg-amber-500" : "[&_[data-slot=progress-indicator]]:bg-emerald-500")} />
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-0.5">
-                <span>SIP, savings, manual goal contributions</span>
-                {totalIncome > 0 && (
-                  <span className={cn("font-medium", savingsPct < 20 ? "text-amber-500" : "text-emerald-500")}>
-                    {savingsPct < 20 ? `Short by ${formatCurrency(targetSavings - (totalSavings + totalGoals))}` : `Surplus of ${formatCurrency((totalSavings + totalGoals) - targetSavings)}`}
-                  </span>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Core Rules Checklist */}
-        <Card className="md:col-span-1 border-border/50 shadow-sm flex flex-col justify-between">
-          <CardHeader className="pb-3 border-b border-border/30">
-            <CardTitle className="text-base font-semibold">Stability Indicators</CardTitle>
-            <CardDescription>Core rules checklists</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 pt-5 flex-1 flex flex-col justify-center">
-            {/* Rent indicator */}
-            <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-card shadow-xs">
-              {rentRulePassed ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              )}
-              <div className="text-xs">
-                <p className="font-bold text-foreground">Rent Budget ({"<"} 30%)</p>
-                <p className="text-muted-foreground mt-0.5">
-                  Housing rent is {totalIncome > 0 ? ((rentExpense / totalIncome) * 100).toFixed(0) : 0}% of income.
-                </p>
-              </div>
-            </div>
-
-            {/* Emergency fund indicator */}
-            <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-card shadow-xs">
-              {emergencyRulePassed ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              ) : (
-                <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-              )}
-              <div className="text-xs">
-                <p className="font-bold text-foreground">Emergency Cover (6-Mo)</p>
-                <p className="text-muted-foreground mt-0.5">
-                  Buffer: {emergencyMonthsCovered.toFixed(1)} months of needs ({formatCurrency(totalLiquidCash)} / {formatCurrency(emergencyTarget)} target)
-                </p>
-              </div>
-            </div>
-
-            {/* Debt to Income ratio indicator */}
-            <div className="flex items-start gap-3 p-3 rounded-xl border border-border bg-card shadow-xs">
-              {dtiRulePassed ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-              ) : (
-                <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-              )}
-              <div className="text-xs">
-                <p className="font-bold text-foreground">Debt-to-Income ({"<"} 36%)</p>
-                <p className="text-muted-foreground mt-0.5">
-                  DTI is {dtiRatio.toFixed(1)}% based on pending borrowed amount of {formatCurrency(totalBorrowedPending)}.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Actionable Tips Column */}
-        <Card className="md:col-span-2 border-border/50 shadow-sm flex flex-col justify-between">
-          <CardHeader className="pb-3 border-b border-border/30">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-              Actionable Wealth Tips
-            </CardTitle>
-            <CardDescription>Tailored suggestions to optimize cash flows</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-5 flex-1">
-            {tips.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500 mb-2" />
-                <p className="font-bold text-foreground text-sm">Perfect Financial Health!</p>
-                <p className="text-xs mt-0.5">All rule thresholds check out positive this month. Keep up the disciplined habits!</p>
-              </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {tips.map((tip, idx) => (
-                  <div key={idx} className={cn("p-3.5 border rounded-xl flex items-start gap-3 text-xs leading-relaxed", tip.color)}>
-                    <tip.icon className="w-4 h-4 shrink-0 mt-0.5 text-foreground" />
-                    <div>
-                      <p className="font-bold text-foreground">{tip.title}</p>
-                      <p className="text-muted-foreground mt-1 leading-normal">{tip.desc}</p>
+            {/* 50-30-20 breakdown */}
+            <Card className="md:col-span-2 border-border/50 shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/30">
+                <CardTitle className="text-base font-semibold">50 / 30 / 20 Breakdown</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5 pt-5">
+                {buckets.map((b) => (
+                  <div key={b.label} className="space-y-1.5">
+                    <div className="flex justify-between items-baseline text-xs">
+                      <span className="font-semibold text-foreground">
+                        {b.label} <span className="text-muted-foreground font-normal">· target {b.target}%</span>
+                      </span>
+                      <span className="font-mono text-muted-foreground">
+                        {formatCurrency(b.amount)} · <span className={cn("font-semibold", b.bad ? "text-rose-500" : "text-emerald-500")}>{b.pct.toFixed(0)}%</span>
+                      </span>
                     </div>
+                    <Progress
+                      value={Math.min(b.pct, 100)}
+                      className={cn("h-2", b.bad ? "[&_[data-slot=progress-indicator]]:bg-rose-500" : "[&_[data-slot=progress-indicator]]:bg-emerald-500")}
+                    />
+                    <p className={cn("text-[11px]", b.bad ? "text-rose-500" : "text-muted-foreground")}>{b.reach}</p>
                   </div>
                 ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Spending by purpose graph */}
+          <motion.div variants={itemVariants}>
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/30">
+                <CardTitle className="text-base font-semibold">Spending by Purpose</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-5">
+                <CategoryBreakdown data={purposeData} />
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* What went wrong + What to do */}
+          <motion.div variants={itemVariants} className="grid gap-6 md:grid-cols-2">
+            {/* What went wrong */}
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/30">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <AlertTriangle className="w-4.5 h-4.5 text-amber-500" /> What went wrong
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-5 space-y-2.5">
+                {issues.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center gap-1.5">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                    <p className="text-sm font-semibold text-foreground">No red flags this month</p>
+                    <p className="text-xs text-muted-foreground">Every 50-30-20 target checks out. Keep it up!</p>
+                  </div>
+                ) : (
+                  issues.map((it, i) => (
+                    <div key={i} className={cn("flex items-start gap-2.5 p-3 rounded-xl border text-xs leading-relaxed", toneClasses[it.tone])}>
+                      <it.icon className="w-4 h-4 shrink-0 mt-0.5" />
+                      <p className="text-foreground/90">{it.wrong}</p>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* What to do */}
+            <Card className="border-border/50 shadow-sm">
+              <CardHeader className="pb-3 border-b border-border/30">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Lightbulb className="w-4.5 h-4.5 text-primary" /> What you should do
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-5 space-y-2.5">
+                {issues.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center gap-1.5">
+                    <Sparkles className="w-8 h-8 text-primary" />
+                    <p className="text-sm font-semibold text-foreground">Stay the course</p>
+                    <p className="text-xs text-muted-foreground">Keep saving 20%+ and your buffer growing.</p>
+                  </div>
+                ) : (
+                  issues.map((it, i) => (
+                    <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-card text-xs leading-relaxed">
+                      <span className="mt-0.5 w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {i + 1}
+                      </span>
+                      <p className="text-muted-foreground">{it.action}</p>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </>
+      )}
     </motion.div>
   );
 }

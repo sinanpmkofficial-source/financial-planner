@@ -73,7 +73,7 @@ export function BorrowLendClient() {
   // Hydrate state from local cache on client mount
   useEffect(() => {
     if (borrowLendCache && borrowLendCache.length > 0) {
-      setRecords(borrowLendCache);
+      setRecords(borrowLendCache as BorrowLend[]);
       setLoading(false);
     }
   }, [borrowLendCache]);

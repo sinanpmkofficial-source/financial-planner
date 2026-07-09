@@ -12,6 +12,7 @@ interface GoalProgressResult {
   targetAmount: number;
   icon: string;
   color: string;
+  targetDate: string | null;
   createdAt: string;
   totalContributed: number;
   progressPercentage: number;
@@ -44,6 +45,7 @@ export async function getGoalsWithProgress(): Promise<GoalProgressResult[]> {
         targetAmount: goal.targetAmount,
         icon: goal.icon,
         color: goal.color,
+        targetDate: goal.targetDate ? new Date(goal.targetDate).toISOString() : null,
         createdAt: goal.createdAt.toISOString(),
         totalContributed,
         progressPercentage: goal.targetAmount > 0
@@ -78,7 +80,7 @@ export async function getGoalContributions(
   }));
 }
 
-export async function createGoal(data: { name: string; targetAmount: number; icon?: string; color?: string }) {
+export async function createGoal(data: { name: string; targetAmount: number; icon?: string; color?: string; targetDate?: string | null }) {
   await dbConnect();
   try {
     const userId = await getCurrentUserId();
@@ -88,6 +90,7 @@ export async function createGoal(data: { name: string; targetAmount: number; ico
       targetAmount: data.targetAmount,
       icon: data.icon || "Target",
       color: data.color || "hsl(217, 91%, 60%)",
+      targetDate: data.targetDate ? new Date(data.targetDate) : null,
     });
     revalidatePath("/goals");
     return { success: true };
@@ -101,7 +104,7 @@ export async function createGoal(data: { name: string; targetAmount: number; ico
 
 export async function updateGoal(
   goalId: string,
-  data: { name: string; targetAmount: number; icon?: string; color?: string }
+  data: { name: string; targetAmount: number; icon?: string; color?: string; targetDate?: string | null }
 ) {
   await dbConnect();
   try {
@@ -113,6 +116,7 @@ export async function updateGoal(
         targetAmount: data.targetAmount,
         ...(data.icon ? { icon: data.icon } : {}),
         ...(data.color ? { color: data.color } : {}),
+        targetDate: data.targetDate ? new Date(data.targetDate) : null,
       }
     );
     if (!updated) {

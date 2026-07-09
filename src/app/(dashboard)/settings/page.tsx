@@ -36,25 +36,69 @@ interface UserSettings {
 
 // Lucide icon names offered when creating/editing a category.
 const ICON_PRESETS = [
-  "Utensils", "Car", "Home", "ShoppingBag", "Zap", "HeartPulse",
-  "GraduationCap", "Gamepad2", "Plane", "Film", "Wine", "Dumbbell",
-  "Coffee", "Gift", "Laptop", "Music", "Pill", "Bus",
-  "Fuel", "Shirt", "Smartphone", "Wifi", "CreditCard", "PiggyBank",
-  "Wallet", "Receipt", "Briefcase", "Book", "Dog", "Cat",
-  "Baby", "Wrench", "Scissors", "Camera", "Bike", "Package",
-  "Tag", "FolderOpen",
+  // Food & drink
+  "Utensils", "Coffee", "Pizza", "Beer", "Wine", "IceCream",
+  "Apple", "CupSoda", "Cookie", "Beef", "Salad", "Sandwich",
+  "Croissant", "Milk", "Candy", "CookingPot",
+  // Transport
+  "Car", "Bus", "Train", "TramFront", "Bike", "Plane",
+  "Ship", "Truck", "Fuel", "ParkingMeter", "Rocket", "Sailboat",
+  // Home & utilities
+  "Home", "Zap", "Lightbulb", "Droplet", "Flame", "Plug",
+  "Sofa", "BedDouble", "ShowerHead", "WashingMachine", "Refrigerator", "Bath",
+  "Wifi", "Wrench",
+  // Shopping
+  "ShoppingBag", "ShoppingCart", "ShoppingBasket", "Store", "Shirt", "Footprints",
+  "Watch", "Glasses", "Gem", "Diamond", "Crown", "Gift", "Scissors",
+  // Health & personal care
+  "HeartPulse", "Pill", "Stethoscope", "Cross", "Activity", "Syringe",
+  "Hospital", "Bandage", "Brain", "Dumbbell", "SprayCan", "Bath",
+  // Entertainment & sports
+  "Gamepad2", "Film", "Music", "Tv", "Headphones", "Ticket",
+  "Popcorn", "Guitar", "PartyPopper", "Palette", "Clapperboard", "Dices",
+  "Camera", "Volleyball",
+  // Education & work
+  "GraduationCap", "Book", "BookOpen", "Pencil", "NotebookPen", "Library",
+  "School", "Presentation", "Briefcase", "Building", "Building2", "Landmark",
+  // Finance
+  "Wallet", "PiggyBank", "CreditCard", "Banknote", "Coins", "IndianRupee",
+  "TrendingUp", "ChartCandlestick", "HandCoins", "Calculator", "BadgePercent",
+  "Receipt", "ReceiptIndianRupee", "BadgeIndianRupee",
+  // Tech
+  "Laptop", "Smartphone", "Monitor", "Tablet", "HardDrive", "Cpu",
+  "Router", "Keyboard", "Printer", "Server",
+  // Travel & nature
+  "MapPin", "Map", "Luggage", "Hotel", "Tent", "Mountain",
+  "Palmtree", "Compass", "Globe", "TreePine", "Leaf", "Flower",
+  "Umbrella",
+  // People & pets
+  "Users", "UsersRound", "HeartHandshake", "HandHeart", "Heart", "Baby",
+  "Dog", "Cat", "PawPrint", "Bone", "Cake",
+  // Misc
+  "Sparkles", "Bell", "Key", "Shield", "Trophy", "Medal",
+  "Church", "Hammer", "Package", "Tag", "FolderOpen",
 ];
 
 const DEFAULT_ICON = "Tag";
 
 const COLOR_PRESETS = [
   { name: "Emerald", value: "hsl(142, 72%, 29%)" },
-  { name: "Blue", value: "hsl(217, 91%, 60%)" },
-  { name: "Orange", value: "hsl(25, 95%, 53%)" },
-  { name: "Rose", value: "hsl(350, 89%, 60%)" },
-  { name: "Amber", value: "hsl(43, 96%, 50%)" },
-  { name: "Violet", value: "hsl(271, 91%, 65%)" },
+  { name: "Green", value: "hsl(142, 71%, 45%)" },
+  { name: "Lime", value: "hsl(84, 81%, 44%)" },
+  { name: "Teal", value: "hsl(172, 66%, 45%)" },
   { name: "Cyan", value: "hsl(188, 86%, 53%)" },
+  { name: "Sky", value: "hsl(199, 89%, 48%)" },
+  { name: "Blue", value: "hsl(217, 91%, 60%)" },
+  { name: "Indigo", value: "hsl(239, 84%, 67%)" },
+  { name: "Violet", value: "hsl(271, 91%, 65%)" },
+  { name: "Fuchsia", value: "hsl(292, 84%, 61%)" },
+  { name: "Pink", value: "hsl(330, 81%, 60%)" },
+  { name: "Rose", value: "hsl(350, 89%, 60%)" },
+  { name: "Red", value: "hsl(0, 84%, 60%)" },
+  { name: "Orange", value: "hsl(25, 95%, 53%)" },
+  { name: "Amber", value: "hsl(43, 96%, 50%)" },
+  { name: "Yellow", value: "hsl(48, 96%, 53%)" },
+  { name: "Brown", value: "hsl(25, 40%, 40%)" },
   { name: "Slate", value: "hsl(200, 15%, 50%)" }
 ];
 
@@ -223,7 +267,7 @@ function CategoryDialog({
             <select
               className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               value={catBucket}
-              onChange={(e) => setCatBucket(e.target.value as any)}
+              onChange={(e) => setCatBucket(e.target.value as "Needs" | "Fun" | "Investments" | "Other")}
             >
               <option value="Needs">Needs (Survival)</option>
               <option value="Fun">Fun (Lifestyle)</option>

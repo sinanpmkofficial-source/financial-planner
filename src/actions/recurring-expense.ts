@@ -43,6 +43,7 @@ export async function createRecurringExpense(data: {
     });
     revalidatePath("/");
     revalidatePath("/transactions");
+    revalidatePath("/recurring");
     return { success: true, id: newRecord._id.toString() };
   } catch (error: unknown) {
     return { 
@@ -95,7 +96,8 @@ export async function confirmRecurringPayment(id: string) {
 
     revalidatePath("/");
     revalidatePath("/transactions");
-    
+    revalidatePath("/recurring");
+
     return { success: true };
   } catch (error: unknown) {
     return { 
@@ -115,11 +117,39 @@ export async function deleteRecurringExpense(id: string) {
     }
     revalidatePath("/");
     revalidatePath("/transactions");
+    revalidatePath("/recurring");
     return { success: true };
   } catch (error: unknown) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Failed to delete recurring expense" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete recurring expense"
+    };
+  }
+}
+
+/**
+ * Pause or resume a recurring template. Paused templates keep their history but
+ * stop appearing in due-reminder banners and monthly recurring totals.
+ */
+export async function setRecurringActive(id: string, isActive: boolean) {
+  await dbConnect();
+  try {
+    const userId = await getCurrentUserId();
+    const updated = await RecurringExpense.findOneAndUpdate(
+      { _id: id, userId },
+      { isActive }
+    );
+    if (!updated) {
+      return { success: false, error: "Recurring expense not found" };
+    }
+    revalidatePath("/");
+    revalidatePath("/transactions");
+    revalidatePath("/recurring");
+    return { success: true };
+  } catch (error: unknown) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update recurring expense",
     };
   }
 }
@@ -132,6 +162,7 @@ export async function updateRecurringExpense(
     tag: "Needs" | "Wants" | "Investments" | "Unnecessary Spending";
     note?: string;
     frequency: "weekly" | "monthly" | "yearly";
+    nextDueDate?: string;
   }
 ) {
   await dbConnect();
@@ -145,6 +176,7 @@ export async function updateRecurringExpense(
         tag: data.tag,
         note: data.note || "",
         frequency: data.frequency,
+        ...(data.nextDueDate ? { nextDueDate: new Date(data.nextDueDate) } : {}),
       }
     );
     if (!updated) {
@@ -152,6 +184,7 @@ export async function updateRecurringExpense(
     }
     revalidatePath("/");
     revalidatePath("/transactions");
+    revalidatePath("/recurring");
     return { success: true };
   } catch (error: unknown) {
     return {

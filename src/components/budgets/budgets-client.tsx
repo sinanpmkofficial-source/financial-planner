@@ -42,7 +42,7 @@ const itemVariants = {
 export function BudgetsClient() {
   const { setDashboardDirty, budgetsCache, updateBudgetsCache } = useUIStore();
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
-  const [categories, setCategories] = useState<{ name: string; icon: string }[]>([]);
+  const [categories, setCategories] = useState<{ name: string; icon: string; color?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<
@@ -95,6 +95,7 @@ export function BudgetsClient() {
   }, []);
 
   const catIconMap = new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.icon]));
+  const catColorMap = new Map<string, string | undefined>(categories.map((c) => [c.name.toLowerCase(), c.color]));
 
   const handleDelete = async (id: string) => {
     const prev = budgets;
@@ -193,10 +194,15 @@ export function BudgetsClient() {
                   <CardContent className="p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2.5">
-                        <CategoryIcon
-                          name={catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "Tag"}
-                          className="w-5 h-5 text-muted-foreground"
-                        />
+                        <span
+                          className={cn(!catColorMap.get(budget.category.toLowerCase()) && "text-muted-foreground")}
+                          style={{ color: catColorMap.get(budget.category.toLowerCase()) }}
+                        >
+                          <CategoryIcon
+                            name={catIconMap.get(budget.category.toLowerCase()) ?? CATEGORY_ICONS[budget.category as ExpenseCategory] ?? "Tag"}
+                            className="w-5 h-5"
+                          />
+                        </span>
                         <div>
                           <p className="font-medium text-sm">{budget.category}</p>
                           <p className="text-xs text-muted-foreground">

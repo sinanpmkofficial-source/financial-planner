@@ -1,5 +1,5 @@
 import { CURRENCY_SYMBOL } from "@/constants";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { utcToLocal } from "./date-utils";
 
 /**

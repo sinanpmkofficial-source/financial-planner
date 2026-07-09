@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { DateRange } from "react-day-picker";
+import type {
+  Expense,
+  Income,
+  BudgetWithSpent,
+  DashboardSummary,
+  RecurringExpense,
+} from "@/types";
 import {
   startOfMonth,
   endOfMonth,
@@ -51,48 +58,58 @@ export function getDateRangeForPreset(preset: string, customRange?: DateRange) {
   }
 }
 
+// Serialized settings blob as cached from the settings action.
+type CachedSettings = {
+  categories?: { name: string; icon: string; color: string }[];
+  showGamification?: boolean;
+  currency?: string;
+};
+type CachedTrendPoint = { label: string; expenses: number; income: number };
+type CachedCategorySpend = { category: string; amount: number };
+
 interface UIState {
   sidebarOpen: boolean;
   preset: PeriodPreset;
   customRange: DateRange | undefined;
   dateRange: { from: Date; to: Date };
-  
+
   // Dashboard Cache & Optimization
   isDashboardDirty: boolean;
   dashboardCache: {
-    summary: any | null;
-    expenses: any[];
-    incomes: any[];
-    budgets: any[];
-    chartData: any[];
-    categorySpend: any[];
-    settings: any | null;
-    recurringExpenses: any[];
+    summary: DashboardSummary | null;
+    expenses: Expense[];
+    incomes: Income[];
+    budgets: BudgetWithSpent[];
+    chartData: CachedTrendPoint[];
+    categorySpend: CachedCategorySpend[];
+    settings: CachedSettings | null;
+    recurringExpenses: RecurringExpense[];
     lastFetched?: number;
   };
 
-  // Screen-specific caches for offline and background sync
-  expensesCache: Record<string, any[]>;
-  incomesCache: Record<string, any[]>;
-  budgetsCache: Record<string, any[]>;
-  goalsCache: any[];
-  borrowLendCache: any[];
-  settingsCache: any | null;
-  
+  // Screen-specific caches for offline and background sync. Goals and borrow/lend
+  // are stored opaquely (consumers cast to their view models on read).
+  expensesCache: Record<string, Expense[]>;
+  incomesCache: Record<string, Income[]>;
+  budgetsCache: Record<string, BudgetWithSpent[]>;
+  goalsCache: unknown[];
+  borrowLendCache: unknown[];
+  settingsCache: CachedSettings | null;
+
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
   setPreset: (preset: PeriodPreset) => void;
   setCustomRange: (range: DateRange | undefined) => void;
-  
+
   // Cache Actions
   setDashboardDirty: (dirty: boolean) => void;
   updateDashboardCache: (data: Partial<UIState["dashboardCache"]>) => void;
-  updateExpensesCache: (key: string, data: any[]) => void;
-  updateIncomesCache: (key: string, data: any[]) => void;
-  updateBudgetsCache: (key: string, data: any[]) => void;
-  updateGoalsCache: (data: any[]) => void;
-  updateBorrowLendCache: (data: any[]) => void;
-  updateSettingsCache: (data: any) => void;
+  updateExpensesCache: (key: string, data: Expense[]) => void;
+  updateIncomesCache: (key: string, data: Income[]) => void;
+  updateBudgetsCache: (key: string, data: BudgetWithSpent[]) => void;
+  updateGoalsCache: (data: unknown[]) => void;
+  updateBorrowLendCache: (data: unknown[]) => void;
+  updateSettingsCache: (data: CachedSettings) => void;
   clearUserCaches: () => void;
 }
 
@@ -157,11 +174,10 @@ export const useUIStore = create<UIState>()(
           const dateRange = getDateRangeForPreset(preset, state.customRange);
           return { preset, dateRange };
         }),
-      setCustomRange: (customRange) =>
-        set((state) => {
-          const dateRange = getDateRangeForPreset("Custom", customRange);
-          return { customRange, dateRange };
-        }),
+      setCustomRange: (customRange) => {
+        const dateRange = getDateRangeForPreset("Custom", customRange);
+        set({ customRange, dateRange });
+      },
 
       // Cache Actions Implementation
       setDashboardDirty: (dirty) => set({ isDashboardDirty: dirty }),

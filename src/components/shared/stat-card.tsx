@@ -16,7 +16,6 @@ export function StatCard({
   value,
   icon: Icon,
   trend,
-  variant = "default",
   index,
   className,
 }: StatCardProps) {

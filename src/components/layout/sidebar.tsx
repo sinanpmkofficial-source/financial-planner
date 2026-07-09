@@ -13,6 +13,7 @@ import {
   Target,
   HeartPulse,
   HelpCircle,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DbSyncIndicator } from "@/components/shared/db-sync-indicator";
@@ -31,6 +32,7 @@ const navGroups = [
     items: [
       { href: "/budgets", label: "Budgets", icon: PiggyBank },
       { href: "/goals", label: "Goals", icon: Target },
+      { href: "/recurring", label: "Recurring", icon: Repeat },
     ],
   },
   {

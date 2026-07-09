@@ -75,6 +75,7 @@ export async function getDashboardSummary(
     budgets,
     stats,
     allContributionsAgg,
+    monthContributionsAgg,
   ] = await Promise.all([
     Income.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
     Expense.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
@@ -120,6 +121,10 @@ export async function getDashboardSummary(
     Budget.find({ userId, month: currentMonth, year: currentYear }).lean(),
     getOrCreateStats(),
     GoalContribution.aggregate([{ $match: { userId } }, { $group: { _id: null, total: { $sum: "$amount" } } }]),
+    GoalContribution.aggregate([
+      { $match: { userId, date: { $gte: monthStart, $lte: monthEnd } } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ]),
   ]);
   
   const allIncome = allIncomeAgg[0]?.total ?? 0;
@@ -133,6 +138,7 @@ export async function getDashboardSummary(
   
   const monthlyIncome = monthIncomeAgg[0]?.total ?? 0;
   const monthlyExpenses = monthExpenseAgg[0]?.total ?? 0;
+  const monthlyGoalContributions = monthContributionsAgg[0]?.total ?? 0;
   const savings = monthlyIncome - monthlyExpenses;
   
   const todayIncome = todayIncomeAgg[0]?.total ?? 0;
@@ -163,6 +169,7 @@ export async function getDashboardSummary(
     currentBalance,
     monthlyIncome,
     monthlyExpenses,
+    monthlyGoalContributions,
     savings,
     totalBorrowed,
     totalLent,

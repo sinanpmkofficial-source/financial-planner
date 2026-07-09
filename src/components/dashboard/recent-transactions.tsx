@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 interface RecentTransactionsProps {
   expenses: Expense[];
   incomes: Income[];
-  categories?: { name: string; icon: string }[];
+  categories?: { name: string; icon: string; color?: string }[];
   loading?: boolean;
 }
 
@@ -21,6 +21,7 @@ type Transaction = {
   createdAt?: string;
   type: "expense" | "income";
   icon?: string;
+  color?: string;
 };
 
 export function RecentTransactions({
@@ -30,6 +31,7 @@ export function RecentTransactions({
   loading = false,
 }: RecentTransactionsProps) {
   const catIconMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.icon]));
+  const catColorMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.color]));
 
   const transactions: Transaction[] = [
     ...expenses.map((e) => ({
@@ -40,6 +42,7 @@ export function RecentTransactions({
       createdAt: e.createdAt,
       type: "expense" as const,
       icon: catIconMap.get(e.category.toLowerCase()) ?? CATEGORY_ICONS[e.category as ExpenseCategory] ?? "📌",
+      color: catColorMap.get(e.category.toLowerCase()),
     })),
     ...incomes.map((i) => ({
       id: i._id,
@@ -110,7 +113,14 @@ export function RecentTransactions({
               className="flex items-center justify-between px-5 py-3"
             >
               <div className="flex items-center gap-3">
-                <span className={t.type === "income" ? "text-emerald-500" : "text-muted-foreground"}>
+                <span
+                  className={cn(
+                    t.type === "income"
+                      ? "text-emerald-500"
+                      : !t.color && "text-muted-foreground"
+                  )}
+                  style={t.type === "expense" && t.color ? { color: t.color } : undefined}
+                >
                   <CategoryIcon name={t.icon ?? "Wallet"} className="w-4 h-4" />
                 </span>
                 <div>

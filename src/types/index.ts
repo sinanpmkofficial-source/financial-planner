@@ -77,6 +77,7 @@ export interface DashboardSummary {
   currentBalance: number;
   monthlyIncome: number;
   monthlyExpenses: number;
+  monthlyGoalContributions: number;
   savings: number;
   totalBorrowed: number;
   totalLent: number;

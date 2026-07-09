@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { transactionSchema, type TransactionFormData } from "@/validations/transaction";
@@ -26,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import type { Expense, Income } from "@/types";
+import type { Expense, Income, RecurringExpense } from "@/types";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/shared/category-icon";
@@ -51,8 +51,13 @@ export function TransactionForm({
   onSuccess,
 }: TransactionFormProps) {
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<{ name: string; icon: string; color: string }[]>([]);
-  const [recurringExpenses, setRecurringExpenses] = useState<any[]>([]);
+  const [time, setTime] = useState<string>(format(new Date(), "HH:mm"));
+  // Seed from the cached settings so the category list is populated the instant
+  // the modal opens, instead of flashing empty while the fetch is in flight.
+  const [categories, setCategories] = useState<{ name: string; icon: string; color: string }[]>(
+    () => (useUIStore.getState().dashboardCache?.settings?.categories as { name: string; icon: string; color: string }[]) || []
+  );
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
   const isEditing = !!transaction;
 
   const getTransactionType = (t?: Expense | Income): "expense" | "income" => {
@@ -84,7 +89,22 @@ export function TransactionForm({
     },
   });
 
-  const { setDashboardDirty } = useUIStore();
+  const { setDashboardDirty, updateDashboardCache } = useUIStore();
+
+  // Fetch categories defensively: never blank out a populated list on a
+  // transient failure or an empty response, and cache good results for reuse.
+  const loadCategories = useCallback(async () => {
+    try {
+      const settings = await getUserSettings();
+      const cats = (settings?.categories || []) as { name: string; icon: string; color: string }[];
+      if (cats.length > 0) {
+        setCategories(cats);
+        updateDashboardCache({ settings });
+      }
+    } catch (err) {
+      console.error("Failed to load categories for transaction form", err);
+    }
+  }, [updateDashboardCache]);
 
   const type = watch("type");
   const category = watch("category");
@@ -97,24 +117,55 @@ export function TransactionForm({
   const fieldLabel =
     "text-[11px] font-medium uppercase tracking-wide text-muted-foreground";
 
+  // Amount input, reused so it can sit beside Category (expense) at equal size,
+  // or stand alone (income). Kept bold + colored but at the standard field height.
+  const amountField = (
+    <div className="space-y-1.5">
+      <Label htmlFor="transaction-amount" className={fieldLabel}>Amount</Label>
+      <Input
+        id="transaction-amount"
+        type="number"
+        step="0.01"
+        placeholder="0.00"
+        className={cn(
+          "!h-10 !text-base !font-bold",
+          type === "expense"
+            ? "text-rose-600 dark:text-rose-400"
+            : "text-emerald-600 dark:text-emerald-400"
+        )}
+        {...register("amount", { valueAsNumber: true })}
+      />
+      {errors.amount && (
+        <p className="text-xs text-destructive">{errors.amount.message}</p>
+      )}
+    </div>
+  );
+
+  // Preload categories as soon as the form mounts, so they're ready before the
+  // user ever opens the modal.
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
+
   useEffect(() => {
     if (open) {
-      getUserSettings().then((settings) => {
-        setCategories(settings.categories || []);
-      });
+      loadCategories();
       getRecurringExpenses().then((recs) => {
         setRecurringExpenses(recs || []);
       });
     }
-  }, [open]);
+  }, [open, loadCategories]);
 
   useEffect(() => {
     if (open) {
       const currentType = getTransactionType(transaction);
       const isRec = !!(transaction && "recurringExpenseId" in transaction && transaction.recurringExpenseId);
       const matchedRec = isRec
-        ? recurringExpenses.find(r => r._id === (transaction as any).recurringExpenseId)
+        ? recurringExpenses.find(r => r._id === (transaction as Expense).recurringExpenseId)
         : null;
+
+      // Seed the time picker from the existing transaction, or "now" for a new one.
+      setTime(format(transaction ? new Date(transaction.date) : new Date(), "HH:mm"));
 
       reset(
         transaction
@@ -147,6 +198,9 @@ export function TransactionForm({
   const onSubmit = async (data: TransactionFormData) => {
     setLoading(true);
     try {
+      // Combine the picked date with the time field into a local datetime string
+      // (e.g. "2026-07-09T14:30"), which `new Date(...)` parses as local time.
+      const dateTime = time ? `${data.date}T${time}` : data.date;
       let result;
       if (data.type === "expense") {
         const expensePayload: ExpenseFormData = {
@@ -154,7 +208,7 @@ export function TransactionForm({
           category: data.category || "",
           tag: (data.tag || "Needs") as "Needs" | "Wants" | "Investments" | "Unnecessary Spending",
           note: data.note,
-          date: data.date,
+          date: dateTime,
         };
         const recurringExpenseId = transaction && "recurringExpenseId" in transaction ? transaction.recurringExpenseId : undefined;
         result = isEditing
@@ -177,7 +231,7 @@ export function TransactionForm({
               await updateRecurringExpense(recurringExpenseId, {
                 amount: toPaise(data.amount),
                 category: data.category || "",
-                tag: (data.tag || "Needs") as any,
+                tag: (data.tag || "Needs") as "Needs" | "Wants" | "Investments" | "Unnecessary Spending",
                 note: data.note,
                 frequency: data.frequency || "monthly",
               });
@@ -186,7 +240,7 @@ export function TransactionForm({
               const recResult = await createRecurringExpense({
                 amount: toPaise(data.amount),
                 category: data.category || "",
-                tag: (data.tag || "Needs") as any,
+                tag: (data.tag || "Needs") as "Needs" | "Wants" | "Investments" | "Unnecessary Spending",
                 note: data.note,
                 frequency: data.frequency || "monthly",
                 nextDueDate: d.toISOString(),
@@ -216,7 +270,7 @@ export function TransactionForm({
           amount: toPaise(data.amount),
           source: data.source || "",
           note: data.note,
-          date: data.date,
+          date: dateTime,
         };
         result = isEditing
           ? await updateIncome(transaction._id, incomePayload)
@@ -292,60 +346,44 @@ export function TransactionForm({
             </div>
           </div>
 
-          {/* Amount hero field */}
-          <div className="space-y-2">
-            <Label htmlFor="transaction-amount">Amount</Label>
-            <Input
-              id="transaction-amount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              className={cn(
-                "!h-14 sm:!h-16 !text-xl sm:!text-2xl !font-bold",
-                type === "expense" ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
-              )}
-              {...register("amount", { valueAsNumber: true })}
-            />
-            {errors.amount && (
-              <p className="text-xs text-destructive">{errors.amount.message}</p>
-            )}
-          </div>
-
           {/* Type-specific fields */}
           {type === "expense" ? (
             <>
-              {/* Category */}
-              <div className="space-y-1.5">
-                <Label className={fieldLabel}>Category</Label>
-                <Select
-                  value={category || ""}
-                  onValueChange={(v) =>
-                    setValue("category", v || undefined, {
-                      shouldValidate: true,
-                    })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category">
-                      {category && categories.length === 0 ? "" : undefined}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.name} value={c.name}>
-                        <span className="mr-2 inline-flex" style={{ color: c.color }}>
-                          <CategoryIcon name={c.icon} className="w-4 h-4" />
-                        </span>
-                        <span>{c.name}</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.category && (
-                  <p className="text-xs text-destructive">
-                    {errors.category.message}
-                  </p>
-                )}
+              {/* Amount + Category — same row, equal width */}
+              <div className="grid grid-cols-2 gap-3">
+                {amountField}
+                <div className="space-y-1.5">
+                  <Label className={fieldLabel}>Category</Label>
+                  <Select
+                    value={category || ""}
+                    onValueChange={(v) =>
+                      setValue("category", v || undefined, {
+                        shouldValidate: true,
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select category">
+                        {category && categories.length === 0 ? "" : undefined}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.name} value={c.name}>
+                          <span className="mr-2 inline-flex" style={{ color: c.color }}>
+                            <CategoryIcon name={c.icon} className="w-4 h-4" />
+                          </span>
+                          <span>{c.name}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.category && (
+                    <p className="text-xs text-destructive">
+                      {errors.category.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Tagging Grid */}
@@ -400,9 +438,6 @@ export function TransactionForm({
                       <Label htmlFor="make-recurring" className="text-xs font-semibold cursor-pointer">
                         Make Recurring Expense
                       </Label>
-                      <p className="text-[11px] text-muted-foreground leading-tight">
-                        Get a bill reminder on the next due date (no auto-logging)
-                      </p>
                     </div>
                   </div>
                   <input
@@ -439,16 +474,20 @@ export function TransactionForm({
               </div>
             </>
           ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="transaction-source" className={fieldLabel}>Source</Label>
-              <Input
-                id="transaction-source"
-                placeholder="e.g. Salary, Freelance"
-                {...register("source")}
-              />
-              {errors.source && (
-                <p className="text-xs text-destructive">{errors.source.message}</p>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              {amountField}
+              <div className="space-y-1.5">
+                <Label htmlFor="transaction-source" className={fieldLabel}>Source</Label>
+                <Input
+                  id="transaction-source"
+                  placeholder="e.g. Salary, Freelance"
+                  className="h-10"
+                  {...register("source")}
+                />
+                {errors.source && (
+                  <p className="text-xs text-destructive">{errors.source.message}</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -462,20 +501,32 @@ export function TransactionForm({
             />
           </div>
 
-          {/* Date field */}
-          <div className="space-y-1.5 flex flex-col">
-            <Label htmlFor="transaction-date" className={fieldLabel}>Date</Label>
-            <DatePicker
-              date={dateValue ? new Date(dateValue) : new Date()}
-              onSelect={(d) => {
-                if (d) {
-                  setValue("date", format(d, "yyyy-MM-dd"), { shouldValidate: true });
-                }
-              }}
-            />
-            {errors.date && (
-              <p className="text-xs text-destructive">{errors.date.message}</p>
-            )}
+          {/* Date + Time fields */}
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <div className="space-y-1.5 flex flex-col min-w-0">
+              <Label htmlFor="transaction-date" className={fieldLabel}>Date</Label>
+              <DatePicker
+                date={dateValue ? new Date(dateValue) : new Date()}
+                onSelect={(d) => {
+                  if (d) {
+                    setValue("date", format(d, "yyyy-MM-dd"), { shouldValidate: true });
+                  }
+                }}
+              />
+              {errors.date && (
+                <p className="text-xs text-destructive">{errors.date.message}</p>
+              )}
+            </div>
+            <div className="space-y-1.5 flex flex-col">
+              <Label htmlFor="transaction-time" className={fieldLabel}>Time</Label>
+              <Input
+                id="transaction-time"
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="h-9"
+              />
+            </div>
           </div>
 
           </div>

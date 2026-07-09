@@ -211,6 +211,11 @@ export function DashboardClient() {
     return new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.icon]));
   }, [settings]);
 
+  const catColorMap = useMemo(() => {
+    const categories = settings?.categories || [];
+    return new Map<string, string>(categories.map((c) => [c.name.toLowerCase(), c.color]));
+  }, [settings]);
+
   // Fallback palette for categories that have no configured colour
   const FALLBACK_PALETTE = [
     "hsl(217, 91%, 60%)", "hsl(142, 72%, 45%)", "hsl(25, 95%, 53%)",
@@ -390,6 +395,18 @@ export function DashboardClient() {
     return unbudgetedRecs.reduce((sum, item) => sum + item.amount, 0);
   }, [recurringExpenses, budgets]);
 
+  // Money already moved into goals this month is set aside, so it is no longer
+  // safe to spend — subtract it alongside earmarked budget and recurring bills.
+  const safeToSpend = useMemo(() => {
+    if (!summary) return 0;
+    return (
+      (summary.savings ?? 0) -
+      (summary.monthlyGoalContributions ?? 0) -
+      budgetSummary.totalLeft -
+      upcomingUnbudgetedRecurringTotal
+    );
+  }, [summary, budgetSummary.totalLeft, upcomingUnbudgetedRecurringTotal]);
+
   const handleConfirmPayment = async (id: string) => {
     const toastId = toast.loading("Confirming and recording payment...");
     try {
@@ -499,7 +516,7 @@ export function DashboardClient() {
             trend={
               summaryLoading || budgetsLoading || !summary
                 ? undefined
-                : (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
+                : safeToSpend >= 0
                 ? "Unallocated surplus"
                 : "Deficit — over budget"
             }
@@ -509,13 +526,13 @@ export function DashboardClient() {
               ) : (
                 <span
                   className={cn(
-                    (summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal >= 0
+                    safeToSpend >= 0
                       ? "text-primary"
                       : "text-rose-500"
                   )}
                 >
                   <CountUp
-                    value={(summary.savings ?? 0) - budgetSummary.totalLeft - upcomingUnbudgetedRecurringTotal}
+                    value={safeToSpend}
                     formatter={formatCurrency}
                   />
                 </span>
@@ -674,10 +691,15 @@ export function DashboardClient() {
                       <div key={b._id} className="space-y-1">
                         <div className="flex justify-between items-center text-xs">
                           <span className="flex items-center gap-1.5 font-medium text-foreground">
-                            <CategoryIcon
-                              name={catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "Tag"}
-                              className="w-4 h-4 text-muted-foreground"
-                            />
+                            <span
+                              className={cn(!catColorMap.get(b.category.toLowerCase()) && "text-muted-foreground")}
+                              style={{ color: catColorMap.get(b.category.toLowerCase()) }}
+                            >
+                              <CategoryIcon
+                                name={catIconMap.get(b.category.toLowerCase()) ?? CATEGORY_ICONS[b.category as ExpenseCategory] ?? "Tag"}
+                                className="w-4 h-4"
+                              />
+                            </span>
                             <span>{b.category}</span>
                           </span>
                           <span className="text-muted-foreground font-mono text-[11px]">
@@ -868,7 +890,12 @@ export function DashboardClient() {
                             )}
                           />
                           <div className="min-w-0">
-                            <p className="font-semibold text-foreground truncate">{rec.category}</p>
+                            <p className="font-semibold text-foreground truncate">
+                              {rec.category}
+                              {rec.note && (
+                                <span className="font-normal text-muted-foreground"> · {rec.note}</span>
+                              )}
+                            </p>
                             <p className={cn(
                               "text-[10px] font-medium",
                               isOverdue ? "text-rose-500" : isDueSoon ? "text-amber-500" : "text-muted-foreground"

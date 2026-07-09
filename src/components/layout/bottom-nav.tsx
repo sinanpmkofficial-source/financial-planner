@@ -13,6 +13,7 @@ import {
   Settings,
   HeartPulse,
   HelpCircle,
+  Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -86,6 +87,7 @@ export function BottomNav() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { href: "/goals", label: "Goals", icon: Target, desc: "Savings goals & progress" },
+                { href: "/recurring", label: "Recurring", icon: Repeat, desc: "Manage recurring bills" },
                 { href: "/financial-health", label: "Financial Health", icon: HeartPulse, desc: "Score & 50-30-20 audit" },
                 { href: "/analytics", label: "Reports & Trends", icon: TrendingUp, desc: "Cash flow analytics" },
                 { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins, desc: "Debts & repayments" },

@@ -13,7 +13,8 @@ import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Plus, Coins, Trash2, Calendar, CheckCircle2, Pencil, History, Clock, Target } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Plus, Coins, Trash2, Calendar, CheckCircle2, Pencil, History, Clock, Target, CalendarClock } from "lucide-react";
 import { CategoryIcon } from "@/components/shared/category-icon";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -43,11 +44,21 @@ interface GoalWithProgress {
   targetAmount: number;
   icon: string;
   color: string;
+  targetDate: string | null;
   createdAt: string;
   totalContributed: number;
   progressPercentage: number;
   contributionCount: number;
   lastContributedAt: string | null;
+}
+
+/** Days from today until a target date; negative when overdue. */
+function daysUntil(dateStr: string): number {
+  const due = new Date(dateStr);
+  const today = new Date();
+  due.setHours(0, 0, 0, 0);
+  today.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export function GoalsClient() {
@@ -72,6 +83,7 @@ export function GoalsClient() {
   const [goalTarget, setGoalTarget] = useState("");
   const [goalIcon, setGoalIcon] = useState("Target");
   const [goalColor, setGoalColor] = useState("hsl(217, 91%, 60%)");
+  const [goalTargetDate, setGoalTargetDate] = useState<Date | undefined>(undefined);
   const [fundAmount, setFundAmount] = useState("");
 
   // Hydrate goals state from local cache on client mount
@@ -108,6 +120,7 @@ export function GoalsClient() {
     setGoalTarget("");
     setGoalIcon("Target");
     setGoalColor("hsl(217, 91%, 60%)");
+    setGoalTargetDate(undefined);
     setEditingGoalId(null);
   };
 
@@ -122,6 +135,7 @@ export function GoalsClient() {
     setGoalTarget(String(toRupees(goal.targetAmount)));
     setGoalIcon(goal.icon || "Target");
     setGoalColor(goal.color || "hsl(217, 91%, 60%)");
+    setGoalTargetDate(goal.targetDate ? new Date(goal.targetDate) : undefined);
     setNewGoalOpen(true);
   };
 
@@ -137,6 +151,7 @@ export function GoalsClient() {
       targetAmount: toPaise(Number(goalTarget)),
       icon: goalIcon,
       color: goalColor,
+      targetDate: goalTargetDate ? goalTargetDate.toISOString() : null,
     };
     const editId = editingGoalId;
     const prev = goals;
@@ -157,6 +172,7 @@ export function GoalsClient() {
                   targetAmount: payload.targetAmount,
                   icon: payload.icon,
                   color: payload.color,
+                  targetDate: payload.targetDate,
                   progressPercentage: progressFor(g.totalContributed, payload.targetAmount),
                 }
               : g
@@ -168,6 +184,7 @@ export function GoalsClient() {
             targetAmount: payload.targetAmount,
             icon: payload.icon,
             color: payload.color,
+            targetDate: payload.targetDate,
             createdAt: new Date().toISOString(),
             totalContributed: 0,
             progressPercentage: 0,
@@ -375,6 +392,8 @@ export function GoalsClient() {
             const isCompleted = goal.progressPercentage >= 100;
             // Cached goals persisted by an older version may lack these fields.
             const contributionCount = goal.contributionCount ?? 0;
+            const dueDays = goal.targetDate ? daysUntil(goal.targetDate) : null;
+            const isOverdue = dueDays !== null && dueDays < 0 && !isCompleted;
             return (
               <motion.div key={goal._id} variants={itemVariants}>
                 <Card className="relative shadow-sm border-border/50 group transition-all duration-300 hover:border-foreground/25 hover:shadow-md flex flex-col justify-between overflow-hidden h-full">
@@ -384,7 +403,7 @@ export function GoalsClient() {
                   style={{ backgroundColor: goal.color || "hsl(217, 91%, 60%)" }}
                 />
                 
-                <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 flex items-center gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -444,9 +463,34 @@ export function GoalsClient() {
                       ) : (
                         <span>{formatCurrency(goal.targetAmount - goal.totalContributed)} remaining</span>
                       )}
-                      <span className="flex items-center gap-0.5 font-medium">
-                        <Calendar className="w-3 h-3" /> Created {new Date(goal.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                      </span>
+                      {goal.targetDate ? (
+                        <span
+                          className={cn(
+                            "flex items-center gap-1 font-semibold",
+                            isCompleted
+                              ? "text-muted-foreground"
+                              : isOverdue
+                              ? "text-rose-500"
+                              : dueDays !== null && dueDays <= 7
+                              ? "text-amber-500"
+                              : "text-muted-foreground"
+                          )}
+                          title={`Target: ${new Date(goal.targetDate).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}`}
+                        >
+                          <CalendarClock className="w-3 h-3" />
+                          {isCompleted
+                            ? new Date(goal.targetDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                            : isOverdue
+                            ? `Overdue ${Math.abs(dueDays as number)}d`
+                            : dueDays === 0
+                            ? "Due today"
+                            : `${dueDays}d left`}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-0.5 font-medium">
+                          <Calendar className="w-3 h-3" /> Created {new Date(goal.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                        </span>
+                      )}
                     </div>
 
                     {/* Contribution summary */}
@@ -546,6 +590,31 @@ export function GoalsClient() {
               </div>
             </div>
 
+            {/* Target Date */}
+            <div className="space-y-2">
+              <Label>Target Date (optional)</Label>
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <DatePicker
+                    date={goalTargetDate}
+                    onSelect={setGoalTargetDate}
+                    placeholder="No deadline"
+                  />
+                </div>
+                {goalTargetDate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground cursor-pointer"
+                    onClick={() => setGoalTargetDate(undefined)}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+            </div>
+
             <Button type="submit" className="w-full cursor-pointer font-bold">{editingGoalId ? "Update Goal" : "Create Goal"}</Button>
           </form>
         </DialogContent>
@@ -622,7 +691,7 @@ export function GoalsClient() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-rose-500 opacity-0 group-hover/item:opacity-100 transition-opacity cursor-pointer"
+                      className="h-7 w-7 text-muted-foreground hover:text-rose-500 opacity-100 lg:opacity-0 lg:group-hover/item:opacity-100 transition-opacity cursor-pointer"
                       onClick={() => handleDeleteContribution(c._id)}
                       aria-label="Delete contribution"
                     >

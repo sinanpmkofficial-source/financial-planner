@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Receipt, Pencil, Wallet, TrendingUp, TrendingDown, ArrowRight, Search } from "lucide-react";
+import { Plus, Receipt, Pencil, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { Expense, Income } from "@/types";
@@ -108,6 +108,10 @@ export function TransactionsClient() {
 
   const catIconMap = useMemo(() => {
     return new Map(categories.map((c) => [c.name.toLowerCase(), c.icon]));
+  }, [categories]);
+
+  const catColorMap = useMemo(() => {
+    return new Map(categories.map((c) => [c.name.toLowerCase(), c.color]));
   }, [categories]);
 
   const handleDelete = async (id: string, type: "expense" | "income") => {
@@ -233,10 +237,15 @@ export function TransactionsClient() {
         title="Transactions"
         description={`${filteredTransactions.length} entries in selected period`}
         showMonthPicker
-        action={
-          <Button onClick={() => setFormOpen(true)} size="sm" className="gap-1.5 cursor-pointer">
-            <Plus className="w-3.5 h-3.5" />
-            Add Transaction
+        titleAction={
+          <Button
+            onClick={() => setFormOpen(true)}
+            size="icon"
+            className="h-7 w-7 rounded-full cursor-pointer"
+            aria-label="Add transaction"
+            title="Add transaction"
+          >
+            <Plus className="w-4 h-4" />
           </Button>
         }
       />
@@ -273,12 +282,11 @@ export function TransactionsClient() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-card/25 backdrop-blur-md p-3 rounded-2xl border border-border">
         {/* Search input */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by category, source, note, amount..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9.5 h-9 w-full bg-background/50 border-border"
+            className="h-9 w-full bg-background/50 border-border"
           />
         </div>
 
@@ -382,6 +390,7 @@ export function TransactionsClient() {
             const icon = isExp
               ? catIconMap.get(transaction.category.toLowerCase()) ?? CATEGORY_ICONS[transaction.category as ExpenseCategory] ?? "Tag"
               : "Wallet";
+            const catColor = isExp ? catColorMap.get(transaction.category.toLowerCase()) : undefined;
             const label = isExp ? transaction.category : transaction.source;
 
             return (
@@ -394,10 +403,13 @@ export function TransactionsClient() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className={cn(
-                        "w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center border border-border/10 shrink-0",
-                        isExp ? "text-muted-foreground" : "text-emerald-500"
-                      )}>
+                      <span
+                        className={cn(
+                          "w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center border border-border/10 shrink-0",
+                          !isExp ? "text-emerald-500" : !catColor ? "text-muted-foreground" : ""
+                        )}
+                        style={isExp && catColor ? { color: catColor } : undefined}
+                      >
                         <CategoryIcon name={icon} className="w-4 h-4" />
                       </span>
                       <div>
