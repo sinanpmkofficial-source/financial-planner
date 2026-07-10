@@ -13,6 +13,7 @@ export const borrowLendSchema = z.object({
   date: z.string({ message: "Date is required" }),
   dueDate: z.string().optional(),
   notes: z.string().optional(),
+  createTransaction: z.boolean().optional(),
 });
 
 export type BorrowLendFormData = z.infer<typeof borrowLendSchema>;

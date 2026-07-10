@@ -36,12 +36,36 @@ export async function createBorrowLend(
     const parsed = borrowLendSchema.parse(data);
     await dbConnect();
     const userId = await getCurrentUserId();
+    const { createTransaction, ...record } = parsed;
+    const date = new Date(parsed.date);
     await BorrowLend.create({
-      ...parsed,
+      ...record,
       userId,
-      date: new Date(parsed.date),
+      date,
       dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
     });
+
+    if (createTransaction) {
+      // Borrowing brings money in (Income); lending sends money out (Expense).
+      if (parsed.type === "borrowed") {
+        await Income.create({
+          userId,
+          amount: parsed.amount,
+          source: `Borrowed from ${parsed.personName}`,
+          note: parsed.notes || "Borrowed money",
+          date,
+        });
+      } else {
+        await Expense.create({
+          userId,
+          amount: parsed.amount,
+          category: "Debt",
+          note: parsed.notes || `Lent money to ${parsed.personName}`,
+          date,
+        });
+      }
+    }
+
     revalidatePath("/");
     revalidatePath("/borrow-lend");
     return { success: true };
@@ -62,10 +86,11 @@ export async function updateBorrowLend(
     const parsed = borrowLendSchema.parse(data);
     await dbConnect();
     const userId = await getCurrentUserId();
+    const { createTransaction: _createTransaction, ...record } = parsed;
     const updated = await BorrowLend.findOneAndUpdate(
       { _id: id, userId },
       {
-        ...parsed,
+        ...record,
         date: new Date(parsed.date),
         dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
       }

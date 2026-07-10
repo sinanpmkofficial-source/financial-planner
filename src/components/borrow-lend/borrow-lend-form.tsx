@@ -76,6 +76,7 @@ export function BorrowLendForm({
           date: format(new Date(), "yyyy-MM-dd"),
           dueDate: undefined,
           notes: "",
+          createTransaction: true,
         },
   });
 
@@ -108,6 +109,7 @@ export function BorrowLendForm({
   const type = watch("type");
   const dateValue = watch("date");
   const dueDateValue = watch("dueDate");
+  const createTransaction = watch("createTransaction");
 
   const onSubmit = async (data: BorrowLendFormData) => {
     setLoading(true);
@@ -223,6 +225,27 @@ export function BorrowLendForm({
               {...register("notes")}
             />
           </div>
+
+          {!isEditing && (
+            <div className="flex items-center gap-2.5 py-1">
+              <input
+                type="checkbox"
+                id="bl-create-tx"
+                className="rounded border-border text-primary focus:ring-ring"
+                checked={createTransaction ?? true}
+                onChange={(e) =>
+                  setValue("createTransaction", e.target.checked)
+                }
+              />
+              <Label
+                htmlFor="bl-create-tx"
+                className="cursor-pointer text-xs font-medium text-muted-foreground select-none"
+              >
+                Record as {type === "borrowed" ? "Income" : "Expense"}{" "}
+                transaction
+              </Label>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button
