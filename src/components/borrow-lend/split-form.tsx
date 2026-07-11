@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { splitSchema, type SplitFormData } from "@/validations/split";
 import { createSplit } from "@/actions/split";
+import { getContacts, createContact } from "@/actions/contact";
 import { toPaise } from "@/lib/money";
 import { formatCurrency } from "@/lib/format";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MentionInput } from "@/components/contacts/mention-input";
+import type { Contact } from "@/types";
 import { Loader2, Plus, X } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -44,12 +47,16 @@ const emptyDefaults: SplitFormData = {
   category: "Other",
   date: format(new Date(), "yyyy-MM-dd"),
   dueDate: undefined,
+  splitMode: "itemized",
   participants: [{ personName: "", amount: undefined as unknown as number }],
+  othersOwe: undefined,
+  groupLabel: "",
   paidBy: "",
 };
 
 export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
   const { setDashboardDirty } = useUIStore();
+  const [contacts, setContacts] = useState<Contact[]>([]);
 
   const {
     register,
@@ -70,7 +77,12 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
   });
 
   useEffect(() => {
-    if (open) reset(emptyDefaults);
+    if (open) {
+      reset(emptyDefaults);
+      getContacts()
+        .then(setContacts)
+        .catch(() => setContacts([]));
+    }
   }, [open, reset]);
 
   const payer = watch("payer");
@@ -79,21 +91,44 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
   const category = watch("category");
   const myShare = watch("myShare");
   const participants = watch("participants");
+  const splitMode = watch("splitMode");
+  const othersOwe = watch("othersOwe");
+  const description = watch("description");
 
   const iPaid = payer === "me";
+  const groupMode = iPaid && splitMode === "group";
+
+  const handleCreateContact = async (name: string): Promise<Contact | null> => {
+    const res = await createContact({ name });
+    if (res.success && res.contact) {
+      const created = res.contact;
+      setContacts((prev) =>
+        prev.some((c) => c._id === created._id) ? prev : [...prev, created]
+      );
+      return created;
+    }
+    return null;
+  };
 
   // Live total so the user can sanity-check against the actual bill.
   const totalRupees = iPaid
-    ? (Number(myShare) || 0) +
-      (participants ?? []).reduce((sum, p) => sum + (Number(p?.amount) || 0), 0)
+    ? groupMode
+      ? (Number(myShare) || 0) + (Number(othersOwe) || 0)
+      : (Number(myShare) || 0) +
+        (participants ?? []).reduce(
+          (sum, p) => sum + (Number(p?.amount) || 0),
+          0
+        )
     : Number(myShare) || 0;
 
   const onSubmit = async (data: SplitFormData) => {
+    const isGroup = data.payer === "me" && data.splitMode === "group";
     const payload: SplitFormData = {
       ...data,
       myShare: toPaise(Number(data.myShare) || 0),
+      othersOwe: isGroup ? toPaise(Number(data.othersOwe) || 0) : undefined,
       participants:
-        data.payer === "me"
+        data.payer === "me" && !isGroup
           ? (data.participants ?? []).map((p) => ({
               personName: p.personName,
               amount: toPaise(Number(p.amount) || 0),
@@ -149,10 +184,15 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="split-desc">Description</Label>
-            <Input
+            <MentionInput
               id="split-desc"
-              placeholder="e.g. Dinner at Barbeque Nation"
-              {...register("description")}
+              placeholder="e.g. Dinner — type @ to tag a contact"
+              contacts={contacts}
+              value={description ?? ""}
+              onChange={(v) =>
+                setValue("description", v, { shouldValidate: true })
+              }
+              onCreateContact={handleCreateContact}
             />
             {errors.description && (
               <p className="text-xs text-destructive">
@@ -204,7 +244,70 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
           </div>
 
           {iPaid ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* How to record who owes you */}
+              <div className="grid grid-cols-2 gap-2">
+                {(
+                  [
+                    ["itemized", "Split by person"],
+                    ["group", "Just track total"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() =>
+                      setValue("splitMode", value, { shouldValidate: true })
+                    }
+                    className={cn(
+                      "rounded-xl border px-3 py-2 text-xs font-medium transition-colors",
+                      (splitMode ?? "itemized") === value
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground hover:border-border/80"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {groupMode ? (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="split-others">Others owe me (₹)</Label>
+                      <Input
+                        id="split-others"
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...register("othersOwe", {
+                          setValueAs: (v) =>
+                            v === "" || v == null ? undefined : Number(v),
+                        })}
+                      />
+                      {errors.othersOwe && (
+                        <p className="text-xs text-destructive">
+                          {errors.othersOwe.message}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="split-grouplabel">Label (optional)</Label>
+                      <Input
+                        id="split-grouplabel"
+                        placeholder="Others"
+                        {...register("groupLabel")}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Tracked as one record you can mark settled once everyone has
+                    paid you back — no need to name each person.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>People who owe you</Label>
                 <Button
@@ -270,6 +373,8 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
                   </div>
                 ))}
               </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-2">

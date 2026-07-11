@@ -36,13 +36,37 @@ export const splitSchema = z
     category: z.string().optional(),
     date: z.string({ message: "Date is required" }),
     dueDate: z.string().optional(),
-    // payer === "me": the people who owe me their share.
+    // payer === "me": how the "others owe me" side is captured.
+    //  - "itemized": name each person and their share (`participants`).
+    //  - "group":    don't name anyone; record one lump `othersOwe` amount
+    //                against a single label, to be settled manually later.
+    splitMode: z.enum(["itemized", "group"]).optional(),
+    // payer === "me": the people who owe me their share (itemized mode).
     participants: z.array(splitParticipantSchema).optional(),
+    // payer === "me" + group mode: the total everyone else owes me, tracked
+    // as one record the user marks settled once they've all paid.
+    othersOwe: z.number().optional(),
+    groupLabel: z.string().optional(),
     // payer === "other": the person who paid the bill (I owe them my share).
     paidBy: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.payer === "me") {
+      const groupMode = data.splitMode === "group";
+      if (groupMode) {
+        if (
+          typeof data.othersOwe !== "number" ||
+          Number.isNaN(data.othersOwe) ||
+          data.othersOwe <= 0
+        ) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Enter the total others owe you",
+            path: ["othersOwe"],
+          });
+        }
+        return;
+      }
       const participants = data.participants ?? [];
       if (participants.length === 0) {
         ctx.addIssue({

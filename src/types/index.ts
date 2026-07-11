@@ -49,6 +49,16 @@ export interface BorrowLend {
   updatedAt: string;
 }
 
+export interface Contact {
+  _id: string;
+  name: string;
+  phone?: string;
+  usageCount: number;
+  lastUsedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Budget {
   _id: string;
   category: ExpenseCategory;

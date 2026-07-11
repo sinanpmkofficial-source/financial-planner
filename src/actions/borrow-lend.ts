@@ -10,6 +10,7 @@ import {
 } from "@/validations/borrow-lend";
 import { serializeDoc } from "@/lib/format";
 import { getCurrentUserId } from "@/lib/session";
+import { upsertContact } from "@/actions/contact";
 import { revalidatePath } from "next/cache";
 import type { BorrowLend as BorrowLendType } from "@/types";
 
@@ -44,6 +45,7 @@ export async function createBorrowLend(
       date,
       dueDate: parsed.dueDate ? new Date(parsed.dueDate) : undefined,
     });
+    await upsertContact(parsed.personName);
 
     if (createTransaction) {
       // Borrowing brings money in (Income); lending sends money out (Expense).
@@ -98,6 +100,7 @@ export async function updateBorrowLend(
     if (!updated) {
       return { success: false, error: "Record not found" };
     }
+    await upsertContact(parsed.personName);
     revalidatePath("/");
     revalidatePath("/borrow-lend");
     return { success: true };

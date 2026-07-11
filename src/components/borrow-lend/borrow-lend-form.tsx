@@ -8,11 +8,18 @@ import {
   type BorrowLendFormData,
 } from "@/validations/borrow-lend";
 import { createBorrowLend, updateBorrowLend } from "@/actions/borrow-lend";
+import {
+  getContacts,
+  backfillContactsFromRecords,
+  createContact,
+} from "@/actions/contact";
 import { toPaise, toRupees } from "@/lib/money";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ContactCombobox } from "@/components/contacts/contact-combobox";
+import { MentionInput } from "@/components/contacts/mention-input";
 import { Loader2 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
@@ -29,7 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import type { BorrowLend } from "@/types";
+import type { BorrowLend, Contact } from "@/types";
 import { format } from "date-fns";
 
 interface BorrowLendFormProps {
@@ -46,6 +53,7 @@ export function BorrowLendForm({
   onSuccess,
 }: BorrowLendFormProps) {
   const [loading, setLoading] = useState(false);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const isEditing = !!record;
   const { setDashboardDirty } = useUIStore();
 
@@ -107,7 +115,39 @@ export function BorrowLendForm({
     }
   }, [record, open, reset]);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      let list = await getContacts();
+      // First run: seed the suggestion list from existing borrow/lend history
+      // so the feature is useful immediately rather than only going forward.
+      if (list.length === 0) {
+        const res = await backfillContactsFromRecords();
+        if (res.success && res.added > 0) list = await getContacts();
+      }
+      if (!cancelled) setContacts(list);
+    })().catch(() => setContacts([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const handleCreateContact = async (name: string): Promise<Contact | null> => {
+    const res = await createContact({ name });
+    if (res.success && res.contact) {
+      const created = res.contact;
+      setContacts((prev) =>
+        prev.some((c) => c._id === created._id) ? prev : [...prev, created]
+      );
+      return created;
+    }
+    return null;
+  };
+
   const type = watch("type");
+  const personName = watch("personName");
+  const notes = watch("notes");
   const dateValue = watch("date");
   const dueDateValue = watch("dueDate");
   const createTransaction = watch("createTransaction");
@@ -145,10 +185,14 @@ export function BorrowLendForm({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="bl-person">Person Name</Label>
-            <Input
+            <ContactCombobox
               id="bl-person"
               placeholder="Who?"
-              {...register("personName")}
+              contacts={contacts}
+              value={personName ?? ""}
+              onChange={(v) =>
+                setValue("personName", v, { shouldValidate: true })
+              }
             />
             {errors.personName && (
               <p className="text-xs text-destructive">
@@ -220,10 +264,13 @@ export function BorrowLendForm({
 
           <div className="space-y-2">
             <Label htmlFor="bl-notes">Notes</Label>
-            <Input
+            <MentionInput
               id="bl-notes"
-              placeholder="Optional notes"
-              {...register("notes")}
+              placeholder="Optional notes — type @ to tag a contact"
+              contacts={contacts}
+              value={notes ?? ""}
+              onChange={(v) => setValue("notes", v, { shouldValidate: true })}
+              onCreateContact={handleCreateContact}
             />
           </div>
 

@@ -14,6 +14,7 @@ import {
   HeartPulse,
   HelpCircle,
   Repeat,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DbSyncIndicator } from "@/components/shared/db-sync-indicator";
@@ -41,6 +42,7 @@ const navGroups = [
       { href: "/financial-health", label: "Financial Health", icon: HeartPulse },
       { href: "/analytics", label: "Reports", icon: TrendingUp },
       { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins },
+      { href: "/contacts", label: "Contacts", icon: Users },
     ],
   },
   {

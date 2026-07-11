@@ -14,6 +14,7 @@ import {
   HeartPulse,
   HelpCircle,
   Repeat,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -91,6 +92,7 @@ export function BottomNav() {
                 { href: "/financial-health", label: "Financial Health", icon: HeartPulse, desc: "Score & 50-30-20 audit" },
                 { href: "/analytics", label: "Reports & Trends", icon: TrendingUp, desc: "Cash flow analytics" },
                 { href: "/borrow-lend", label: "Borrow & Lend", icon: HandCoins, desc: "Debts & repayments" },
+                { href: "/contacts", label: "Contacts", icon: Users, desc: "People you transact with" },
                 { href: "/settings", label: "Settings", icon: Settings, desc: "System configurations" },
                 { href: "/guide", label: "Methodology Guide", icon: HelpCircle, desc: "Formulas & math rules" },
               ].map((item) => {

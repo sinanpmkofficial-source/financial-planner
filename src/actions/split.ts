@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/db";
 import BorrowLend from "@/models/borrow-lend";
 import Expense from "@/models/expense";
 import { splitSchema, type SplitFormData } from "@/validations/split";
+import { upsertContact } from "@/actions/contact";
 import { getCurrentUserId } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
@@ -36,6 +37,39 @@ export async function createSplit(
         });
       }
 
+      // Group mode: the user didn't name anyone — record one lump `lent`
+      // record they'll mark settled once everyone has paid them back. The full
+      // bill already left the account, so mirror it as an expense now too.
+      if (parsed.splitMode === "group") {
+        const label = (parsed.groupLabel ?? "").trim() || "Others";
+        const owed = parsed.othersOwe ?? 0;
+        if (owed > 0) {
+          await BorrowLend.create({
+            userId,
+            personName: label,
+            amount: owed,
+            paidAmount: 0,
+            type: "lent",
+            date,
+            dueDate,
+            status: "pending",
+            notes: `Split: ${parsed.description}`,
+          });
+          await Expense.create({
+            userId,
+            amount: owed,
+            category: "Debt",
+            tag: "Needs",
+            note: `Lent for split "${parsed.description}" to ${label}`,
+            date,
+          });
+          await upsertContact(label);
+        }
+        revalidatePath("/");
+        revalidatePath("/borrow-lend");
+        return { success: true };
+      }
+
       // Each other participant owes me their share (a `lent` record). The full
       // bill already left my account, so mirror each share as an expense now;
       // collecting the repayment later records income that adds it back.
@@ -64,6 +98,7 @@ export async function createSplit(
           note: `Lent for split "${parsed.description}" to ${personName}`,
           date,
         });
+        await upsertContact(personName);
       }
     } else {
       // Someone else paid — I only owe my share. Record it as borrowed and
@@ -80,6 +115,7 @@ export async function createSplit(
         status: "pending",
         notes: `Split: ${parsed.description}`,
       });
+      await upsertContact((parsed.paidBy ?? "").trim());
     }
 
     revalidatePath("/");
