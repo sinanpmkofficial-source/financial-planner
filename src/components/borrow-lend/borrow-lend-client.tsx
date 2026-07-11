@@ -9,6 +9,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/layout/header";
 import { BorrowLendForm } from "@/components/borrow-lend/borrow-lend-form";
+import { SplitForm } from "@/components/borrow-lend/split-form";
 import { RepaymentDialog } from "@/components/borrow-lend/repayment-dialog";
 import { ConfirmDelete } from "@/components/shared/confirm-delete";
 import { ConfirmAction } from "@/components/shared/confirm-action";
@@ -29,6 +30,7 @@ import {
   Clock,
   Banknote,
   Coins,
+  Split,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { BorrowLend } from "@/types";
@@ -44,6 +46,7 @@ export function BorrowLendClient() {
   const [editingRecord, setEditingRecord] = useState<BorrowLend | undefined>();
   const [repayOpen, setRepayOpen] = useState(false);
   const [repayRecord, setRepayRecord] = useState<BorrowLend | null>(null);
+  const [splitOpen, setSplitOpen] = useState(false);
 
   // Compute summary metrics on the client side
   const summary = useMemo(() => {
@@ -329,10 +332,21 @@ export function BorrowLendClient() {
         title="Borrow & Lend"
         description="Track money you've borrowed and lent"
         action={
-          <Button onClick={() => setFormOpen(true)} size="sm" className="gap-1.5">
-            <Plus className="w-3.5 h-3.5" />
-            Add Record
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setSplitOpen(true)}
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+            >
+              <Split className="w-3.5 h-3.5" />
+              Split
+            </Button>
+            <Button onClick={() => setFormOpen(true)} size="sm" className="gap-1.5">
+              <Plus className="w-3.5 h-3.5" />
+              Add Record
+            </Button>
+          </div>
         }
       />
 
@@ -416,6 +430,12 @@ export function BorrowLendClient() {
         open={repayOpen}
         onOpenChange={setRepayOpen}
         record={repayRecord}
+        onSuccess={fetchData}
+      />
+
+      <SplitForm
+        open={splitOpen}
+        onOpenChange={setSplitOpen}
         onSuccess={fetchData}
       />
     </div>

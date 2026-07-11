@@ -101,6 +101,7 @@ export function BorrowLendForm({
               date: format(new Date(), "yyyy-MM-dd"),
               dueDate: undefined,
               notes: "",
+              createTransaction: true,
             }
       );
     }
