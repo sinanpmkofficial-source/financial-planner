@@ -22,13 +22,15 @@ export const splitParticipantSchema = z.object({
   // number input. zod 4's `z.number()` rejects NaN, which would fail the base
   // parse before `superRefine` runs — and in the "someone else paid" flow these
   // inputs aren't even rendered, so that error would have nowhere to show and
-  // the form would silently refuse to submit. Coerce NaN to undefined ("not
-  // entered"); the per-row positivity check in `superRefine` still applies where
-  // participants actually matter (payer === "me", itemized).
-  amount: z.preprocess(
-    (v) => (typeof v === "number" && Number.isNaN(v) ? undefined : v),
-    z.number().optional()
-  ),
+  // the form would silently refuse to submit. Accept NaN and fold it to
+  // undefined ("not entered") while keeping the field's input type `number`, so
+  // the react-hook-form resolver stays typed correctly. The per-row positivity
+  // check in `superRefine` still applies where participants actually matter
+  // (payer === "me", itemized).
+  amount: z
+    .union([z.number(), z.nan()])
+    .transform((v) => (Number.isNaN(v) ? undefined : v))
+    .optional(),
 });
 
 export const splitSchema = z
