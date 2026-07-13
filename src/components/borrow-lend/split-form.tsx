@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { splitSchema, type SplitFormData } from "@/validations/split";
 import { createSplit } from "@/actions/split";
 import { getContacts, createContact } from "@/actions/contact";
-import { toPaise } from "@/lib/money";
+import { toPaise, toRupees } from "@/lib/money";
 import { formatCurrency } from "@/lib/format";
 import { useUIStore } from "@/stores/ui-store";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MentionInput } from "@/components/contacts/mention-input";
 import type { Contact } from "@/types";
-import { Loader2, Plus, X } from "lucide-react";
+import { Divide, Loader2, Plus, X } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
@@ -57,6 +57,9 @@ const emptyDefaults: SplitFormData = {
 export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
   const { setDashboardDirty } = useUIStore();
   const [contacts, setContacts] = useState<Contact[]>([]);
+  // Local-only: the full bill, used to auto-split the remaining equally. Not
+  // submitted — the server derives everything from `myShare` + participants.
+  const [totalBill, setTotalBill] = useState("");
 
   const {
     register,
@@ -79,6 +82,7 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
   useEffect(() => {
     if (open) {
       reset(emptyDefaults);
+      setTotalBill("");
       getContacts()
         .then(setContacts)
         .catch(() => setContacts([]));
@@ -108,6 +112,29 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
       return created;
     }
     return null;
+  };
+
+  // Auto equal-split: what's left after my share, and how it divides across
+  // the current people. Work in integer paise so the shares sum back exactly.
+  const remainingPaise =
+    toPaise(Number(totalBill) || 0) - toPaise(Number(myShare) || 0);
+  const canSplit = fields.length > 0 && remainingPaise > 0;
+  const perPersonPaise = canSplit
+    ? Math.floor(remainingPaise / fields.length)
+    : 0;
+
+  // Fill each person's amount with an equal cut of the remaining, spreading the
+  // rounding remainder across the first few so the total matches the bill. The
+  // user can still edit any amount afterward.
+  const splitEqually = () => {
+    if (!canSplit) return;
+    const extra = remainingPaise - perPersonPaise * fields.length;
+    fields.forEach((_, index) => {
+      const sharePaise = perPersonPaise + (index < extra ? 1 : 0);
+      setValue(`participants.${index}.amount`, toRupees(sharePaise), {
+        shouldValidate: true,
+      });
+    });
   };
 
   // Live total so the user can sanity-check against the actual bill.
@@ -307,24 +334,55 @@ export function SplitForm({ open, onOpenChange, onSuccess }: SplitFormProps) {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="split-total">Total bill (₹)</Label>
+                <Input
+                  id="split-total"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={totalBill}
+                  onChange={(e) => setTotalBill(e.target.value)}
+                />
+                {canSplit && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Remaining {formatCurrency(remainingPaise)} ÷ {fields.length} ={" "}
+                    {formatCurrency(perPersonPaise)} each — “Split equally” fills
+                    these; edit any after.
+                  </p>
+                )}
+              </div>
               <div className="flex items-center justify-between">
                 <Label>People who owe you</Label>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 gap-1 text-xs"
-                  onClick={() =>
-                    append({
-                      personName: "",
-                      amount: undefined as unknown as number,
-                    })
-                  }
-                >
-                  <Plus className="w-3 h-3" />
-                  Add person
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 text-xs"
+                    onClick={splitEqually}
+                    disabled={!canSplit}
+                  >
+                    <Divide className="w-3 h-3" />
+                    Split equally
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 gap-1 text-xs"
+                    onClick={() =>
+                      append({
+                        personName: "",
+                        amount: undefined as unknown as number,
+                      })
+                    }
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add person
+                  </Button>
+                </div>
               </div>
               {typeof errors.participants?.message === "string" && (
                 <p className="text-xs text-destructive">

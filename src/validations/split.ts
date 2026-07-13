@@ -18,7 +18,17 @@ import { z } from "zod";
 // flow, where participants are ignored entirely.
 export const splitParticipantSchema = z.object({
   personName: z.string().optional(),
-  amount: z.number().optional(),
+  // The form registers this with `valueAsNumber`, which yields NaN for an empty
+  // number input. zod 4's `z.number()` rejects NaN, which would fail the base
+  // parse before `superRefine` runs — and in the "someone else paid" flow these
+  // inputs aren't even rendered, so that error would have nowhere to show and
+  // the form would silently refuse to submit. Coerce NaN to undefined ("not
+  // entered"); the per-row positivity check in `superRefine` still applies where
+  // participants actually matter (payer === "me", itemized).
+  amount: z.preprocess(
+    (v) => (typeof v === "number" && Number.isNaN(v) ? undefined : v),
+    z.number().optional()
+  ),
 });
 
 export const splitSchema = z

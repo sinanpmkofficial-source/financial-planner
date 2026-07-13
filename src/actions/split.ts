@@ -24,6 +24,32 @@ export async function createSplit(
     const date = new Date(parsed.date);
     const dueDate = parsed.dueDate ? new Date(parsed.dueDate) : undefined;
 
+    // A share someone owes me: a `lent` record plus a mirrored expense, since
+    // the full bill already left my account. Collecting the repayment later
+    // records income that adds it back.
+    const recordLentShare = async (personName: string, amount: number) => {
+      await BorrowLend.create({
+        userId,
+        personName,
+        amount,
+        paidAmount: 0,
+        type: "lent",
+        date,
+        dueDate,
+        status: "pending",
+        notes: `Split: ${parsed.description}`,
+      });
+      await Expense.create({
+        userId,
+        amount,
+        category: "Debt",
+        tag: "Needs",
+        note: `Lent for split "${parsed.description}" to ${personName}`,
+        date,
+      });
+      await upsertContact(personName);
+    };
+
     if (parsed.payer === "me") {
       // My share is a genuine expense.
       if (parsed.myShare > 0) {
@@ -44,69 +70,30 @@ export async function createSplit(
         const label = (parsed.groupLabel ?? "").trim() || "Others";
         const owed = parsed.othersOwe ?? 0;
         if (owed > 0) {
-          await BorrowLend.create({
-            userId,
-            personName: label,
-            amount: owed,
-            paidAmount: 0,
-            type: "lent",
-            date,
-            dueDate,
-            status: "pending",
-            notes: `Split: ${parsed.description}`,
-          });
-          await Expense.create({
-            userId,
-            amount: owed,
-            category: "Debt",
-            tag: "Needs",
-            note: `Lent for split "${parsed.description}" to ${label}`,
-            date,
-          });
-          await upsertContact(label);
+          await recordLentShare(label, owed);
         }
         revalidatePath("/");
         revalidatePath("/borrow-lend");
         return { success: true };
       }
 
-      // Each other participant owes me their share (a `lent` record). The full
-      // bill already left my account, so mirror each share as an expense now;
-      // collecting the repayment later records income that adds it back.
+      // Each other participant owes me their share.
       for (const p of parsed.participants ?? []) {
         const personName = p.personName?.trim();
         // superRefine guarantees these, but guard defensively for the types.
         if (!personName || typeof p.amount !== "number" || p.amount <= 0) {
           continue;
         }
-        await BorrowLend.create({
-          userId,
-          personName,
-          amount: p.amount,
-          paidAmount: 0,
-          type: "lent",
-          date,
-          dueDate,
-          status: "pending",
-          notes: `Split: ${parsed.description}`,
-        });
-        await Expense.create({
-          userId,
-          amount: p.amount,
-          category: "Debt",
-          tag: "Needs",
-          note: `Lent for split "${parsed.description}" to ${personName}`,
-          date,
-        });
-        await upsertContact(personName);
+        await recordLentShare(personName, p.amount);
       }
     } else {
       // Someone else paid — I only owe my share. Record it as borrowed and
       // nothing else; no money has left my account yet. Paying them back later
       // (part by part) records the expense.
+      const paidBy = (parsed.paidBy ?? "").trim();
       await BorrowLend.create({
         userId,
-        personName: (parsed.paidBy ?? "").trim(),
+        personName: paidBy,
         amount: parsed.myShare,
         paidAmount: 0,
         type: "borrowed",
@@ -115,7 +102,7 @@ export async function createSplit(
         status: "pending",
         notes: `Split: ${parsed.description}`,
       });
-      await upsertContact((parsed.paidBy ?? "").trim());
+      await upsertContact(paidBy);
     }
 
     revalidatePath("/");
